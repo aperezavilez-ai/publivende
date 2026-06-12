@@ -1,10 +1,11 @@
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, PlusSquare, Calendar, MessageCircle, Zap, BarChart3, Settings, LogOut, Sparkles, FolderOpen, Inbox, ShoppingBag, ChefHat, Menu, Megaphone, Brain, Target, Wifi, WifiOff, FlaskConical } from "lucide-react";
+import { LayoutDashboard, PlusSquare, Calendar, MessageCircle, Zap, BarChart3, Settings, LogOut, FolderOpen, Inbox, ShoppingBag, ChefHat, Menu, Megaphone, Brain, Target, Wifi, WifiOff, FlaskConical } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/mock/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useOnline } from "@/hooks/useOnline";
+import { PubliVendeMark } from "@/components/PubliVendeLogo";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -53,9 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}>
         <div className="p-5 border-b border-sidebar-border">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center shadow-elegant">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
+            <PubliVendeMark size="md" />
             <div>
               <div className="font-bold text-base leading-none">PubliVende</div>
               <div className="text-[10px] text-muted-foreground mt-0.5">Plan {user.plan}</div>

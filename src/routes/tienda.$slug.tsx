@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, ShieldCheck, Truck, Star } from "lucide-react";
+import { PubliVendeMark } from "@/components/PubliVendeLogo";
 
 export const Route = createFileRoute("/tienda/$slug")({
   component: TiendaPublica,
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/tienda/$slug")({
       { name: "description", content: `Compra ${params.slug.replace(/-/g, " ")} con envío rápido y atención por WhatsApp. Pago seguro.` },
       { property: "og:title", content: params.slug.replace(/-/g, " ") },
       { property: "og:description", content: "Producto disponible con envío rápido y atención por WhatsApp." },
+      { property: "og:image", content: "/icon-1024.png" },
     ],
   }),
 });
@@ -109,8 +111,12 @@ function TiendaPublica() {
           </div>
         </section>
 
-        <footer className="mt-12 pt-8 border-t text-center text-xs text-muted-foreground">
-          Tienda potenciada por <a href="/" className="text-primary hover:underline">PubliVende</a> · Pagos seguros · Atención por WhatsApp
+        <footer className="mt-12 pt-8 border-t flex flex-col items-center gap-2 text-center text-xs text-muted-foreground">
+          <a href="/" className="flex items-center gap-1.5 text-primary hover:underline">
+            <PubliVendeMark size="xs" className="shadow-none" />
+            Tienda potenciada por PubliVende
+          </a>
+          <span>Pagos seguros · Atención por WhatsApp</span>
         </footer>
       </main>
     </div>

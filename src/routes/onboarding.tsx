@@ -15,6 +15,7 @@ import { RECETAS } from "@/lib/recetas";
 import { generateCatalogFromBusiness, suggestProductImage } from "@/services/ai/catalog";
 import { importStoreFromLink, getStorePlatformLabel, detectStorePlatform } from "@/services/import/storeImport";
 import { Instagram, Facebook, Youtube, Music2, Check, MessageCircle, Sparkles, Store, Bot, Plus, Trash2, Wand2, Upload, Package, ImageIcon, Link2 } from "lucide-react";
+import { PubliVendeLogo } from "@/components/PubliVendeLogo";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import type { PagoProvider, Red } from "@/lib/mock/types";
@@ -194,9 +195,8 @@ function Onboarding() {
   return (
     <div className="min-h-screen bg-muted/30 p-4 py-10">
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center"><Sparkles className="w-5 h-5 text-white" /></div>
-          <span className="font-bold text-lg">PubliVende</span>
+        <div className="flex items-center justify-center mb-2">
+          <PubliVendeLogo size="md" />
         </div>
         <p className="text-center text-sm text-muted-foreground mb-4">
           Configura tu negocio — la IA usará esta info para publicar, vender y responder en WhatsApp

@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/mock/auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PricingPlans } from "@/components/PricingPlans";
+import { PubliVendeLogo } from "@/components/PubliVendeLogo";
 import { Sparkles, Upload, Share2, MessageCircle, Star, Instagram, Facebook, Youtube, Music2, Zap, BarChart3, Bot } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Elige tu plan, crea tu cuenta y publica en Instagram, TikTok, Facebook y YouTube con IA." },
       { property: "og:title", content: "PubliVende" },
       { property: "og:description", content: "Planes para creadores y pymes LATAM. Publica en todas tus redes y vende por WhatsApp." },
+      { property: "og:image", content: "/icon-1024.png" },
     ],
   }),
   component: Landing,
@@ -39,12 +41,7 @@ function Landing() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold text-lg">PubliVende</span>
-          </Link>
+          <PubliVendeLogo to="/" size="sm" />
           <Link to="/auth" search={{ mode: "login", plan: "free" }}>
             <Button variant="outline" size="sm">Ya tengo cuenta — Iniciar sesión</Button>
           </Link>
@@ -176,8 +173,13 @@ function Landing() {
         </div>
       </section>
 
-      <footer className="border-t py-8 text-center text-sm text-muted-foreground">
-        © 2026 PubliVende. Hecho con 💜 para LATAM.
+      <footer className="border-t py-8 text-center text-sm text-muted-foreground space-y-2">
+        <p>© 2026 PubliVende. Hecho con 💜 para LATAM.</p>
+        <p>
+          <Link to="/terminos" className="hover:underline text-primary">Términos de servicio</Link>
+          {" · "}
+          <Link to="/privacidad" className="hover:underline text-primary">Política de privacidad</Link>
+        </p>
       </footer>
     </div>
   );

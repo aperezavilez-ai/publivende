@@ -153,7 +153,7 @@ function defaultConfig(): StoryConfig {
     textoTop: "🛍️ OFERTA DEL DÍA",
     textoCTA: "👉 Escríbenos al WhatsApp",
     ...PLANTILLAS.bold,
-    logoUrl: "",
+    logoUrl: "/icon-1024.png",
   } as StoryConfig;
 }
 

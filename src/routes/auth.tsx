@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { isValidPlan, planLabel, PLAN_OFFERS } from "@/lib/plans";
 import type { Plan } from "@/lib/mock/types";
+import { PubliVendeLogo } from "@/components/PubliVendeLogo";
 
 const PAISES = [
   { code: "+52", name: "México 🇲🇽" }, { code: "+57", name: "Colombia 🇨🇴" }, { code: "+54", name: "Argentina 🇦🇷" },
@@ -76,12 +77,7 @@ function AuthPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-hero">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-between mb-6">
-          <Link to="/" className="flex items-center gap-2 text-white">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-xl">PubliVende</span>
-          </Link>
+          <PubliVendeLogo to="/" size="lg" textClassName="text-white text-xl" />
           <a href="/#precios">
             <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 gap-1">
               <ArrowLeft className="w-4 h-4" />

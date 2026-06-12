@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/mock/auth";
 import { Card } from "@/components/ui/card";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PubliVendeMark } from "@/components/PubliVendeLogo";
 
 const searchSchema = z.object({
   code: z.string().optional(),
@@ -85,6 +86,7 @@ function OAuthCallbackPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
       <Card className="p-8 max-w-md w-full text-center space-y-4">
+        <PubliVendeMark size="lg" className="mx-auto" />
         {status === "loading" && <Loader2 className="w-10 h-10 animate-spin mx-auto text-primary" />}
         {status === "ok" && <CheckCircle2 className="w-10 h-10 mx-auto text-green-600" />}
         {status === "error" && <XCircle className="w-10 h-10 mx-auto text-destructive" />}

@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TerminosRouteImport } from './routes/terminos'
+import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
@@ -31,6 +33,16 @@ import { Route as AppAnunciosRouteImport } from './routes/_app.anuncios'
 import { Route as AppAnaliticasRouteImport } from './routes/_app.analiticas'
 import { Route as OauthCallbackProviderRouteImport } from './routes/oauth.callback.$provider'
 
+const TerminosRoute = TerminosRouteImport.update({
+  id: '/terminos',
+  path: '/terminos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadRoute = PrivacidadRouteImport.update({
+  id: '/privacidad',
+  path: '/privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -140,6 +152,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/terminos': typeof TerminosRoute
   '/analiticas': typeof AppAnaliticasRoute
   '/anuncios': typeof AppAnunciosRoute
   '/automatizaciones': typeof AppAutomatizacionesRoute
@@ -162,6 +176,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/terminos': typeof TerminosRoute
   '/analiticas': typeof AppAnaliticasRoute
   '/anuncios': typeof AppAnunciosRoute
   '/automatizaciones': typeof AppAutomatizacionesRoute
@@ -186,6 +202,8 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/terminos': typeof TerminosRoute
   '/_app/analiticas': typeof AppAnaliticasRoute
   '/_app/anuncios': typeof AppAnunciosRoute
   '/_app/automatizaciones': typeof AppAutomatizacionesRoute
@@ -210,6 +228,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/privacidad'
+    | '/terminos'
     | '/analiticas'
     | '/anuncios'
     | '/automatizaciones'
@@ -232,6 +252,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/privacidad'
+    | '/terminos'
     | '/analiticas'
     | '/anuncios'
     | '/automatizaciones'
@@ -255,6 +277,8 @@ export interface FileRouteTypes {
     | '/_app'
     | '/auth'
     | '/onboarding'
+    | '/privacidad'
+    | '/terminos'
     | '/_app/analiticas'
     | '/_app/anuncios'
     | '/_app/automatizaciones'
@@ -279,12 +303,28 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
   OnboardingRoute: typeof OnboardingRoute
+  PrivacidadRoute: typeof PrivacidadRoute
+  TerminosRoute: typeof TerminosRoute
   TiendaSlugRoute: typeof TiendaSlugRoute
   OauthCallbackProviderRoute: typeof OauthCallbackProviderRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terminos': {
+      id: '/terminos'
+      path: '/terminos'
+      fullPath: '/terminos'
+      preLoaderRoute: typeof TerminosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidad': {
+      id: '/privacidad'
+      path: '/privacidad'
+      fullPath: '/privacidad'
+      preLoaderRoute: typeof PrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -478,6 +518,8 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
   OnboardingRoute: OnboardingRoute,
+  PrivacidadRoute: PrivacidadRoute,
+  TerminosRoute: TerminosRoute,
   TiendaSlugRoute: TiendaSlugRoute,
   OauthCallbackProviderRoute: OauthCallbackProviderRoute,
 }
