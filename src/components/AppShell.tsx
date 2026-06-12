@@ -53,12 +53,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         <div className="p-5 border-b border-sidebar-border">
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <PubliVendeMark size="md" />
-            <div>
-              <div className="font-bold text-base leading-none">PubliVende</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">Plan {user.plan}</div>
-            </div>
+          <Link to="/dashboard" className="flex flex-col gap-1">
+            <PubliVendeMark size="sm" />
+            <div className="text-[10px] text-muted-foreground">Plan {user.plan}</div>
           </Link>
         </div>
         <nav className="flex-1 overflow-y-auto p-2">

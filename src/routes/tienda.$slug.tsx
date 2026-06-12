@@ -14,7 +14,7 @@ export const Route = createFileRoute("/tienda/$slug")({
       { name: "description", content: `Compra ${params.slug.replace(/-/g, " ")} con envío rápido y atención por WhatsApp. Pago seguro.` },
       { property: "og:title", content: params.slug.replace(/-/g, " ") },
       { property: "og:description", content: "Producto disponible con envío rápido y atención por WhatsApp." },
-      { property: "og:image", content: "/icon-1024.png" },
+      { property: "og:image", content: "/logo-publivende.png" },
     ],
   }),
 });

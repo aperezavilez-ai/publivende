@@ -1,55 +1,54 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
-const LOGO_SRC = "/icon-1024.png";
+const LOGO_SRC = "/logo-publivende.png";
 
-const SIZES = {
-  xs: "w-6 h-6 rounded-md",
-  sm: "w-8 h-8 rounded-lg",
-  md: "w-9 h-9 rounded-xl",
-  lg: "w-10 h-10 rounded-xl",
-  xl: "w-12 h-12 rounded-2xl",
+const HEIGHTS = {
+  xs: "h-6",
+  sm: "h-8",
+  md: "h-10",
+  lg: "h-12",
+  xl: "h-14",
 } as const;
 
-type LogoSize = keyof typeof SIZES;
+type LogoSize = keyof typeof HEIGHTS;
 
 interface PubliVendeMarkProps {
   size?: LogoSize;
   className?: string;
 }
 
-/** Solo el icono de marca (sin texto). */
+/** Logo PubliVende (imagen completa con nombre). */
 export function PubliVendeMark({ size = "md", className }: PubliVendeMarkProps) {
   return (
     <img
       src={LOGO_SRC}
-      alt=""
-      aria-hidden
-      className={cn(SIZES[size], "object-cover shrink-0 shadow-elegant", className)}
+      alt="PubliVende"
+      className={cn(HEIGHTS[size], "w-auto object-contain shrink-0", className)}
     />
   );
 }
 
 interface PubliVendeLogoProps {
   size?: LogoSize;
+  /** Legacy: el logo ya trae el texto; por defecto no se duplica. */
   showText?: boolean;
   textClassName?: string;
   className?: string;
-  /** Si se pasa, envuelve en Link hacia esa ruta. */
   to?: "/" | "/dashboard";
 }
 
-/** Logo + nombre PubliVende. */
 export function PubliVendeLogo({
   size = "md",
-  showText = true,
+  showText = false,
   textClassName,
   className,
   to,
 }: PubliVendeLogoProps) {
+  const img = <PubliVendeMark size={size} />;
   const content = (
     <div className={cn("flex items-center gap-2", className)}>
-      <PubliVendeMark size={size} />
+      {img}
       {showText && (
         <span className={cn("font-bold text-lg leading-none", textClassName)}>PubliVende</span>
       )}
@@ -59,7 +58,7 @@ export function PubliVendeLogo({
   if (to) {
     return (
       <Link to={to} className={cn("flex items-center gap-2", className)}>
-        <PubliVendeMark size={size} />
+        {img}
         {showText && (
           <span className={cn("font-bold text-lg leading-none", textClassName)}>PubliVende</span>
         )}

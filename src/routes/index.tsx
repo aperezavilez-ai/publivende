@@ -14,7 +14,7 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Elige tu plan, crea tu cuenta y publica en Instagram, TikTok, Facebook y YouTube con IA." },
       { property: "og:title", content: "PubliVende" },
       { property: "og:description", content: "Planes para creadores y pymes LATAM. Publica en todas tus redes y vende por WhatsApp." },
-      { property: "og:image", content: "/icon-1024.png" },
+      { property: "og:image", content: "/logo-publivende.png" },
     ],
   }),
   component: Landing,
