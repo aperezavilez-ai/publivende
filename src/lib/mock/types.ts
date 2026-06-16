@@ -3,6 +3,13 @@ export type Red = "facebook" | "instagram" | "tiktok" | "youtube";
 export type Plan = "free" | "pro" | "business";
 export type EtapaLead = "nuevo" | "contactado" | "negociando" | "ganado" | "perdido";
 export type EstadoPost = "borrador" | "programado" | "publicado" | "error";
+
+export interface ScheduleMeta {
+  auto_repurpose?: boolean;
+  notify_whatsapp?: boolean;
+  tono?: "casual" | "profesional" | "formal";
+  schedule_error?: string;
+}
 export type TipoPost = "imagen" | "video" | "texto";
 export type PagoProvider = "mercadopago" | "payu" | "wompi" | "kushki" | "stripe" | "manual";
 
@@ -83,6 +90,7 @@ export interface Post {
   /** Último envío masivo por WhatsApp CRM. */
   whatsapp_enviado_at?: string;
   whatsapp_broadcast_count?: number;
+  schedule_meta?: ScheduleMeta;
 }
 
 export interface PostMetric {

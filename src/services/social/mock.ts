@@ -1,6 +1,6 @@
 // Adaptador mock — listo para reemplazar por Meta Graph / TikTok / YouTube APIs reales
 import { loadDB, saveDB, uid, slug } from "@/lib/mock/db";
-import type { Red, Post, TipoPost, PostAlcance, CanalDistribucion } from "@/lib/mock/types";
+import type { Red, Post, TipoPost, PostAlcance, CanalDistribucion, ScheduleMeta } from "@/lib/mock/types";
 
 export interface PublishInput {
   user_id: string;
@@ -18,6 +18,7 @@ export interface PublishInput {
   canales_distribucion?: CanalDistribucion[];
   nicho_label?: string;
   total_canales?: number;
+  schedule_meta?: ScheduleMeta;
 }
 
 export async function publishPost(input: PublishInput): Promise<Post> {
@@ -44,6 +45,7 @@ export async function publishPost(input: PublishInput): Promise<Post> {
     canales_distribucion: input.canales_distribucion,
     nicho_label: input.nicho_label,
     total_canales: input.total_canales,
+    schedule_meta: input.schedule_meta,
   };
 
   let post: Post;

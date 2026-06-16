@@ -43,7 +43,7 @@ import {
   Upload, Sparkles, FolderOpen, Instagram, Facebook, Youtube, Music2,
   Heart, MessageCircle as MC, Send, TrendingUp, FlaskConical, Eye, DollarSign,
   MessageSquare, Link2, Wand2, PenLine, Globe, MapPin, Users, BarChart3, AlertTriangle,
-  Hash, Radio,
+  Hash, Radio, MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { consumePublishDraft } from "@/lib/draft";
@@ -63,16 +63,23 @@ import {
 } from "@/lib/geo-targeting";
 import type { Red, PostAlcance } from "@/lib/mock/types";
 
-export const Route = createFileRoute("/_app/publicar")({ component: Publicar });
+export const Route = createFileRoute("/_app/publicar")({
+  component: Publicar,
+  validateSearch: (s: Record<string, unknown>) => ({
+    link: typeof s.link === "string" ? s.link : undefined,
+  }),
+});
 
 const ICONS: Record<Red, typeof Instagram> = { instagram: Instagram, facebook: Facebook, tiktok: Music2, youtube: Youtube };
 const ALL_REDES: Red[] = ["instagram", "facebook", "tiktok", "youtube"];
+const WA_COLOR = "#25D366";
 
 type PublishMode = "manual" | "link";
 
 function Publicar() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { link: linkFromCalendar } = Route.useSearch();
   const accounts = useDB((db) => db.social_accounts.filter((a) => a.user_id === user?.id));
   const fbAccount = accounts.find((a) => a.red === "facebook");
   const fbConnected = fbAccount?.estado_conexion === "conectada";
@@ -103,8 +110,16 @@ function Publicar() {
   const [adaptLoading, setAdaptLoading] = useState(false);
   const [reachFuente, setReachFuente] = useState<ReachAIAnalysis["fuente"] | null>(null);
   const [draftPostId, setDraftPostId] = useState<string | undefined>();
-  const [notifyWhatsApp, setNotifyWhatsApp] = useState(true);
+  const [whatsappSelected, setWhatsappSelected] = useState(true);
   const waContactCount = useDB((db) => db.whatsapp_contacts.filter((c) => c.user_id === user?.id).length);
+
+  useEffect(() => {
+    if (linkFromCalendar) {
+      setPublishMode("link");
+      setSourceUrl(linkFromCalendar);
+      toast.message("Link cargado desde calendario", { description: "Importa y adapta, o programa la publicación." });
+    }
+  }, [linkFromCalendar]);
 
   useEffect(() => {
     const draft = consumePublishDraft();
@@ -176,9 +191,10 @@ function Publicar() {
   function toggleRed(r: Red) {
     setRedes((rs) => rs.includes(r) ? rs.filter((x) => x !== r) : [...rs, r]);
   }
-  function selectAllRedes() {
+  function selectAllDestinos() {
     setRedes([...ALL_REDES]);
-    toast.success("4 redes seleccionadas");
+    setWhatsappSelected(true);
+    toast.success("Todas las redes + WhatsApp seleccionadas");
   }
   function onFile(e: React.ChangeEvent<HTMLInputElement>, setter: (s: string) => void) {
     const f = e.target.files?.[0]; if (!f) return; setter(URL.createObjectURL(f));
@@ -415,15 +431,22 @@ function Publicar() {
 
   async function publicar() {
     if (!user) return;
-    if (!media) return toast.error("Sube una imagen o video");
-    if (redes.length === 0) return toast.error("Selecciona al menos una red");
+    if (redes.length === 0 && !whatsappSelected) return toast.error("Selecciona al menos una red o WhatsApp");
+    if (!programar && !media && !(publishMode === "link" && sourceUrl)) {
+      return toast.error("Sube una imagen o video, o pega un link");
+    }
 
     const isLinkMode = publishMode === "link" && Object.keys(copyPorRed).length > 0;
     const primaryCopy = isLinkMode
       ? (copyPorRed[redes[0]] ?? copy)
       : copy;
 
-    if (!primaryCopy) return toast.error("Agrega un copy o adapta con IA");
+    if (!primaryCopy && !programar) return toast.error("Agrega un copy o adapta con IA");
+    if (programar && publishMode === "link" && sourceUrl && !primaryCopy) {
+      // Programación solo con link — se adaptará en el cron
+    } else if (!primaryCopy) {
+      return toast.error("Agrega un copy o adapta con IA");
+    }
     if (alcanceTipo === "local") {
       if (!paisSel || !estadoSel || !ciudadSel) {
         return toast.error("Completa país, estado y ciudad para alcance local");
@@ -454,23 +477,33 @@ function Publicar() {
       return;
     }
 
+    const scheduleMeta =
+      programar && fecha
+        ? {
+            auto_repurpose: publishMode === "link" && !!sourceUrl && !linkAdaptado,
+            notify_whatsapp: whatsappSelected,
+            tono: tono as "casual" | "profesional" | "formal",
+          }
+        : undefined;
+
     const published = await publishPost({
       user_id: user.id,
       tipo: sourceMeta?.mediaType ?? "imagen",
       media_url: media,
-      copy: primaryCopy,
+      copy: primaryCopy || "⏰ Compartida programada",
       copy_por_red: isLinkMode ? copyPorRed : undefined,
-      source_url: sourceMeta?.url,
+      source_url: (sourceMeta?.url ?? sourceUrl) || undefined,
       redes,
       alcance,
       programar: programar && fecha ? new Date(fecha).toISOString() : undefined,
       draft_id: draftPostId,
+      schedule_meta: scheduleMeta,
       ...meta,
     });
 
     let realPublishErrors: string[] = [];
     const sessionToken = getSessionToken();
-    if (isProductionModeClient() && sessionToken && !programar) {
+    if (isProductionModeClient() && sessionToken) {
       const real = await publishPostReal({
         data: {
           token: sessionToken,
@@ -479,15 +512,17 @@ function Publicar() {
             draft_id: draftPostId,
             tipo: sourceMeta?.mediaType ?? "imagen",
             media_url: media,
-            copy: primaryCopy,
+            copy: primaryCopy || "⏰ Compartida programada",
             copy_por_red: isLinkMode ? copyPorRed : undefined,
-            source_url: sourceMeta?.url,
+            source_url: (sourceMeta?.url ?? sourceUrl) || undefined,
             alcance,
             redes,
+            programar: programar && fecha ? new Date(fecha).toISOString() : undefined,
             tracking_slug: published.tracking_slug,
+            schedule_meta: scheduleMeta,
             ...meta,
           },
-          notifyWhatsApp,
+          notifyWhatsApp: programar ? false : whatsappSelected,
         },
       });
       if (real.ok) {
@@ -495,10 +530,10 @@ function Publicar() {
         if (real.waSent) {
           toast.success(`WhatsApp real: ${real.waSent} contacto${real.waSent > 1 ? "s" : ""} notificados`);
         }
-      } else if (!real.useLocal && real.error) {
+      } else if (!real.useLocal && real.error && !programar) {
         toast.warning(`Redes reales: ${real.error}`);
       }
-    } else if (notifyWhatsApp && !programar) {
+    } else if (whatsappSelected && !programar) {
       if (waContactCount === 0) {
         toast.message("Sin contactos en CRM", {
           description: "Publicación guardada. Cuando tengas contactos en WhatsApp CRM, podrás enviarles el link desde Biblioteca.",
@@ -513,13 +548,15 @@ function Publicar() {
       toast.message("Algunas redes no publicaron", { description: realPublishErrors.join(" · ") });
     }
 
-    const n = redes.length;
+    const n = redes.length + (whatsappSelected && !programar ? 1 : 0);
     toast.success(
       programar
-        ? "Publicación programada 📅 — guardada en Biblioteca"
-        : `¡Publicado en ${n} red${n > 1 ? "es" : ""}! Guardado en Biblioteca 🎉`,
+        ? "Publicación programada 📅 — aparece en Calendario"
+        : n > 1
+          ? `¡Publicado en ${n} destinos! Guardado en Biblioteca 🎉`
+          : "¡Publicado! Guardado en Biblioteca 🎉",
     );
-    navigate({ to: "/biblioteca" });
+    navigate({ to: programar ? "/calendario" : "/biblioteca" });
   }
 
   function charCountFor(red: Red): number {
@@ -870,8 +907,8 @@ function Publicar() {
           <Card className="p-5">
             <div className="flex items-center justify-between mb-3">
               <Label className="font-semibold">Redes destino</Label>
-              <Button size="sm" variant="outline" onClick={selectAllRedes} className="h-7 text-xs">
-                Publicar en las 4
+              <Button size="sm" variant="outline" onClick={selectAllDestinos} className="h-7 text-xs">
+                Todas (5)
               </Button>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -893,6 +930,21 @@ function Publicar() {
                   </button>
                 );
               })}
+              <button
+                type="button"
+                onClick={() => setWhatsappSelected((v) => !v)}
+                className={`flex items-center gap-2 p-3 rounded-lg border-2 text-left text-sm col-span-2 ${whatsappSelected ? "border-green-500 bg-green-50 dark:bg-green-950/30" : "border-border hover:border-green-400/50"}`}
+              >
+                <MessageCircle className="w-4 h-4 text-green-600" />
+                <div className="flex-1">
+                  <div className="font-medium">WhatsApp CRM</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {user?.whatsapp_configurado
+                      ? `${waContactCount} contacto${waContactCount !== 1 ? "s" : ""} · envía link de la publicación`
+                      : "Configura tu número · broadcast a contactos"}
+                  </div>
+                </div>
+              </button>
             </div>
           </Card>
 
@@ -905,23 +957,21 @@ function Publicar() {
                 <Switch checked={programar} onCheckedChange={setProgramar} />
               </div>
               {programar && <Input type="datetime-local" value={fecha} onChange={(e) => setFecha(e.target.value)} />}
-              {!programar && (
-                <div className="flex items-start justify-between gap-3 pt-2 border-t">
-                  <div>
-                    <Label className="font-semibold text-sm">Enviar a contactos WhatsApp</Label>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      El CRM manda el link de la publicación a {waContactCount} contacto{waContactCount !== 1 ? "s" : ""}.
-                      Si responden, la IA contesta sobre esa publicación.
-                    </p>
-                  </div>
-                  <Switch checked={notifyWhatsApp} onCheckedChange={setNotifyWhatsApp} />
-                </div>
+              {programar && whatsappSelected && (
+                <p className="text-[11px] text-muted-foreground pt-2 border-t">
+                  WhatsApp CRM se enviará automáticamente a la hora programada si está seleccionado arriba.
+                </p>
               )}
             </Card>
           )}
 
           <Button onClick={publicar} size="lg" className="w-full bg-gradient-primary border-0 shadow-elegant">
-            {abMode ? "Lanzar experimento A/B" : programar ? "Programar publicación" : redes.length > 1 ? `Publicar en ${redes.length} redes` : "Publicar ahora"}
+            {abMode ? "Lanzar experimento A/B" : programar ? "Programar publicación" : (() => {
+              const parts = redes.length ? `${redes.length} red${redes.length > 1 ? "es" : ""}` : "";
+              const wa = whatsappSelected ? "WhatsApp" : "";
+              const label = [parts, wa].filter(Boolean).join(" + ");
+              return label ? `Publicar en ${label}` : "Publicar ahora";
+            })()}
           </Button>
         </div>
 

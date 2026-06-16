@@ -51,3 +51,7 @@ export function isRealAIEnabled(): boolean {
 export function isRealPaymentsEnabled(): boolean {
   return !!(getStripeSecretKey() || getMercadoPagoToken());
 }
+
+export function getCronSecret(): string | undefined {
+  return process.env.CRON_SECRET;
+}

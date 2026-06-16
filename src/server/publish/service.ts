@@ -6,6 +6,7 @@ import { publishToNetwork } from "@/server/publish/networks";
 import { broadcastWhatsAppMessages, userHasWhatsAppSending } from "@/server/whatsapp/cloud-api";
 import { buildBroadcastMessage } from "@/lib/whatsapp-post";
 import type { Red, Post } from "@/lib/mock/types";
+import type { ScheduleMeta } from "@/lib/mock/types";
 
 export function dbPostToClient(row: typeof schema.posts.$inferSelect): Post {
   return {
@@ -29,6 +30,7 @@ export function dbPostToClient(row: typeof schema.posts.$inferSelect): Post {
     total_canales: row.totalCanales ?? undefined,
     whatsapp_enviado_at: row.whatsappEnviadoAt?.toISOString(),
     whatsapp_broadcast_count: row.whatsappBroadcastCount ?? undefined,
+    schedule_meta: row.scheduleMeta as Post["schedule_meta"],
     created_at: row.createdAt.toISOString(),
   };
 }
@@ -52,6 +54,7 @@ export interface PublishForUserInput {
     nicho_label?: string;
     total_canales?: number;
     tracking_slug?: string;
+    schedule_meta?: ScheduleMeta;
   };
   notifyWhatsApp?: boolean;
 }
@@ -117,6 +120,7 @@ export async function publishForUser(input: PublishForUserInput): Promise<Publis
     nichoLabel: input.post.nicho_label,
     totalCanales: input.post.total_canales,
     externalIds,
+    scheduleMeta: input.post.schedule_meta,
   };
 
   let saved;

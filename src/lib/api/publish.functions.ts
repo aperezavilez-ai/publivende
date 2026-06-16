@@ -27,6 +27,13 @@ export const publishPostReal = createServerFn({ method: "POST" })
         nicho_label: z.string().optional(),
         total_canales: z.number().optional(),
         tracking_slug: z.string().optional(),
+        schedule_meta: z
+          .object({
+            auto_repurpose: z.boolean().optional(),
+            notify_whatsapp: z.boolean().optional(),
+            tono: z.enum(["casual", "profesional", "formal"]).optional(),
+          })
+          .optional(),
       }),
       notifyWhatsApp: z.boolean().optional(),
     }),

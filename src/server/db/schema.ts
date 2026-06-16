@@ -9,7 +9,7 @@ import {
   uuid,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import type { Plan, Red, EstadoPost, TipoPost, EtapaLead, PagoProvider } from "@/lib/mock/types";
+import type { Plan, Red, EstadoPost, TipoPost, EtapaLead, PagoProvider, ScheduleMeta } from "@/lib/mock/types";
 
 /** Perfil de usuario (sin password en respuestas API). */
 export const users = pgTable("users", {
@@ -83,6 +83,7 @@ export const posts = pgTable("posts", {
   whatsappEnviadoAt: timestamp("whatsapp_enviado_at", { withTimezone: true }),
   whatsappBroadcastCount: integer("whatsapp_broadcast_count"),
   externalIds: jsonb("external_ids").$type<Partial<Record<Red, string>>>(),
+  scheduleMeta: jsonb("schedule_meta").$type<ScheduleMeta>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -36,6 +36,7 @@ import { Route as AppAnunciosRouteImport } from './routes/_app.anuncios'
 import { Route as AppAnaliticasRouteImport } from './routes/_app.analiticas'
 import { Route as OauthCallbackProviderRouteImport } from './routes/oauth.callback.$provider'
 import { Route as ApiWebhookWhatsappRouteImport } from './routes/api.webhook.whatsapp'
+import { Route as ApiCronPublishScheduledRouteImport } from './routes/api.cron.publish-scheduled'
 import { Route as ApiV1PartnersUsersRouteImport } from './routes/api.v1.partners.users'
 import { Route as ApiV1PartnersPublishRouteImport } from './routes/api.v1.partners.publish'
 import { Route as ApiV1PartnersConnectRouteImport } from './routes/api.v1.partners.connect'
@@ -175,6 +176,11 @@ const ApiWebhookWhatsappRoute = ApiWebhookWhatsappRouteImport.update({
   path: '/api/webhook/whatsapp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronPublishScheduledRoute = ApiCronPublishScheduledRouteImport.update({
+  id: '/api/cron/publish-scheduled',
+  path: '/api/cron/publish-scheduled',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1PartnersUsersRoute = ApiV1PartnersUsersRouteImport.update({
   id: '/api/v1/partners/users',
   path: '/api/v1/partners/users',
@@ -222,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/connect/$partnerSlug': typeof ConnectPartnerSlugRoute
   '/p/$slug': typeof PSlugRoute
   '/tienda/$slug': typeof TiendaSlugRoute
+  '/api/cron/publish-scheduled': typeof ApiCronPublishScheduledRoute
   '/api/webhook/whatsapp': typeof ApiWebhookWhatsappRoute
   '/oauth/callback/$provider': typeof OauthCallbackProviderRoute
   '/api/v1/partners/connect': typeof ApiV1PartnersConnectRoute
@@ -254,6 +261,7 @@ export interface FileRoutesByTo {
   '/connect/$partnerSlug': typeof ConnectPartnerSlugRoute
   '/p/$slug': typeof PSlugRoute
   '/tienda/$slug': typeof TiendaSlugRoute
+  '/api/cron/publish-scheduled': typeof ApiCronPublishScheduledRoute
   '/api/webhook/whatsapp': typeof ApiWebhookWhatsappRoute
   '/oauth/callback/$provider': typeof OauthCallbackProviderRoute
   '/api/v1/partners/connect': typeof ApiV1PartnersConnectRoute
@@ -288,6 +296,7 @@ export interface FileRoutesById {
   '/connect/$partnerSlug': typeof ConnectPartnerSlugRoute
   '/p/$slug': typeof PSlugRoute
   '/tienda/$slug': typeof TiendaSlugRoute
+  '/api/cron/publish-scheduled': typeof ApiCronPublishScheduledRoute
   '/api/webhook/whatsapp': typeof ApiWebhookWhatsappRoute
   '/oauth/callback/$provider': typeof OauthCallbackProviderRoute
   '/api/v1/partners/connect': typeof ApiV1PartnersConnectRoute
@@ -322,6 +331,7 @@ export interface FileRouteTypes {
     | '/connect/$partnerSlug'
     | '/p/$slug'
     | '/tienda/$slug'
+    | '/api/cron/publish-scheduled'
     | '/api/webhook/whatsapp'
     | '/oauth/callback/$provider'
     | '/api/v1/partners/connect'
@@ -354,6 +364,7 @@ export interface FileRouteTypes {
     | '/connect/$partnerSlug'
     | '/p/$slug'
     | '/tienda/$slug'
+    | '/api/cron/publish-scheduled'
     | '/api/webhook/whatsapp'
     | '/oauth/callback/$provider'
     | '/api/v1/partners/connect'
@@ -387,6 +398,7 @@ export interface FileRouteTypes {
     | '/connect/$partnerSlug'
     | '/p/$slug'
     | '/tienda/$slug'
+    | '/api/cron/publish-scheduled'
     | '/api/webhook/whatsapp'
     | '/oauth/callback/$provider'
     | '/api/v1/partners/connect'
@@ -405,6 +417,7 @@ export interface RootRouteChildren {
   ConnectPartnerSlugRoute: typeof ConnectPartnerSlugRoute
   PSlugRoute: typeof PSlugRoute
   TiendaSlugRoute: typeof TiendaSlugRoute
+  ApiCronPublishScheduledRoute: typeof ApiCronPublishScheduledRoute
   ApiWebhookWhatsappRoute: typeof ApiWebhookWhatsappRoute
   OauthCallbackProviderRoute: typeof OauthCallbackProviderRoute
   ApiV1PartnersConnectRoute: typeof ApiV1PartnersConnectRoute
@@ -603,6 +616,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWebhookWhatsappRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/publish-scheduled': {
+      id: '/api/cron/publish-scheduled'
+      path: '/api/cron/publish-scheduled'
+      fullPath: '/api/cron/publish-scheduled'
+      preLoaderRoute: typeof ApiCronPublishScheduledRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/partners/users': {
       id: '/api/v1/partners/users'
       path: '/api/v1/partners/users'
@@ -696,6 +716,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConnectPartnerSlugRoute: ConnectPartnerSlugRoute,
   PSlugRoute: PSlugRoute,
   TiendaSlugRoute: TiendaSlugRoute,
+  ApiCronPublishScheduledRoute: ApiCronPublishScheduledRoute,
   ApiWebhookWhatsappRoute: ApiWebhookWhatsappRoute,
   OauthCallbackProviderRoute: OauthCallbackProviderRoute,
   ApiV1PartnersConnectRoute: ApiV1PartnersConnectRoute,
