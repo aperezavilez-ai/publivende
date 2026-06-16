@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/mock/auth";
 import { useDB } from "@/lib/mock/useDB";
 import { loadDB, saveDB, uid } from "@/lib/mock/db";
@@ -17,6 +17,8 @@ import type { Post, Red, EstadoPost } from "@/lib/mock/types";
 import { RED_COLORS, RED_LABELS } from "@/services/social/mock";
 import { broadcastPostLink } from "@/services/whatsapp/mock";
 import { buildPostPageUrl } from "@/lib/whatsapp-post";
+import { isProductionModeClient, getSessionToken } from "@/lib/production/session";
+import { listCalendarPosts } from "@/lib/api/calendar.functions";
 
 export const Route = createFileRoute("/_app/biblioteca")({ component: Biblio });
 
@@ -43,15 +45,25 @@ const ESTADO_STYLES: Record<EstadoPost, string> = {
 
 function Biblio() {
   const { user } = useAuth();
-  const posts = useDB((db) =>
+  const localPosts = useDB((db) =>
     db.posts
       .filter((p) => p.user_id === user?.id)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
   );
+  const [serverPosts, setServerPosts] = useState<Post[]>([]);
   const assets = useDB((db) => db.media_assets.filter((a) => a.user_id === user?.id));
   const waContactCount = useDB((db) => db.whatsapp_contacts.filter((c) => c.user_id === user?.id).length);
   const [q, setQ] = useState("");
   const [tab, setTab] = useState("publicaciones");
+  const posts = isProductionModeClient() ? serverPosts : localPosts;
+
+  useEffect(() => {
+    const token = getSessionToken();
+    if (!isProductionModeClient() || !token) return;
+    void listCalendarPosts({ data: { token } }).then((res) => {
+      if (res.ok) setServerPosts(res.posts);
+    });
+  }, []);
 
   function subir(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -274,6 +286,12 @@ function PublicationCard({
                   </Badge>
                 ))}
               </div>
+            </div>
+          )}
+
+          {post.estado === "error" && post.schedule_meta?.schedule_error && (
+            <div className="text-xs rounded border border-red-200 bg-red-50 text-red-800 px-2 py-1">
+              Error automático: {post.schedule_meta.schedule_error}
             </div>
           )}
 
