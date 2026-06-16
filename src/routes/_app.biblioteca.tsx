@@ -125,11 +125,11 @@ function Biblio() {
         placeholder="Buscar por copy, nicho o hashtag…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        className="max-w-md"
+        className="w-full sm:max-w-md"
       />
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="publicaciones" className="gap-1.5">
             <Sparkles className="w-3.5 h-3.5" />
             Publicaciones ({posts.length})
@@ -142,7 +142,7 @@ function Biblio() {
 
         <TabsContent value="publicaciones" className="mt-4 space-y-3">
           {filteredPosts.length === 0 ? (
-            <Card className="p-12 text-center">
+            <Card className="p-6 sm:p-12 text-center">
               <Sparkles className="w-10 h-10 mx-auto text-muted-foreground" />
               <p className="mt-2 text-sm font-medium">Aún no hay publicaciones guardadas</p>
               <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
@@ -181,7 +181,7 @@ function Biblio() {
             </Button>
           </div>
           {filteredAssets.length === 0 ? (
-            <Card className="p-12 text-center">
+            <Card className="p-6 sm:p-12 text-center">
               <Upload className="w-10 h-10 mx-auto text-muted-foreground" />
               <p className="mt-2 text-sm text-muted-foreground">No hay archivos multimedia.</p>
             </Card>

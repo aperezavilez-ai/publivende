@@ -25,6 +25,14 @@ const NAV = [
   { to: "/configuracion", label: "Configuración", icon: Settings },
 ] as const;
 
+const MOBILE_TABS = [
+  { to: "/dashboard", label: "Inicio", icon: LayoutDashboard },
+  { to: "/publicar", label: "Publicar", icon: PlusSquare },
+  { to: "/calendario", label: "Calendario", icon: Calendar },
+  { to: "/whatsapp", label: "CRM", icon: MessageCircle },
+  { to: "/configuracion", label: "Ajustes", icon: Settings },
+] as const;
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
   const router = useRouter();
@@ -39,17 +47,19 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (!user) return null;
 
+  const isActive = (to: string) => pathname === to || pathname.startsWith(to + "/");
+
   return (
     <div className="min-h-screen flex w-full bg-muted/30">
       <button
         onClick={() => setOpen(!open)}
-        className="md:hidden fixed top-3 left-3 z-50 p-2 rounded-lg bg-card border shadow-soft"
+        className="md:hidden fixed top-3 left-3 z-50 p-2.5 rounded-lg bg-card border shadow-soft"
       >
         <Menu className="w-5 h-5" />
       </button>
 
       <aside className={cn(
-        "fixed md:static inset-y-0 left-0 z-40 w-64 bg-sidebar border-r border-sidebar-border flex flex-col transition-transform",
+        "fixed md:static inset-y-0 left-0 z-40 w-[82vw] max-w-72 bg-sidebar border-r border-sidebar-border flex flex-col transition-transform",
         open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         <div className="p-5 border-b border-sidebar-border">
@@ -61,7 +71,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <nav className="flex-1 overflow-y-auto p-2">
           {NAV.map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.to || pathname.startsWith(item.to + "/");
+            const active = isActive(item.to);
             return (
               <Link
                 key={item.to} to={item.to}
@@ -94,7 +104,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           )}
         </nav>
-        <div className="p-3 border-t border-sidebar-border">
+        <div className="p-3 border-t border-sidebar-border pb-[max(env(safe-area-inset-bottom),12px)]">
           <div className="flex items-center gap-2 px-2 py-2 mb-2">
             <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white text-xs font-bold shrink-0">
               {user.nombre.charAt(0).toUpperCase()}
@@ -118,10 +128,34 @@ export function AppShell({ children }: { children: ReactNode }) {
       {open && <div onClick={() => setOpen(false)} className="md:hidden fixed inset-0 bg-black/40 z-30" />}
 
       <main className="flex-1 min-w-0 overflow-x-hidden">
-        <div className="p-4 md:p-8 max-w-7xl mx-auto pt-16 md:pt-8">
+        <div className="p-3 md:p-8 max-w-7xl mx-auto pt-16 md:pt-8 pb-24 md:pb-8">
           {children}
         </div>
       </main>
+
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85 pb-[max(env(safe-area-inset-bottom),8px)]">
+        <div className="grid grid-cols-5 px-1 pt-1">
+          {MOBILE_TABS.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.to);
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-0.5 py-2 rounded-lg text-[11px]",
+                  active
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground",
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

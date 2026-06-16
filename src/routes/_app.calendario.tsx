@@ -193,7 +193,7 @@ function Calendario() {
             Programa compartidas con link — el sistema importa, adapta con IA y publica solo a la hora indicada.
           </p>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center w-full sm:w-auto justify-end">
           <button
             type="button"
             onClick={() => setMes(new Date(mes.getFullYear(), mes.getMonth() - 1, 1))}
@@ -201,7 +201,7 @@ function Calendario() {
           >
             ←
           </button>
-          <div className="font-semibold capitalize w-40 text-center">
+          <div className="font-semibold capitalize w-32 sm:w-40 text-center text-sm sm:text-base">
             {mes.toLocaleDateString("es-MX", { month: "long", year: "numeric" })}
           </div>
           <button
@@ -214,15 +214,15 @@ function Calendario() {
         </div>
       </div>
 
-      <Card className="p-3">
-        <div className="grid grid-cols-7 gap-1 text-xs font-semibold text-muted-foreground mb-2">
+      <Card className="p-2 sm:p-3">
+        <div className="hidden sm:grid grid-cols-7 gap-1 text-xs font-semibold text-muted-foreground mb-2">
           {["D", "L", "M", "M", "J", "V", "S"].map((d, i) => (
             <div key={i} className="text-center py-1">
               {d}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1">
+        <div className="hidden sm:grid grid-cols-7 gap-1">
           {cells.map((d, i) => (
             <div
               key={i}
@@ -264,6 +264,45 @@ function Calendario() {
               )}
             </div>
           ))}
+        </div>
+
+        <div className="sm:hidden space-y-2">
+          {Array.from({ length: dias }, (_, idx) => idx + 1).map((d) => {
+            const dayPosts = postsDia(d);
+            return (
+              <button
+                key={d}
+                type="button"
+                onClick={() => openSchedule(d)}
+                className="w-full rounded-lg border p-2 text-left"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-sm">{d} {mes.toLocaleDateString("es-MX", { month: "short" })}</span>
+                  <Plus className="w-3.5 h-3.5 text-muted-foreground" />
+                </div>
+                {dayPosts.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground mt-1">Sin publicaciones</p>
+                ) : (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {dayPosts.slice(0, 3).map((p) => {
+                      const firstRed = p.redes_destino[0];
+                      const wa = p.schedule_meta?.notify_whatsapp;
+                      return (
+                        <span
+                          key={p.id}
+                          className="text-[10px] text-white px-1.5 py-0.5 rounded inline-flex items-center gap-1"
+                          style={{ background: firstRed ? RED_COLORS[firstRed] : wa ? "#25D366" : "#7c3aed" }}
+                        >
+                          {p.estado === "programado" ? "⏰" : p.estado === "error" ? "✕" : "✓"}
+                          {linkHost(p.source_url)}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       </Card>
 
