@@ -16,6 +16,8 @@ const searchSchema = z.object({
   state: z.string().optional(),
   error: z.string().optional(),
   error_description: z.string().optional(),
+  error_code: z.string().optional(),
+  error_message: z.string().optional(),
 });
 
 export const Route = createFileRoute("/oauth/callback/$provider")({
@@ -38,14 +40,34 @@ function OAuthCallbackPage() {
     ran.current = true;
 
     async function run() {
-      if (search.error) {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const code = search.code ?? hashParams.get("code") ?? undefined;
+      const state = search.state ?? hashParams.get("state") ?? undefined;
+      const error =
+        search.error ??
+        search.error_message ??
+        hashParams.get("error") ??
+        hashParams.get("error_message") ??
+        undefined;
+      const errorDescription =
+        search.error_description ??
+        hashParams.get("error_description") ??
+        undefined;
+
+      if (error || search.error_code) {
         setStatus("error");
-        setMessage(search.error_description ?? search.error ?? "Autorización cancelada");
+        setMessage(
+          errorDescription
+            ?? error
+            ?? (search.error_code ? `Meta OAuth error (${search.error_code})` : "Autorización cancelada"),
+        );
         return;
       }
-      if (!search.code || !search.state) {
+      if (!code || !state) {
         setStatus("error");
-        setMessage("Faltan parámetros de OAuth. Intenta conectar de nuevo.");
+        setMessage(
+          "Meta no devolvió code/state OAuth. Revisa App Domains y Redirect URI en developers.facebook.com.",
+        );
         return;
       }
       if (provider !== "meta" && provider !== "google" && provider !== "tiktok") {
@@ -55,7 +77,7 @@ function OAuthCallbackPage() {
       }
 
       const result = await completeOAuthCallback({
-        data: { provider, code: search.code, state: search.state },
+        data: { provider, code, state },
       });
 
       if (!result.ok) {
