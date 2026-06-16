@@ -5,6 +5,7 @@ import { isProductionMode } from "@/server/config";
 import { verifySessionToken } from "@/server/auth/crypto";
 import { getDb, schema } from "@/server/db";
 import type { Red, Post, ScheduleMeta } from "@/lib/mock/types";
+import { userHasWhatsAppSending } from "@/server/whatsapp/cloud-api";
 
 const redSchema = z.enum(["facebook", "instagram", "tiktok", "youtube"]);
 
@@ -81,13 +82,42 @@ export const scheduleLinkPost = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Selecciona al menos una red o WhatsApp" };
     }
 
+    const db = getDb();
+    if (data.redes.length) {
+      const connected = await db
+        .select({ red: schema.oauthAccounts.red })
+        .from(schema.oauthAccounts)
+        .where(and(eq(schema.oauthAccounts.userId, session.userId), eq(schema.oauthAccounts.estadoConexion, "conectada")));
+      const connectedSet = new Set(connected.map((x) => x.red));
+      const missing = data.redes.filter((r) => !connectedSet.has(r));
+      if (missing.length) {
+        return {
+          ok: false as const,
+          error: `Conecta estas redes antes de programar: ${missing.join(", ")}`,
+        };
+      }
+    }
+
+    if (data.notify_whatsapp) {
+      const hasWa = await userHasWhatsAppSending(session.userId);
+      if (!hasWa) {
+        return { ok: false as const, error: "Conecta tu WhatsApp en Configuración antes de programar envíos" };
+      }
+      const contacts = await db
+        .select({ id: schema.whatsappContacts.id })
+        .from(schema.whatsappContacts)
+        .where(eq(schema.whatsappContacts.userId, session.userId));
+      if (!contacts.length) {
+        return { ok: false as const, error: "No tienes contactos en WhatsApp CRM para enviar esta campaña" };
+      }
+    }
+
     const scheduleMeta: ScheduleMeta = {
       auto_repurpose: true,
       notify_whatsapp: data.notify_whatsapp,
       tono: data.tono ?? "casual",
     };
 
-    const db = getDb();
     const rows = await db
       .insert(schema.posts)
       .values({

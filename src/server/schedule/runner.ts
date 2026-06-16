@@ -5,6 +5,9 @@ import { findUserById } from "@/server/auth/users";
 import { repurposeFromLink } from "@/services/import";
 import { publishForUser } from "@/server/publish/service";
 import type { Red, ScheduleMeta } from "@/lib/mock/types";
+import { analizarAlcanceIA, totalAlcanceIA } from "@/lib/reach-ai";
+import { planificarDistribucionIA, totalCanales } from "@/lib/distribution-ai";
+import { hashtagsFromAlcanceIA, mergeHashtagMaps, pickViralHashtags } from "@/lib/hashtags-ai";
 
 export interface ScheduledRunResult {
   postId: string;
@@ -21,6 +24,14 @@ async function markScheduleError(postId: string, message: string) {
     .update(schema.posts)
     .set({ estado: "error", scheduleMeta: meta })
     .where(eq(schema.posts.id, postId));
+}
+
+function estimateAdsConversion(peopleMin: number, peopleMax: number) {
+  const leadsMin = Math.max(1, Math.round(peopleMin * 0.004));
+  const leadsMax = Math.max(leadsMin, Math.round(peopleMax * 0.009));
+  const conversionPct = 2.8;
+  const cplMxn = 42;
+  return { cpl_mxn: cplMxn, conversion_pct: conversionPct, leads_min: leadsMin, leads_max: leadsMax };
 }
 
 export async function executeScheduledPost(post: DbPost): Promise<ScheduledRunResult> {
@@ -60,6 +71,63 @@ export async function executeScheduledPost(post: DbPost): Promise<ScheduledRunRe
       copyPorRed = adapted;
       mediaUrl = source.mediaUrl || post.mediaUrl || "";
       tipo = source.mediaType ?? "imagen";
+
+      const alcance = (post.alcance as {
+        tipo: "global" | "local";
+        pais?: string;
+        pais_codigo?: string;
+        estado?: string;
+        ciudad?: string;
+        radio_km?: number;
+      } | null) ?? { tipo: "global", pais: "México", pais_codigo: "MX" };
+
+      const alcanceIA = analizarAlcanceIA({
+        alcance,
+        redes,
+        industria: user.industria ?? "general",
+        source,
+        copyPorRed: adapted,
+        copyManual: primaryCopy,
+        fuente: "link_ia",
+      });
+
+      const hashtagsNicho = alcanceIA
+        ? hashtagsFromAlcanceIA(alcanceIA.por_red, redes, user.industria ?? "general", primaryCopy)
+        : {};
+      const hashtagsPorRed = mergeHashtagMaps(hashtagsNicho);
+      const hashtagsVirales = pickViralHashtags(hashtagsPorRed);
+      const distribucion = alcanceIA
+        ? planificarDistribucionIA(redes, alcanceIA.analysis.nicho, alcance)
+        : [];
+      const totalCanalesValue = totalCanales(distribucion);
+      const alcanceTotal = alcanceIA ? totalAlcanceIA(alcanceIA.por_red) : { personas_min: 0, personas_max: 0 };
+      const ads = estimateAdsConversion(alcanceTotal.personas_min, alcanceTotal.personas_max);
+
+      meta.ia_snapshot = {
+        nicho_label: alcanceIA?.analysis.nicho_label,
+        alcance_personas_min: alcanceTotal.personas_min,
+        alcance_personas_max: alcanceTotal.personas_max,
+        total_canales: totalCanalesValue,
+        hashtags_virales: hashtagsVirales,
+      };
+      meta.ads_estimate = ads;
+      delete meta.schedule_error;
+
+      await getDb()
+        .update(schema.posts)
+        .set({
+          alcance,
+          hashtagsPorRed: hashtagsPorRed,
+          hashtagsVirales: hashtagsVirales,
+          canalesDistribucion: distribucion,
+          nichoLabel: alcanceIA?.analysis.nicho_label,
+          totalCanales: totalCanalesValue,
+          scheduleMeta: meta,
+        })
+        .where(eq(schema.posts.id, post.id));
+
+      post.scheduleMeta = meta;
+      post.alcance = alcance as DbPost["alcance"];
     }
 
     const result = await publishForUser({
@@ -73,6 +141,12 @@ export async function executeScheduledPost(post: DbPost): Promise<ScheduledRunRe
         source_url: post.sourceUrl ?? undefined,
         redes: redes.length ? redes : [],
         tracking_slug: post.trackingSlug,
+        alcance: post.alcance,
+        hashtags_por_red: post.hashtagsPorRed as Record<string, string[]> | undefined,
+        hashtags_virales: post.hashtagsVirales as string[] | undefined,
+        canales_distribucion: post.canalesDistribucion as unknown[] | undefined,
+        nicho_label: post.nichoLabel ?? undefined,
+        total_canales: post.totalCanales ?? undefined,
       },
       notifyWhatsApp: meta.notify_whatsapp ?? false,
     });

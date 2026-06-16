@@ -9,6 +9,19 @@ export interface ScheduleMeta {
   notify_whatsapp?: boolean;
   tono?: "casual" | "profesional" | "formal";
   schedule_error?: string;
+  ia_snapshot?: {
+    nicho_label?: string;
+    alcance_personas_min?: number;
+    alcance_personas_max?: number;
+    total_canales?: number;
+    hashtags_virales?: string[];
+  };
+  ads_estimate?: {
+    cpl_mxn: number;
+    conversion_pct: number;
+    leads_min: number;
+    leads_max: number;
+  };
 }
 export type TipoPost = "imagen" | "video" | "texto";
 export type PagoProvider = "mercadopago" | "payu" | "wompi" | "kushki" | "stripe" | "manual";
