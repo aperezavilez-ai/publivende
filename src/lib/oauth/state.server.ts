@@ -7,6 +7,9 @@ export interface OAuthStatePayload {
   red: Red;
   returnTo: string;
   ts: number;
+  partnerId?: string;
+  externalUserId?: string;
+  partnerReturnUrl?: string;
 }
 
 function sign(data: string): string {

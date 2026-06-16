@@ -2,8 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { completeOAuthCallback } from "@/lib/api/oauth.functions";
+import { saveOAuthTokenServer } from "@/lib/api/auth.functions";
 import { connectAccountOAuth } from "@/services/social/mock";
 import { useAuth } from "@/lib/mock/auth";
+import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
 import { Card } from "@/components/ui/card";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -71,9 +73,43 @@ function OAuthCallbackPage() {
         oauth_provider: result.account.provider,
       });
 
+      const token = getSessionToken();
+      if (isProductionModeClient() && token) {
+        await saveOAuthTokenServer({
+          data: {
+            token,
+            red: result.account.red,
+            account: {
+              nombre_cuenta: result.account.nombre_cuenta,
+              access_token: result.account.access_token,
+              external_account_id: result.account.external_account_id,
+              token_expires_at: result.account.token_expires_at,
+              avatar: result.account.avatar,
+              oauth_provider: result.account.provider,
+            },
+          },
+        });
+      }
+
       setReturnTo(result.returnTo);
       setStatus("ok");
       setMessage(`${result.account.nombre_cuenta} conectado correctamente`);
+
+      if (result.partnerReturnUrl) {
+        try {
+          const u = new URL(result.partnerReturnUrl);
+          u.searchParams.set("publivende_connected", "1");
+          u.searchParams.set("red", result.account.red);
+          if (result.externalUserId) u.searchParams.set("external_user_id", result.externalUserId);
+          setTimeout(() => {
+            window.location.href = u.toString();
+          }, 1200);
+          return;
+        } catch {
+          /* fallback to internal returnTo */
+        }
+      }
+
       setTimeout(() => navigate({ to: result.returnTo as "/" }), 1800);
     }
 

@@ -34,12 +34,51 @@ function rnd(len = 10) {
   return Math.random().toString(36).slice(2, 2 + len).toUpperCase();
 }
 
-export function generarLinkCobro(opts: {
+async function tryRealPaymentLink(opts: {
   provider: PagoProvider;
   monto: number;
   moneda: string;
   descripcion: string;
-}): CobroLink {
+}): Promise<CobroLink | null> {
+  if (opts.provider !== "stripe" && opts.provider !== "mercadopago") return null;
+  try {
+    const { createPaymentLinkServer } = await import("@/lib/api/payments.functions");
+    const real = await createPaymentLinkServer({
+      data: {
+        title: opts.descripcion,
+        amount: opts.monto,
+        currency: opts.moneda,
+        provider: opts.provider,
+      },
+    });
+    if (real.ok && real.url) {
+      const ref = rnd(8);
+      return {
+        url: real.url,
+        provider: opts.provider,
+        referencia: real.preferenceId ?? ref,
+        monto: opts.monto,
+        moneda: opts.moneda,
+        descripcion: opts.descripcion,
+        qr_url: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(real.url)}`,
+        expira: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      };
+    }
+  } catch {
+    /* fallback mock */
+  }
+  return null;
+}
+
+export async function generarLinkCobro(opts: {
+  provider: PagoProvider;
+  monto: number;
+  moneda: string;
+  descripcion: string;
+}): Promise<CobroLink> {
+  const real = await tryRealPaymentLink(opts);
+  if (real) return real;
+
   const ref = rnd(8);
   const url = `${BASES[opts.provider]}${ref}?amount=${opts.monto}&currency=${opts.moneda.toLowerCase()}`;
   return {

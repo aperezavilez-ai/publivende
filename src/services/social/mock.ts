@@ -1,6 +1,6 @@
 // Adaptador mock — listo para reemplazar por Meta Graph / TikTok / YouTube APIs reales
 import { loadDB, saveDB, uid, slug } from "@/lib/mock/db";
-import type { Red, Post, TipoPost, PostAlcance } from "@/lib/mock/types";
+import type { Red, Post, TipoPost, PostAlcance, CanalDistribucion } from "@/lib/mock/types";
 
 export interface PublishInput {
   user_id: string;
@@ -12,6 +12,12 @@ export interface PublishInput {
   alcance?: PostAlcance;
   redes: Red[];
   programar?: string;
+  draft_id?: string;
+  hashtags_por_red?: Partial<Record<Red, string[]>>;
+  hashtags_virales?: string[];
+  canales_distribucion?: CanalDistribucion[];
+  nicho_label?: string;
+  total_canales?: number;
 }
 
 export async function publishPost(input: PublishInput): Promise<Post> {
@@ -20,8 +26,8 @@ export async function publishPost(input: PublishInput): Promise<Post> {
   const primaryCopy = input.copy_por_red
     ? (input.redes.map((r) => input.copy_por_red![r]).find(Boolean) ?? input.copy)
     : input.copy;
-  const post: Post = {
-    id: uid(),
+  const estado = input.programar ? "programado" : "publicado";
+  const postFields: Omit<Post, "id" | "created_at" | "tracking_slug"> = {
     user_id: input.user_id,
     tipo: input.tipo,
     media_url: input.media_url,
@@ -30,13 +36,38 @@ export async function publishPost(input: PublishInput): Promise<Post> {
     source_url: input.source_url,
     alcance: input.alcance,
     redes_destino: input.redes,
-    estado: input.programar ? "programado" : "publicado",
+    estado,
     fecha_programada: input.programar,
     fecha_publicacion: input.programar ? undefined : now,
-    tracking_slug: slug(),
-    created_at: now,
+    hashtags_por_red: input.hashtags_por_red,
+    hashtags_virales: input.hashtags_virales,
+    canales_distribucion: input.canales_distribucion,
+    nicho_label: input.nicho_label,
+    total_canales: input.total_canales,
   };
-  db.posts.push(post);
+
+  let post: Post;
+  const draftIdx = input.draft_id
+    ? db.posts.findIndex((p) => p.id === input.draft_id && p.user_id === input.user_id)
+    : -1;
+
+  if (draftIdx >= 0) {
+    post = {
+      ...db.posts[draftIdx],
+      ...postFields,
+      tracking_slug: db.posts[draftIdx].tracking_slug,
+      created_at: db.posts[draftIdx].created_at,
+    };
+    db.posts[draftIdx] = post;
+  } else {
+    post = {
+      id: uid(),
+      ...postFields,
+      tracking_slug: slug(),
+      created_at: now,
+    };
+    db.posts.push(post);
+  }
 
   if (!input.programar) {
     input.redes.forEach((red) => {

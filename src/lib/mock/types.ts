@@ -50,6 +50,13 @@ export interface PostAlcance {
   radio_km?: number;
 }
 
+export interface CanalDistribucion {
+  red: Red;
+  canal: string;
+  cantidad: number;
+  descripcion: string;
+}
+
 export interface Post {
   id: string;
   user_id: string;
@@ -65,6 +72,17 @@ export interface Post {
   fecha_publicacion?: string;
   tracking_slug: string;
   created_at: string;
+  /** Hashtags de nicho por red (generados por IA). */
+  hashtags_por_red?: Partial<Record<Red, string[]>>;
+  /** Top hashtags virales para el producto/servicio. */
+  hashtags_virales?: string[];
+  /** Canales y grupos donde la IA distribuirá el contenido. */
+  canales_distribucion?: CanalDistribucion[];
+  nicho_label?: string;
+  total_canales?: number;
+  /** Último envío masivo por WhatsApp CRM. */
+  whatsapp_enviado_at?: string;
+  whatsapp_broadcast_count?: number;
 }
 
 export interface PostMetric {
@@ -103,6 +121,8 @@ export interface WaMessage {
   direccion: "entrante" | "saliente";
   texto: string;
   automatico: boolean;
+  /** Publicación relacionada (broadcast o consulta). */
+  post_id?: string;
   timestamp: string;
   tipo_media?: "audio";
   duracion_seg?: number;

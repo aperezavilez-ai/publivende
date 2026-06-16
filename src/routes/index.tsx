@@ -26,7 +26,7 @@ function Landing() {
 
   useEffect(() => {
     if (loading || !user) return;
-    navigate({ to: user.onboarding_completado ? "/dashboard" : "/onboarding" });
+    navigate({ to: "/dashboard" });
   }, [user, loading, navigate]);
 
   if (!loading && user) {
@@ -41,7 +41,7 @@ function Landing() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <PubliVendeLogo to="/" size="sm" />
+          <PubliVendeLogo to="/" size="sm" showText />
           <Link to="/auth" search={{ mode: "login", plan: "free" }}>
             <Button variant="outline" size="sm">Ya tengo cuenta — Iniciar sesión</Button>
           </Link>

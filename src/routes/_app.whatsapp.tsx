@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sendMessage, updateContact } from "@/services/whatsapp/mock";
 import { processIncomingMessage } from "@/services/whatsapp/engine";
-import { getBusinessContext } from "@/lib/bootstrap";
+import { generatePostAwareReply } from "@/services/whatsapp/post-reply";
+import { buildPostPageUrl } from "@/lib/whatsapp-post";
 import {
   reproducirAudio,
   detenerAudio,
@@ -41,9 +42,11 @@ function WA() {
   const navigate = useNavigate();
   const contacts = useDB((db) => db.whatsapp_contacts.filter((c) => c.user_id === user?.id));
   const messages = useDB((db) => db.whatsapp_messages);
+  const posts = useDB((db) => db.posts.filter((p) => p.user_id === user?.id));
   const productos = useDB((db) => db.productos.filter((p) => p.user_id === user?.id && p.activo));
   const [selId, setSelId] = useState<string | null>(null);
   const sel = contacts.find((c) => c.id === selId);
+  const selPost = sel?.post_origen_id ? posts.find((p) => p.id === sel.post_origen_id) : undefined;
 
   useEffect(() => {
     if (user?.is_admin) ensureUserSeeded(user.id);
@@ -72,7 +75,7 @@ function WA() {
   const [cobroOpen, setCobroOpen] = useState(false);
   const [cobroMonto, setCobroMonto] = useState("");
   const [cobroDesc, setCobroDesc] = useState("");
-  const [cobroProvider, setCobroProvider] = useState<PagoProvider>(user?.pago_provider_default ?? "mercadopago");
+  const [cobroProvider, setCobroProvider] = useState<PagoProvider>(user?.pago_provider_default ?? "stripe");
   const [cobroMoneda, setCobroMoneda] = useState("MXN");
   const [cobroLink, setCobroLink] = useState<CobroLink | null>(null);
 
@@ -185,31 +188,49 @@ function WA() {
   }
 
   async function sugerirIA() {
-    if (!sel) return;
+    if (!sel || !user) return;
     toast.loading("Generando sugerencia con IA…", { id: "ia" });
-    await new Promise((r) => setTimeout(r, 800));
-    const ctx = user ? getBusinessContext(user.id) : "";
-    const ultimo = chat[chat.length - 1]?.texto.toLowerCase() ?? "";
-    let r = `¡Hola ${sel.nombre.split(" ")[0]}! Con gusto te ayudo desde ${user?.nombre_negocio ?? "nuestro negocio"} 💜`;
-    if (ultimo.includes("precio")) r = `Te paso el precio de nuestro catálogo:\n${productos.map((p) => `• ${p.nombre}: $${p.precio}`).join("\n")}`;
-    if (ultimo.includes("envío") || ultimo.includes("envio")) r = `Sí hacemos envíos${user?.ciudad ? ` desde ${user.ciudad}` : ""}. ¿A qué ciudad te enviamos?`;
+    await new Promise((r) => setTimeout(r, 600));
+    const ultimo = chat[chat.length - 1]?.texto ?? "";
+
+    if (sel.post_origen_id) {
+      const postReply = generatePostAwareReply(user.id, sel, ultimo, sel.post_origen_id);
+      if (postReply) {
+        setTxt(postReply);
+        toast.success("Sugerencia basada en la publicación del contacto", { id: "ia" });
+        return;
+      }
+    }
+
+    const ultimoLower = ultimo.toLowerCase();
+    let r = `¡Hola ${sel.nombre.split(" ")[0]}! Con gusto te ayudo desde ${user.nombre_negocio ?? "nuestro negocio"} 💜`;
+    if (ultimoLower.includes("precio")) {
+      r = `Te paso el precio de nuestro catálogo:\n${productos.map((p) => `• ${p.nombre}: $${p.precio}`).join("\n")}`;
+    }
+    if (ultimoLower.includes("envío") || ultimoLower.includes("envio")) {
+      r = `Sí hacemos envíos${user.ciudad ? ` desde ${user.ciudad}` : ""}. ¿A qué ciudad te enviamos?`;
+    }
     if (productos[0]) r += `\n\nTe recomiendo: ${productos[0].nombre} - $${productos[0].precio} ${productos[0].moneda}`;
-    if (ctx && !ultimo.includes("precio")) r += `\n\n_${user?.descripcion_negocio?.slice(0, 80) ?? ""}_`;
     setTxt(r);
-    toast.success("Sugerencia lista (basada en tu perfil)", { id: "ia" });
+    toast.success("Sugerencia lista", { id: "ia" });
   }
 
   async function simularCliente() {
     if (!user) return;
+    const lastPost = posts.find((p) => p.estado === "publicado") ?? posts[0];
+    const ref = lastPost?.tracking_slug ?? "demo123";
     const result = await processIncomingMessage(user.id, {
       nombre: "Cliente demo",
       celular: "+52 55 1234-5678",
-      texto: "Hola, vi tu publicación. ¿Cuál es el precio?",
-      origen: "Reel de Instagram (demo)",
+      texto: lastPost
+        ? `Hola, vi tu publicación ${buildPostPageUrl(ref)} — ¿cuánto cuesta? (ref: ${ref})`
+        : "Hola, vi tu publicación. ¿Cuál es el precio?",
+      post_origen_id: lastPost?.id,
+      origen: lastPost ? `Broadcast: ${lastPost.copy.slice(0, 40)}…` : "Reel de Instagram (demo)",
     });
     setSelId(result.contact.id);
     toast.success(result.autoReplies.length
-      ? `CRM respondió automáticamente (${result.autoReplies.length} regla${result.autoReplies.length > 1 ? "s" : ""})`
+      ? `IA respondió sobre la publicación (${result.autoReplies.length} mensaje${result.autoReplies.length > 1 ? "s" : ""})`
       : "Contacto creado en CRM");
   }
 
@@ -380,7 +401,23 @@ function WA() {
                 )}
                 <div><label className="text-xs text-muted-foreground">Origen</label>
                   <div className="text-sm bg-accent rounded px-2 py-1">{sel.origen}</div>
-                  {sel.post_origen_id && <div className="text-[10px] text-success mt-1">✓ Atribuido a publicación</div>}
+                  {selPost && (
+                    <div className="mt-2 rounded-lg border p-2 text-xs space-y-1">
+                      <p className="font-semibold text-[10px] uppercase text-muted-foreground">Publicación vinculada</p>
+                      <p className="line-clamp-3">{selPost.copy}</p>
+                      <a
+                        href={buildPostPageUrl(selPost.tracking_slug)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary flex items-center gap-1 hover:underline"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Ver publicación
+                      </a>
+                    </div>
+                  )}
+                  {sel.post_origen_id && !selPost && (
+                    <div className="text-[10px] text-success mt-1">✓ Atribuido a publicación</div>
+                  )}
                 </div>
                 <div><label className="text-xs text-muted-foreground">Notas</label>
                   <Textarea rows={4} value={sel.notas} onChange={(e) => updateContact(sel.id, { notas: e.target.value })} />

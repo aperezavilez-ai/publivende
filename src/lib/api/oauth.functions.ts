@@ -9,6 +9,10 @@ import {
 } from "@/lib/oauth/config.server";
 import { providerForRed } from "@/lib/oauth/providers";
 import { createOAuthState, verifyOAuthState } from "@/lib/oauth/state.server";
+import { isProductionMode } from "@/server/config";
+import { upsertOAuthAccount } from "@/server/auth/users";
+import { findPartnerById } from "@/server/partners/users";
+import { notifyPartnerWebhook } from "@/server/partners/webhooks";
 import type { Red } from "@/lib/mock/types";
 
 const redSchema = z.enum(["facebook", "instagram", "tiktok", "youtube"]);
@@ -268,10 +272,34 @@ export const completeOAuthCallback = createServerFn({ method: "POST" })
         result = await exchangeTikTokCode(data.code);
       }
 
+      if (isProductionMode()) {
+        await upsertOAuthAccount(payload.userId, {
+          red: result.red,
+          nombre_cuenta: result.nombre_cuenta,
+          access_token: result.access_token,
+          external_account_id: result.external_account_id,
+          token_expires_at: result.token_expires_at,
+          avatar: result.avatar,
+          oauth_provider: result.provider,
+        });
+
+        if (payload.partnerId && payload.externalUserId) {
+          const partner = await findPartnerById(payload.partnerId);
+          if (partner) {
+            notifyPartnerWebhook(partner, "connection.connected", payload.externalUserId, {
+              platform: result.red,
+              nombre_cuenta: result.nombre_cuenta,
+            });
+          }
+        }
+      }
+
       return {
         ok: true as const,
         userId: payload.userId,
         returnTo: payload.returnTo,
+        partnerReturnUrl: payload.partnerReturnUrl,
+        externalUserId: payload.externalUserId,
         account: result,
       };
     } catch (err) {

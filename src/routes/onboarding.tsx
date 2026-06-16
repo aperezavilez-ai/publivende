@@ -41,7 +41,7 @@ function Onboarding() {
     tono: user?.tono_marca ?? "casual",
     ciudad: user?.ciudad ?? "",
     horario: user?.horario_atencion ?? "Lunes a sábado, 9am a 7pm",
-    pago_provider: (user?.pago_provider_default ?? "mercadopago") as PagoProvider,
+    pago_provider: (user?.pago_provider_default ?? "stripe") as PagoProvider,
   });
 
   const [productos, setProductos] = useState<OnboardingProductInput[]>([
@@ -153,6 +153,17 @@ function Onboarding() {
     }
   }
 
+  function saltarAlPanel() {
+    updateUser({
+      onboarding_completado: true,
+      industria: negocio.industria,
+      tono_marca: negocio.tono,
+      pago_provider_default: negocio.pago_provider,
+    });
+    toast.success("¡Listo! Pega links en Publicar para empezar.");
+    navigate({ to: "/dashboard" });
+  }
+
   function finalizar() {
     const validProducts = productos.filter((p) => p.nombre.trim().length >= 2 && (p.precio > 0 || p.tipo === "servicio"));
     if (validProducts.length === 0) return toast.error("Agrega al menos un producto o servicio con nombre y precio");
@@ -199,7 +210,7 @@ function Onboarding() {
           <PubliVendeLogo size="md" />
         </div>
         <p className="text-center text-sm text-muted-foreground mb-4">
-          Configura tu negocio — la IA usará esta info para publicar, vender y responder en WhatsApp
+          Configuración opcional — mejora la IA. Puedes ir directo al panel y pegar links.
         </p>
         <div className="flex justify-center gap-2 mb-6">
           {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((s) => (
@@ -209,8 +220,8 @@ function Onboarding() {
 
         {step === 1 && (
           <Card className="p-6">
-            <div className="flex items-center gap-2 mb-1"><Store className="w-5 h-5 text-primary" /><h1 className="text-2xl font-bold">Tu negocio</h1></div>
-            <p className="text-muted-foreground text-sm">Esta información alimenta la IA, el CRM y tus publicaciones.</p>
+            <div className="flex items-center gap-2 mb-1"><Store className="w-5 h-5 text-primary" /><h1 className="text-2xl font-bold">Tu negocio (opcional)</h1></div>
+            <p className="text-muted-foreground text-sm">Ayuda a la IA a adaptar mejor tus publicaciones. Puedes completarlo después en Configuración.</p>
             <div className="mt-5 space-y-3">
               <div>
                 <Label>Industria</Label>
@@ -241,9 +252,10 @@ function Onboarding() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end mt-6">
+            <div className="flex justify-between mt-6 gap-2 flex-wrap">
+              <Button variant="outline" onClick={saltarAlPanel}>Ir al panel ahora</Button>
               <Button onClick={() => {
-                if (negocio.descripcion.trim().length < 10) return toast.error("Describe tu negocio (mín. 10 caracteres)");
+                if (negocio.descripcion.trim().length < 10) return toast.error("Describe tu negocio (mín. 10 caracteres) o usa «Ir al panel ahora»");
                 setStep(2);
               }} className="bg-gradient-primary border-0">Continuar</Button>
             </div>
@@ -357,8 +369,8 @@ function Onboarding() {
                       <Select value={negocio.pago_provider} onValueChange={(v) => setNegocio({ ...negocio, pago_provider: v as PagoProvider })}>
                         <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="mercadopago">Mercado Pago</SelectItem>
                           <SelectItem value="stripe">Stripe</SelectItem>
+                          <SelectItem value="mercadopago">Mercado Pago</SelectItem>
                           <SelectItem value="wompi">Wompi</SelectItem>
                           <SelectItem value="payu">PayU</SelectItem>
                         </SelectContent>
@@ -389,17 +401,19 @@ function Onboarding() {
 
         {step === 3 && (
           <Card className="p-6">
-            <h1 className="text-2xl font-bold">Conecta tus redes sociales</h1>
+            <h1 className="text-2xl font-bold">Redes sociales (opcional)</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              Obligatorio para <b>importar posts desde links</b> y publicar. Al tocar una red se abre el
-              <b> login oficial</b> de Meta, Google o TikTok (OAuth real).
+              Puedes empezar <b>solo pegando links</b> — la IA adapta el contenido, distribuye por WhatsApp y genera
+              copy listo para copiar. Conecta tus cuentas <b>solo si quieres publicación automática</b> en tus perfiles.
             </p>
-            <div className="mt-3 flex items-center gap-2 text-xs">
+            <div className="mt-3 flex items-center gap-2 text-xs flex-wrap">
               <Badge variant={conectadas >= 1 ? "default" : "secondary"}>
                 {conectadas}/4 conectadas
               </Badge>
-              {conectadas === 0 && (
-                <span className="text-amber-700">Conecta al menos una red para continuar</span>
+              {conectadas === 0 ? (
+                <span className="text-muted-foreground">Modo simple: links + IA + WhatsApp (sin OAuth)</span>
+              ) : (
+                <span className="text-green-700">Auto-publicación disponible en {conectadas} red{conectadas !== 1 ? "es" : ""}</span>
               )}
             </div>
             <div className="grid sm:grid-cols-2 gap-3 mt-4">
@@ -417,7 +431,7 @@ function Onboarding() {
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-sm">{RED_LABELS[a.red]}</div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {ok ? a.nombre_cuenta : "Toca para conectar"}
+                        {ok ? a.nombre_cuenta : "Opcional — toca para conectar"}
                       </div>
                     </div>
                     {ok ? <Check className="w-5 h-5 text-success" /> : <span className="text-[10px] text-primary font-medium">Conectar</span>}
@@ -426,19 +440,18 @@ function Onboarding() {
               })}
             </div>
             <p className="text-[11px] text-muted-foreground mt-4">
-              Tip: conecta <b>Facebook</b> si vas a republicar posts desde links de FB (como GafCore).
+              Tip: <b>Facebook</b> conectado mejora la importación de posts de FB. Para IG, TikTok y YouTube basta con pegar el link público.
             </p>
-            <div className="flex justify-between mt-6">
+            <div className="flex justify-between mt-6 gap-2 flex-wrap">
               <Button variant="ghost" onClick={() => setStep(2)}>Atrás</Button>
-              <Button
-                onClick={() => {
-                  if (conectadas < 1) return toast.error("Conecta al menos una red social para continuar");
-                  setStep(4);
-                }}
-                className="bg-gradient-primary border-0"
-              >
-                Continuar ({conectadas} red{conectadas !== 1 ? "es" : ""})
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep(4)}>
+                  Saltar por ahora
+                </Button>
+                <Button onClick={() => setStep(4)} className="bg-gradient-primary border-0">
+                  {conectadas > 0 ? `Continuar (${conectadas} red${conectadas !== 1 ? "es" : ""})` : "Continuar al panel"}
+                </Button>
+              </div>
             </div>
           </Card>
         )}

@@ -40,7 +40,17 @@ const TEMPLATES: Record<Tono, string[]> = {
 const HASHTAGS = ["#LATAM", "#Emprende", "#Pymes", "#VenderEnLínea", "#Creadores", "#MarketingDigital"];
 const CTAS = ["Escríbenos por DM 💌", "Reserva ya por WhatsApp 📱", "Link en bio 👆", "Comenta YO y te escribimos 💜"];
 
-export async function generateCaptions(input: GenInput): Promise<string[]> {
+export async function generateCaptions(input: GenInput, industria?: string): Promise<string[]> {
+  try {
+    const { generateCaptionsAI } = await import("@/lib/api/ai.functions");
+    const ai = await generateCaptionsAI({
+      data: { idea: input.idea, tono: input.tono, industria },
+    });
+    if (ai.ok && ai.captions?.length) return ai.captions;
+  } catch {
+    /* fallback mock */
+  }
+
   await new Promise((r) => setTimeout(r, 600));
   return TEMPLATES[input.tono].map((tpl) => {
     let s = tpl.replace("{idea}", input.idea);

@@ -103,6 +103,17 @@ function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {!user?.onboarding_completado && (
+        <Card className="p-4 border-primary/30 bg-primary/5 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm">
+            <span className="font-medium">Tip:</span> Pega links en <strong>Crear publicación</strong> para empezar ya.
+            Opcional: <Link to="/onboarding" className="underline font-medium">completa tu perfil</Link> para mejores sugerencias de IA.
+          </div>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/publicar">Publicar un link</Link>
+          </Button>
+        </Card>
+      )}
       <div className="flex flex-wrap justify-between items-start gap-3">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Hola, {user?.nombre.split(" ")[0]} 👋</h1>

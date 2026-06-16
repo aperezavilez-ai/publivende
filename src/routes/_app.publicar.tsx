@@ -15,6 +15,9 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { publishPost, RED_LABELS, RED_LIMITS, RED_COLORS } from "@/services/social/mock";
+import { publishPostReal } from "@/lib/api/publish.functions";
+import { broadcastPostLink } from "@/services/whatsapp/mock";
+import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
 import { generateCaptions, type Tono } from "@/services/ai/mock";
 import {
   repurposeFromLink, detectPlatform, SOURCE_LABELS, fetchMetadataFromLink,
@@ -28,10 +31,19 @@ import {
   totalAlcanceIA,
   type ReachAIAnalysis,
 } from "@/lib/reach-ai";
+import { planificarDistribucionIA, totalCanales } from "@/lib/distribution-ai";
+import {
+  hashtagsFromAlcanceIA,
+  hashtagsFromVariants,
+  mergeHashtagMaps,
+  pickViralHashtags,
+} from "@/lib/hashtags-ai";
+import { saveDraftPost } from "@/lib/save-draft-post";
 import {
   Upload, Sparkles, FolderOpen, Instagram, Facebook, Youtube, Music2,
   Heart, MessageCircle as MC, Send, TrendingUp, FlaskConical, Eye, DollarSign,
   MessageSquare, Link2, Wand2, PenLine, Globe, MapPin, Users, BarChart3, AlertTriangle,
+  Hash, Radio,
 } from "lucide-react";
 import { toast } from "sonner";
 import { consumePublishDraft } from "@/lib/draft";
@@ -90,6 +102,9 @@ function Publicar() {
   const [importLoading, setImportLoading] = useState(false);
   const [adaptLoading, setAdaptLoading] = useState(false);
   const [reachFuente, setReachFuente] = useState<ReachAIAnalysis["fuente"] | null>(null);
+  const [draftPostId, setDraftPostId] = useState<string | undefined>();
+  const [notifyWhatsApp, setNotifyWhatsApp] = useState(true);
+  const waContactCount = useDB((db) => db.whatsapp_contacts.filter((c) => c.user_id === user?.id).length);
 
   useEffect(() => {
     const draft = consumePublishDraft();
@@ -244,7 +259,40 @@ function Publicar() {
       const first = redes[0];
       if (first) setActiveRedTab(first);
       setReachFuente("link_ia");
-      toast.success(`IA adaptó el contenido y calculó alcance por nicho en ${redes.length} red${redes.length > 1 ? "es" : ""}`);
+      const hashtags_por_red = hashtagsFromVariants(result.variants, redes);
+      const hashtags_virales = pickViralHashtags(hashtags_por_red);
+      const iaAlcance = analizarAlcanceIA({
+        alcance: alcanceActual,
+        redes,
+        calidadScore: prediccion?.score ?? 65,
+        industria: user?.industria ?? "general",
+        source: result.source,
+        copyPorRed: result.copyPorRed,
+        fuente: "link_ia",
+      });
+      const canales_distribucion = planificarDistribucionIA(
+        redes,
+        iaAlcance?.analysis.nicho ?? "default",
+        alcanceActual,
+      );
+      const saved = saveDraftPost({
+        user_id: user!.id,
+        draft_id: draftPostId,
+        tipo: result.source.mediaType ?? "imagen",
+        media_url: result.source.mediaUrl || media,
+        copy: result.copyPorRed[redes[0]!] ?? caption,
+        copy_por_red: result.copyPorRed,
+        source_url: result.source.url,
+        redes,
+        alcance: buildPostAlcance(),
+        hashtags_por_red,
+        hashtags_virales,
+        canales_distribucion,
+        nicho_label: iaAlcance?.analysis.nicho_label,
+        total_canales: totalCanales(canales_distribucion),
+      });
+      setDraftPostId(saved.id);
+      toast.success(`IA adaptó el contenido y lo guardó en Biblioteca (${redes.length} red${redes.length > 1 ? "es" : ""})`);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -324,6 +372,47 @@ function Publicar() {
     [alcancePorRed],
   );
 
+  const distribucionIA = useMemo(() => {
+    if (!redes.length) return null;
+    const nicho = reachAnalysis?.nicho ?? "default";
+    return planificarDistribucionIA(redes, nicho, alcanceActual);
+  }, [redes, reachAnalysis?.nicho, alcanceActual]);
+
+  const totalCanalesIA = useMemo(
+    () => (distribucionIA ? totalCanales(distribucionIA) : 0),
+    [distribucionIA],
+  );
+
+  function buildPublishMeta() {
+    const contentHint = [
+      sourceMeta?.originalCaption ?? "",
+      copy,
+      ...Object.values(copyPorRed),
+    ].filter(Boolean).join(" ");
+
+    const hashtags_por_red = mergeHashtagMaps(
+      hashtagsFromVariants(variants, redes),
+      alcanceIA
+        ? hashtagsFromAlcanceIA(alcanceIA.por_red, redes, user?.industria ?? "general", contentHint)
+        : {},
+    );
+
+    const hashtags_virales = pickViralHashtags(hashtags_por_red);
+    const canales_distribucion = distribucionIA ?? planificarDistribucionIA(
+      redes,
+      reachAnalysis?.nicho ?? "default",
+      alcanceActual,
+    );
+
+    return {
+      hashtags_por_red,
+      hashtags_virales,
+      canales_distribucion,
+      nicho_label: reachAnalysis?.nicho_label,
+      total_canales: totalCanales(canales_distribucion),
+    };
+  }
+
   async function publicar() {
     if (!user) return;
     if (!media) return toast.error("Sube una imagen o video");
@@ -342,6 +431,7 @@ function Publicar() {
     }
 
     const alcance = buildPostAlcance();
+    const meta = buildPublishMeta();
 
     if (abMode) {
       if (!copyB) return toast.error("Agrega el copy de la variante B");
@@ -364,7 +454,7 @@ function Publicar() {
       return;
     }
 
-    await publishPost({
+    const published = await publishPost({
       user_id: user.id,
       tipo: sourceMeta?.mediaType ?? "imagen",
       media_url: media,
@@ -374,10 +464,62 @@ function Publicar() {
       redes,
       alcance,
       programar: programar && fecha ? new Date(fecha).toISOString() : undefined,
+      draft_id: draftPostId,
+      ...meta,
     });
+
+    let realPublishErrors: string[] = [];
+    const sessionToken = getSessionToken();
+    if (isProductionModeClient() && sessionToken && !programar) {
+      const real = await publishPostReal({
+        data: {
+          token: sessionToken,
+          post: {
+            id: published.id,
+            draft_id: draftPostId,
+            tipo: sourceMeta?.mediaType ?? "imagen",
+            media_url: media,
+            copy: primaryCopy,
+            copy_por_red: isLinkMode ? copyPorRed : undefined,
+            source_url: sourceMeta?.url,
+            alcance,
+            redes,
+            tracking_slug: published.tracking_slug,
+            ...meta,
+          },
+          notifyWhatsApp,
+        },
+      });
+      if (real.ok) {
+        if (real.errors?.length) realPublishErrors = real.errors;
+        if (real.waSent) {
+          toast.success(`WhatsApp real: ${real.waSent} contacto${real.waSent > 1 ? "s" : ""} notificados`);
+        }
+      } else if (!real.useLocal && real.error) {
+        toast.warning(`Redes reales: ${real.error}`);
+      }
+    } else if (notifyWhatsApp && !programar) {
+      if (waContactCount === 0) {
+        toast.message("Sin contactos en CRM", {
+          description: "Publicación guardada. Cuando tengas contactos en WhatsApp CRM, podrás enviarles el link desde Biblioteca.",
+        });
+      } else {
+        const { sent } = await broadcastPostLink(user.id, published.id);
+        toast.success(`Link enviado a ${sent} contacto${sent > 1 ? "s" : ""} por WhatsApp CRM`);
+      }
+    }
+
+    if (realPublishErrors.length) {
+      toast.message("Algunas redes no publicaron", { description: realPublishErrors.join(" · ") });
+    }
+
     const n = redes.length;
-    toast.success(programar ? "Publicación programada 📅" : `¡Publicado en ${n} red${n > 1 ? "es" : ""}! 🎉`);
-    navigate({ to: "/dashboard" });
+    toast.success(
+      programar
+        ? "Publicación programada 📅 — guardada en Biblioteca"
+        : `¡Publicado en ${n} red${n > 1 ? "es" : ""}! Guardado en Biblioteca 🎉`,
+    );
+    navigate({ to: "/biblioteca" });
   }
 
   function charCountFor(red: Red): number {
@@ -425,7 +567,7 @@ function Publicar() {
           </p>
           <div className="mb-3 rounded-lg border p-3 text-xs space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium text-muted-foreground">Tus redes (conectadas en el registro)</span>
+              <span className="font-medium text-muted-foreground">Auto-publicación (opcional)</span>
               <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
                 <Link to="/configuracion">Gestionar conexiones</Link>
               </Button>
@@ -443,7 +585,7 @@ function Publicar() {
                   >
                     <Icon className="w-3 h-3" />
                     {RED_LABELS[r]}
-                    {ok ? ` · ${acc?.nombre_cuenta}` : " · sin conectar"}
+                    {ok ? ` · ${acc?.nombre_cuenta}` : " · copiar/pegar OK"}
                   </Badge>
                 );
               })}
@@ -527,6 +669,9 @@ function Publicar() {
                   caption={copy || sourceMeta.originalCaption}
                   mediaUrl={media}
                   mediaType={sourceMeta.mediaType}
+                  linkTitle={sourceMeta.title}
+                  linkDescription={sourceMeta.linkDescription}
+                  linkUrl={sourceMeta.url}
                 />
               ) : (
                 <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 text-center bg-primary/5">
@@ -742,7 +887,7 @@ function Publicar() {
                     <div className="flex-1">
                       <div className="font-medium">{RED_LABELS[r]}</div>
                       <div className="text-[10px] text-muted-foreground">
-                        {acc ? (connected ? acc.nombre_cuenta : "Demo — sin conectar") : "Disponible"}
+                        {acc ? (connected ? acc.nombre_cuenta : "Copy listo — conectar para auto-publicar") : "Disponible"}
                       </div>
                     </div>
                   </button>
@@ -752,12 +897,26 @@ function Publicar() {
           </Card>
 
           {!abMode && (
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-2">
-                <Label className="font-semibold">Programar</Label>
+            <Card className="p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="font-semibold">Programar</Label>
+                </div>
                 <Switch checked={programar} onCheckedChange={setProgramar} />
               </div>
               {programar && <Input type="datetime-local" value={fecha} onChange={(e) => setFecha(e.target.value)} />}
+              {!programar && (
+                <div className="flex items-start justify-between gap-3 pt-2 border-t">
+                  <div>
+                    <Label className="font-semibold text-sm">Enviar a contactos WhatsApp</Label>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      El CRM manda el link de la publicación a {waContactCount} contacto{waContactCount !== 1 ? "s" : ""}.
+                      Si responden, la IA contesta sobre esa publicación.
+                    </p>
+                  </div>
+                  <Switch checked={notifyWhatsApp} onCheckedChange={setNotifyWhatsApp} />
+                </div>
+              )}
             </Card>
           )}
 
@@ -1033,6 +1192,65 @@ function Publicar() {
                       {formatAlcanceNumero(totalAlcance.personas_min)}–{formatAlcanceNumero(totalAlcance.personas_max)} personas
                     </span>
                   </div>
+
+                  {distribucionIA && totalCanalesIA > 0 && (
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <Label className="text-xs font-semibold flex items-center gap-1.5 text-emerald-800 dark:text-emerald-200">
+                          <Radio className="w-3.5 h-3.5" />
+                          Distribución IA
+                        </Label>
+                        <Badge className="bg-emerald-600 text-[10px]">
+                          {totalCanalesIA} canales/grupos
+                        </Badge>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        La IA republicará tu contenido en estos canales según tu nicho y zona.
+                      </p>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                        {distribucionIA.map((c, i) => {
+                          const Icon = ICONS[c.red];
+                          return (
+                            <div key={`${c.red}-${c.canal}-${i}`} className="flex items-start gap-2 text-[10px]">
+                              <Icon className="w-3 h-3 shrink-0 mt-0.5" style={{ color: RED_COLORS[c.red] }} />
+                              <div className="flex-1 min-w-0">
+                                <span className="font-medium">{c.canal}</span>
+                                <span className="text-muted-foreground"> ×{c.cantidad}</span>
+                                <p className="text-muted-foreground truncate">{c.descripcion}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {(Object.keys(variants).length > 0 || alcancePorRed.length > 0) && (
+                    <div className="rounded-lg border border-pink-200 bg-pink-50/60 dark:bg-pink-950/20 p-3 space-y-2">
+                      <Label className="text-xs font-semibold flex items-center gap-1.5 text-pink-800 dark:text-pink-200">
+                        <Hash className="w-3.5 h-3.5" />
+                        Hashtags virales (IA)
+                      </Label>
+                      <div className="flex flex-wrap gap-1">
+                        {pickViralHashtags(
+                          mergeHashtagMaps(
+                            hashtagsFromVariants(variants, redes),
+                            hashtagsFromAlcanceIA(
+                              alcancePorRed,
+                              redes,
+                              user?.industria ?? "general",
+                              [sourceMeta?.originalCaption, copy, ...Object.values(copyPorRed)].filter(Boolean).join(" "),
+                            ),
+                          ),
+                        ).map((h) => (
+                          <Badge key={h} variant="outline" className="text-[9px] border-pink-300 text-pink-800">
+                            {h}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <p className="text-[10px] text-muted-foreground leading-relaxed">
                     La IA detectó el nicho del {publishMode === "link" ? "link" : "contenido"}, ajustó el alcance por afinidad de cada red
                     ({alcanceTipo === "local" ? `${radioKm} km en ${ciudadSel}` : "alcance global"}) y mercados donde se compartirá.
@@ -1075,6 +1293,9 @@ function Publicar() {
                   caption={getPreviewCopy(r) || copy || sourceMeta.originalCaption}
                   mediaUrl={media}
                   mediaType={sourceMeta.mediaType}
+                  linkTitle={sourceMeta.title}
+                  linkDescription={sourceMeta.linkDescription}
+                  linkUrl={sourceMeta.url}
                   compact
                   className="border-0 rounded-none shadow-none"
                 />

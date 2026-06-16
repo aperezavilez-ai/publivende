@@ -107,11 +107,16 @@ const AVATARS = (n: string) => `https://api.dicebear.com/7.x/avataaars/svg?seed=
 export function initMinimalUser(userId: string, nombreNegocio: string) {
   const db = loadDB();
   if (db.social_accounts.some((a) => a.user_id === userId)) return;
-  const handle = nombreNegocio.toLowerCase().replace(/\s+/g, "").slice(0, 12) || "minegocio";
+  const labels: Record<Red, string> = {
+    instagram: "Conectar Instagram",
+    tiktok: "Conectar TikTok",
+    facebook: "Conectar Facebook",
+    youtube: "Conectar YouTube",
+  };
   REDES.forEach((red) => {
     db.social_accounts.push({
       id: uid(), user_id: userId, red,
-      nombre_cuenta: `@${handle}_${red.slice(0, 2)}`,
+      nombre_cuenta: labels[red],
       avatar: AVATARS(red),
       estado_conexion: "desconectada",
       token_placeholder: "",
@@ -122,16 +127,18 @@ export function initMinimalUser(userId: string, nombreNegocio: string) {
 
 export function seedForUser(userId: string) {
   const db = loadDB();
-  // social accounts (mock, desconectadas)
-  REDES.forEach((red) => {
-    db.social_accounts.push({
-      id: uid(), user_id: userId, red,
-      nombre_cuenta: `@minegocio_${red}`,
-      avatar: AVATARS(red),
-      estado_conexion: "desconectada",
-      token_placeholder: "",
+  // social accounts (mock, desconectadas) — solo si el usuario aún no tiene
+  if (!db.social_accounts.some((a) => a.user_id === userId)) {
+    REDES.forEach((red) => {
+      db.social_accounts.push({
+        id: uid(), user_id: userId, red,
+        nombre_cuenta: `@minegocio_${red}`,
+        avatar: AVATARS(red),
+        estado_conexion: "desconectada",
+        token_placeholder: "",
+      });
     });
-  });
+  }
 
   // 20 posts en los últimos 60 días
   const now = Date.now();

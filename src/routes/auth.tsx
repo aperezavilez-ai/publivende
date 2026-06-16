@@ -42,7 +42,7 @@ function AuthPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      navigate({ to: user.onboarding_completado ? "/dashboard" : "/onboarding" });
+      navigate({ to: "/dashboard" });
     }
   }, [user, loading, navigate]);
 
@@ -55,13 +55,13 @@ function AuthPage() {
     setLoadingForm(true);
     try {
       if (mode === "login") {
-        const loggedIn = await signIn(form.email, form.password);
+        await signIn(form.email, form.password);
         toast.success("¡Bienvenido de vuelta!");
-        navigate({ to: loggedIn.onboarding_completado ? "/dashboard" : "/onboarding" });
+        navigate({ to: "/dashboard" });
       } else {
         const profile = await signUp({ ...form, plan: selectedPlan });
         toast.success(`Cuenta creada con plan ${planLabel(profile.plan)} 🎉`);
-        navigate({ to: "/onboarding" });
+        navigate({ to: "/dashboard" });
       }
     } catch (err) {
       toast.error((err as Error).message);
@@ -78,7 +78,7 @@ function AuthPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-hero">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-between mb-6">
-          <PubliVendeLogo to="/" size="lg" textClassName="text-white text-xl" />
+          <PubliVendeLogo to="/" size="lg" showText textClassName="text-white text-xl" />
           <a href="/#precios">
             <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 gap-1">
               <ArrowLeft className="w-4 h-4" />

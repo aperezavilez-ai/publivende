@@ -14,7 +14,6 @@ function AppLayout() {
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { mode: "login", plan: "free" } });
-    else if (!loading && user && !user.onboarding_completado) navigate({ to: "/onboarding" });
   }, [user, loading, navigate]);
 
   if (loading || !user) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Cargando…</div>;

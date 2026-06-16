@@ -1,12 +1,13 @@
 import process from "node:process";
 
 import { providerForRed as providerForRedShared, type OAuthProvider } from "./providers";
+import { resolveAppBaseUrl } from "@/lib/app-url";
 
 export type { OAuthProvider };
 export { providerForRedShared as providerForRed };
 
 export function getAppBaseUrl(): string {
-  return (process.env.VITE_APP_URL ?? process.env.APP_URL ?? "http://localhost:8083").replace(/\/$/, "");
+  return resolveAppBaseUrl();
 }
 
 export function getOAuthStateSecret(): string {

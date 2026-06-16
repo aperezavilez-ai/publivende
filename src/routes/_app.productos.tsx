@@ -30,7 +30,7 @@ function Prods() {
     const limit = PLAN_LIMITS[user.plan].productos;
     if (productos.length >= limit) return toast.error(`Tu plan permite máximo ${limit} productos`);
     if (!form.nombre || !form.precio) return toast.error("Nombre y precio requeridos");
-    const provider = user.pago_provider_default ?? "mercadopago";
+    const provider = user.pago_provider_default ?? "stripe";
     const cobro = generarLinkCobro({
       provider,
       monto: form.precio,

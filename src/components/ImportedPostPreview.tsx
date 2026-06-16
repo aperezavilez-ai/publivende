@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Facebook, Instagram, Music2, Youtube, Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
+import { Facebook, Instagram, Music2, Youtube, Heart, MessageCircle, Share2, MoreHorizontal, Link2, ExternalLink } from "lucide-react";
 import type { Red, TipoPost } from "@/lib/mock/types";
 import type { SourcePlatform } from "@/services/import/detectPlatform";
 import { RED_COLORS, RED_LABELS } from "@/services/social/mock";
@@ -13,12 +13,27 @@ const PLATFORM_ICONS = {
   youtube: Youtube,
 } as const;
 
+function linkDomain(url?: string): string {
+  if (!url) return "";
+  try {
+    return new URL(url).hostname.replace(/^www\./i, "");
+  } catch {
+    return url;
+  }
+}
+
 interface ImportedPostPreviewProps {
   platform: SourcePlatform | Red;
   pageName?: string;
   caption: string;
   mediaUrl?: string;
   mediaType?: TipoPost;
+  /** Título OG del enlace compartido. */
+  linkTitle?: string;
+  /** Descripción OG del enlace compartido. */
+  linkDescription?: string;
+  /** URL que se compartirá en redes. */
+  linkUrl?: string;
   compact?: boolean;
   className?: string;
 }
@@ -29,6 +44,9 @@ export function ImportedPostPreview({
   caption,
   mediaUrl,
   mediaType = "imagen",
+  linkTitle,
+  linkDescription,
+  linkUrl,
   compact = false,
   className = "",
 }: ImportedPostPreviewProps) {
@@ -73,9 +91,10 @@ export function ImportedPostPreview({
   }, [mediaUrl]);
 
   const showMedia = !!displayUrl && !mediaFailed;
-  const lines = caption.trim().split("\n").filter(Boolean);
-  const headline = lines[0] ?? "Post importado";
-  const body = lines.slice(1).join("\n");
+  const domain = linkDomain(linkUrl);
+  const previewTitle = linkTitle?.trim() || pageName || RED_LABELS[platform as Red] || "Enlace compartido";
+  const previewDescription = linkDescription?.trim() || caption.trim();
+  const hasLinkPreview = !!(linkTitle || linkDescription || linkUrl);
 
   return (
     <div className={`rounded-xl border overflow-hidden bg-white dark:bg-card shadow-sm ${className}`}>
@@ -94,7 +113,7 @@ export function ImportedPostPreview({
       </div>
 
       {loading && (
-        <div className={`${compact ? "h-40" : "aspect-square"} bg-muted animate-pulse flex items-center justify-center text-xs text-muted-foreground`}>
+        <div className={`${compact ? "h-40" : "aspect-video"} bg-muted animate-pulse flex items-center justify-center text-xs text-muted-foreground`}>
           Cargando media del post…
         </div>
       )}
@@ -107,24 +126,49 @@ export function ImportedPostPreview({
         <img
           src={displayUrl}
           alt=""
-          className={`w-full ${compact ? "max-h-56" : "aspect-square"} object-cover bg-muted`}
+          className={`w-full ${compact ? "max-h-56" : "aspect-video"} object-cover bg-muted`}
           onError={() => setMediaFailed(true)}
         />
       )}
 
-      {!loading && !showMedia && (
-        <div
-          className={`${compact ? "p-4" : "p-6 aspect-square flex flex-col justify-center"} bg-gradient-to-br from-violet-600/90 to-indigo-800/90 text-white`}
-        >
-          <p className={`font-bold ${compact ? "text-base" : "text-xl"} leading-tight`}>{headline}</p>
-          {body && <p className={`mt-2 opacity-90 whitespace-pre-wrap ${compact ? "text-xs" : "text-sm"}`}>{body}</p>}
-          {mediaFailed && (
-            <p className="text-[10px] mt-3 opacity-75">Imagen no disponible — conecta la red o usa link directo del post.</p>
-          )}
+      {!loading && !showMedia && hasLinkPreview && (
+        <div className={`border-b bg-muted/30 ${compact ? "" : ""}`}>
+          <div className={`${compact ? "h-28" : "aspect-[1.91/1]"} bg-muted/60 flex items-center justify-center border-b`}>
+            <Link2 className={`${compact ? "w-8 h-8" : "w-12 h-12"} text-muted-foreground/50`} />
+          </div>
+          <div className={`${compact ? "p-3" : "p-4"} space-y-1 bg-muted/20`}>
+            {domain && (
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">{domain}</p>
+            )}
+            <p className={`font-semibold leading-snug ${compact ? "text-sm line-clamp-2" : "text-base line-clamp-2"}`}>
+              {previewTitle}
+            </p>
+            {previewDescription && (
+              <p className={`text-muted-foreground whitespace-pre-wrap ${compact ? "text-xs line-clamp-3" : "text-sm line-clamp-4"}`}>
+                {previewDescription}
+              </p>
+            )}
+            {linkUrl && (
+              <p className="text-[10px] text-primary truncate flex items-center gap-1 pt-1">
+                <ExternalLink className="w-3 h-3 shrink-0" />
+                {linkUrl}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
-      {(showMedia || compact) && caption && (
+      {!loading && !showMedia && !hasLinkPreview && (
+        <div
+          className={`${compact ? "p-4" : "p-6 aspect-video flex flex-col justify-center"} bg-muted/40 text-foreground`}
+        >
+          <p className={`font-medium ${compact ? "text-sm" : "text-base"} text-muted-foreground`}>
+            Sin vista previa del enlace. Pega el texto o sube la imagen del post.
+          </p>
+        </div>
+      )}
+
+      {caption && (
         <div className="p-3 space-y-2">
           <p className={`whitespace-pre-wrap ${compact ? "text-xs line-clamp-4" : "text-sm"}`}>
             <span className="font-semibold">{pageName ?? RED_LABELS[platform as Red]} </span>

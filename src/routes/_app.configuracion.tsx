@@ -16,13 +16,24 @@ import { PLAN_LIMITS } from "@/lib/mock/types";
 import { planLabel } from "@/lib/plans";
 import { toast } from "sonner";
 import { ArrowLeft, ExternalLink, Trash2 } from "lucide-react";
+import { ConnectWhatsApp } from "@/components/whatsapp/ConnectWhatsApp";
 
 export const Route = createFileRoute("/_app/configuracion")({ component: Conf });
 
 function Conf() {
   const { user, updateUser, signOut } = useAuth();
   const navigate = useNavigate();
-  const accounts = useDB((db) => db.social_accounts.filter((a) => a.user_id === user?.id));
+  const accounts = useDB((db) => {
+    const mine = db.social_accounts.filter((a) => a.user_id === user?.id);
+    const byRed = new Map<string, (typeof mine)[0]>();
+    for (const a of mine) {
+      const prev = byRed.get(a.red);
+      if (!prev || (a.estado_conexion === "conectada" && prev.estado_conexion !== "conectada")) {
+        byRed.set(a.red, a);
+      }
+    }
+    return Array.from(byRed.values());
+  });
   const posts = useDB((db) => db.posts.filter((p) => p.user_id === user?.id && p.estado === "publicado"));
   const contacts = useDB((db) => db.whatsapp_contacts.filter((c) => c.user_id === user?.id));
   const reglas = useDB((db) => db.automation_rules.filter((r) => r.user_id === user?.id));
@@ -80,9 +91,19 @@ function Conf() {
       </Card>
 
       <Card className="p-5">
-        <h2 className="font-semibold mb-1">Cuentas conectadas</h2>
+        <h2 className="font-semibold mb-1">WhatsApp Business</h2>
+        <p className="text-xs text-muted-foreground mb-4">
+          Conecta <b>tu</b> número. Tus clientes te escriben directo a tu WhatsApp — PubliVende genera los enlaces
+          y textos al publicar.
+        </p>
+        <ConnectWhatsApp />
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="font-semibold mb-1">Auto-publicación en redes (opcional)</h2>
         <p className="text-xs text-muted-foreground mb-3">
-          Conexión real vía OAuth. Al pulsar <b>Conectar</b> se abre el login oficial de Meta, Google o TikTok.
+          No es necesario para usar PubliVende. Conecta solo si quieres que publiquemos directo en tus perfiles.
+          Para empezar, basta con pegar links en <b>Publicar</b>.
         </p>
         {oauthReady && !oauthReady.meta && !oauthReady.google && !oauthReady.tiktok && (
           <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50/80 p-3 text-xs text-amber-900">

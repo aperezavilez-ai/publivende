@@ -1,0 +1,24 @@
+{
+  "name": "@publivende/sdk",
+  "version": "0.1.0",
+  "description": "Cliente TypeScript para la API de plataforma PubliVende",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["publivende", "social-media", "whatsapp", "api"],
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  }
+}

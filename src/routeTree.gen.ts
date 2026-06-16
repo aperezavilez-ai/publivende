@@ -16,10 +16,13 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TiendaSlugRouteImport } from './routes/tienda.$slug'
+import { Route as PSlugRouteImport } from './routes/p.$slug'
+import { Route as ConnectPartnerSlugRouteImport } from './routes/connect.$partnerSlug'
 import { Route as AppWhatsappRouteImport } from './routes/_app.whatsapp'
 import { Route as AppRecetasRouteImport } from './routes/_app.recetas'
 import { Route as AppPublicarRouteImport } from './routes/_app.publicar'
 import { Route as AppProductosRouteImport } from './routes/_app.productos'
+import { Route as AppPlataformaRouteImport } from './routes/_app.plataforma'
 import { Route as AppInteligenciaRouteImport } from './routes/_app.inteligencia'
 import { Route as AppExperimentosRouteImport } from './routes/_app.experimentos'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -32,6 +35,11 @@ import { Route as AppAutomatizacionesRouteImport } from './routes/_app.automatiz
 import { Route as AppAnunciosRouteImport } from './routes/_app.anuncios'
 import { Route as AppAnaliticasRouteImport } from './routes/_app.analiticas'
 import { Route as OauthCallbackProviderRouteImport } from './routes/oauth.callback.$provider'
+import { Route as ApiWebhookWhatsappRouteImport } from './routes/api.webhook.whatsapp'
+import { Route as ApiV1PartnersUsersRouteImport } from './routes/api.v1.partners.users'
+import { Route as ApiV1PartnersPublishRouteImport } from './routes/api.v1.partners.publish'
+import { Route as ApiV1PartnersConnectRouteImport } from './routes/api.v1.partners.connect'
+import { Route as ApiV1PartnersUsersExternalIdConnectionsRouteImport } from './routes/api.v1.partners.users.$externalId.connections'
 
 const TerminosRoute = TerminosRouteImport.update({
   id: '/terminos',
@@ -67,6 +75,16 @@ const TiendaSlugRoute = TiendaSlugRouteImport.update({
   path: '/tienda/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PSlugRoute = PSlugRouteImport.update({
+  id: '/p/$slug',
+  path: '/p/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectPartnerSlugRoute = ConnectPartnerSlugRouteImport.update({
+  id: '/connect/$partnerSlug',
+  path: '/connect/$partnerSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppWhatsappRoute = AppWhatsappRouteImport.update({
   id: '/whatsapp',
   path: '/whatsapp',
@@ -85,6 +103,11 @@ const AppPublicarRoute = AppPublicarRouteImport.update({
 const AppProductosRoute = AppProductosRouteImport.update({
   id: '/productos',
   path: '/productos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlataformaRoute = AppPlataformaRouteImport.update({
+  id: '/plataforma',
+  path: '/plataforma',
   getParentRoute: () => AppRoute,
 } as any)
 const AppInteligenciaRoute = AppInteligenciaRouteImport.update({
@@ -147,6 +170,32 @@ const OauthCallbackProviderRoute = OauthCallbackProviderRouteImport.update({
   path: '/oauth/callback/$provider',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWebhookWhatsappRoute = ApiWebhookWhatsappRouteImport.update({
+  id: '/api/webhook/whatsapp',
+  path: '/api/webhook/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1PartnersUsersRoute = ApiV1PartnersUsersRouteImport.update({
+  id: '/api/v1/partners/users',
+  path: '/api/v1/partners/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1PartnersPublishRoute = ApiV1PartnersPublishRouteImport.update({
+  id: '/api/v1/partners/publish',
+  path: '/api/v1/partners/publish',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1PartnersConnectRoute = ApiV1PartnersConnectRouteImport.update({
+  id: '/api/v1/partners/connect',
+  path: '/api/v1/partners/connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1PartnersUsersExternalIdConnectionsRoute =
+  ApiV1PartnersUsersExternalIdConnectionsRouteImport.update({
+    id: '/$externalId/connections',
+    path: '/$externalId/connections',
+    getParentRoute: () => ApiV1PartnersUsersRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -165,12 +214,20 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/experimentos': typeof AppExperimentosRoute
   '/inteligencia': typeof AppInteligenciaRoute
+  '/plataforma': typeof AppPlataformaRoute
   '/productos': typeof AppProductosRoute
   '/publicar': typeof AppPublicarRoute
   '/recetas': typeof AppRecetasRoute
   '/whatsapp': typeof AppWhatsappRoute
+  '/connect/$partnerSlug': typeof ConnectPartnerSlugRoute
+  '/p/$slug': typeof PSlugRoute
   '/tienda/$slug': typeof TiendaSlugRoute
+  '/api/webhook/whatsapp': typeof ApiWebhookWhatsappRoute
   '/oauth/callback/$provider': typeof OauthCallbackProviderRoute
+  '/api/v1/partners/connect': typeof ApiV1PartnersConnectRoute
+  '/api/v1/partners/publish': typeof ApiV1PartnersPublishRoute
+  '/api/v1/partners/users': typeof ApiV1PartnersUsersRouteWithChildren
+  '/api/v1/partners/users/$externalId/connections': typeof ApiV1PartnersUsersExternalIdConnectionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -189,12 +246,20 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/experimentos': typeof AppExperimentosRoute
   '/inteligencia': typeof AppInteligenciaRoute
+  '/plataforma': typeof AppPlataformaRoute
   '/productos': typeof AppProductosRoute
   '/publicar': typeof AppPublicarRoute
   '/recetas': typeof AppRecetasRoute
   '/whatsapp': typeof AppWhatsappRoute
+  '/connect/$partnerSlug': typeof ConnectPartnerSlugRoute
+  '/p/$slug': typeof PSlugRoute
   '/tienda/$slug': typeof TiendaSlugRoute
+  '/api/webhook/whatsapp': typeof ApiWebhookWhatsappRoute
   '/oauth/callback/$provider': typeof OauthCallbackProviderRoute
+  '/api/v1/partners/connect': typeof ApiV1PartnersConnectRoute
+  '/api/v1/partners/publish': typeof ApiV1PartnersPublishRoute
+  '/api/v1/partners/users': typeof ApiV1PartnersUsersRouteWithChildren
+  '/api/v1/partners/users/$externalId/connections': typeof ApiV1PartnersUsersExternalIdConnectionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -215,12 +280,20 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/experimentos': typeof AppExperimentosRoute
   '/_app/inteligencia': typeof AppInteligenciaRoute
+  '/_app/plataforma': typeof AppPlataformaRoute
   '/_app/productos': typeof AppProductosRoute
   '/_app/publicar': typeof AppPublicarRoute
   '/_app/recetas': typeof AppRecetasRoute
   '/_app/whatsapp': typeof AppWhatsappRoute
+  '/connect/$partnerSlug': typeof ConnectPartnerSlugRoute
+  '/p/$slug': typeof PSlugRoute
   '/tienda/$slug': typeof TiendaSlugRoute
+  '/api/webhook/whatsapp': typeof ApiWebhookWhatsappRoute
   '/oauth/callback/$provider': typeof OauthCallbackProviderRoute
+  '/api/v1/partners/connect': typeof ApiV1PartnersConnectRoute
+  '/api/v1/partners/publish': typeof ApiV1PartnersPublishRoute
+  '/api/v1/partners/users': typeof ApiV1PartnersUsersRouteWithChildren
+  '/api/v1/partners/users/$externalId/connections': typeof ApiV1PartnersUsersExternalIdConnectionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -241,12 +314,20 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/experimentos'
     | '/inteligencia'
+    | '/plataforma'
     | '/productos'
     | '/publicar'
     | '/recetas'
     | '/whatsapp'
+    | '/connect/$partnerSlug'
+    | '/p/$slug'
     | '/tienda/$slug'
+    | '/api/webhook/whatsapp'
     | '/oauth/callback/$provider'
+    | '/api/v1/partners/connect'
+    | '/api/v1/partners/publish'
+    | '/api/v1/partners/users'
+    | '/api/v1/partners/users/$externalId/connections'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -265,12 +346,20 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/experimentos'
     | '/inteligencia'
+    | '/plataforma'
     | '/productos'
     | '/publicar'
     | '/recetas'
     | '/whatsapp'
+    | '/connect/$partnerSlug'
+    | '/p/$slug'
     | '/tienda/$slug'
+    | '/api/webhook/whatsapp'
     | '/oauth/callback/$provider'
+    | '/api/v1/partners/connect'
+    | '/api/v1/partners/publish'
+    | '/api/v1/partners/users'
+    | '/api/v1/partners/users/$externalId/connections'
   id:
     | '__root__'
     | '/'
@@ -290,12 +379,20 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/experimentos'
     | '/_app/inteligencia'
+    | '/_app/plataforma'
     | '/_app/productos'
     | '/_app/publicar'
     | '/_app/recetas'
     | '/_app/whatsapp'
+    | '/connect/$partnerSlug'
+    | '/p/$slug'
     | '/tienda/$slug'
+    | '/api/webhook/whatsapp'
     | '/oauth/callback/$provider'
+    | '/api/v1/partners/connect'
+    | '/api/v1/partners/publish'
+    | '/api/v1/partners/users'
+    | '/api/v1/partners/users/$externalId/connections'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -305,8 +402,14 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   PrivacidadRoute: typeof PrivacidadRoute
   TerminosRoute: typeof TerminosRoute
+  ConnectPartnerSlugRoute: typeof ConnectPartnerSlugRoute
+  PSlugRoute: typeof PSlugRoute
   TiendaSlugRoute: typeof TiendaSlugRoute
+  ApiWebhookWhatsappRoute: typeof ApiWebhookWhatsappRoute
   OauthCallbackProviderRoute: typeof OauthCallbackProviderRoute
+  ApiV1PartnersConnectRoute: typeof ApiV1PartnersConnectRoute
+  ApiV1PartnersPublishRoute: typeof ApiV1PartnersPublishRoute
+  ApiV1PartnersUsersRoute: typeof ApiV1PartnersUsersRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -360,6 +463,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TiendaSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/p/$slug': {
+      id: '/p/$slug'
+      path: '/p/$slug'
+      fullPath: '/p/$slug'
+      preLoaderRoute: typeof PSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connect/$partnerSlug': {
+      id: '/connect/$partnerSlug'
+      path: '/connect/$partnerSlug'
+      fullPath: '/connect/$partnerSlug'
+      preLoaderRoute: typeof ConnectPartnerSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/whatsapp': {
       id: '/_app/whatsapp'
       path: '/whatsapp'
@@ -386,6 +503,13 @@ declare module '@tanstack/react-router' {
       path: '/productos'
       fullPath: '/productos'
       preLoaderRoute: typeof AppProductosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/plataforma': {
+      id: '/_app/plataforma'
+      path: '/plataforma'
+      fullPath: '/plataforma'
+      preLoaderRoute: typeof AppPlataformaRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/inteligencia': {
@@ -472,6 +596,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OauthCallbackProviderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhook/whatsapp': {
+      id: '/api/webhook/whatsapp'
+      path: '/api/webhook/whatsapp'
+      fullPath: '/api/webhook/whatsapp'
+      preLoaderRoute: typeof ApiWebhookWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/partners/users': {
+      id: '/api/v1/partners/users'
+      path: '/api/v1/partners/users'
+      fullPath: '/api/v1/partners/users'
+      preLoaderRoute: typeof ApiV1PartnersUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/partners/publish': {
+      id: '/api/v1/partners/publish'
+      path: '/api/v1/partners/publish'
+      fullPath: '/api/v1/partners/publish'
+      preLoaderRoute: typeof ApiV1PartnersPublishRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/partners/connect': {
+      id: '/api/v1/partners/connect'
+      path: '/api/v1/partners/connect'
+      fullPath: '/api/v1/partners/connect'
+      preLoaderRoute: typeof ApiV1PartnersConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/partners/users/$externalId/connections': {
+      id: '/api/v1/partners/users/$externalId/connections'
+      path: '/$externalId/connections'
+      fullPath: '/api/v1/partners/users/$externalId/connections'
+      preLoaderRoute: typeof ApiV1PartnersUsersExternalIdConnectionsRouteImport
+      parentRoute: typeof ApiV1PartnersUsersRoute
+    }
   }
 }
 
@@ -487,6 +646,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppExperimentosRoute: typeof AppExperimentosRoute
   AppInteligenciaRoute: typeof AppInteligenciaRoute
+  AppPlataformaRoute: typeof AppPlataformaRoute
   AppProductosRoute: typeof AppProductosRoute
   AppPublicarRoute: typeof AppPublicarRoute
   AppRecetasRoute: typeof AppRecetasRoute
@@ -505,6 +665,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppExperimentosRoute: AppExperimentosRoute,
   AppInteligenciaRoute: AppInteligenciaRoute,
+  AppPlataformaRoute: AppPlataformaRoute,
   AppProductosRoute: AppProductosRoute,
   AppPublicarRoute: AppPublicarRoute,
   AppRecetasRoute: AppRecetasRoute,
@@ -513,6 +674,18 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface ApiV1PartnersUsersRouteChildren {
+  ApiV1PartnersUsersExternalIdConnectionsRoute: typeof ApiV1PartnersUsersExternalIdConnectionsRoute
+}
+
+const ApiV1PartnersUsersRouteChildren: ApiV1PartnersUsersRouteChildren = {
+  ApiV1PartnersUsersExternalIdConnectionsRoute:
+    ApiV1PartnersUsersExternalIdConnectionsRoute,
+}
+
+const ApiV1PartnersUsersRouteWithChildren =
+  ApiV1PartnersUsersRoute._addFileChildren(ApiV1PartnersUsersRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
@@ -520,8 +693,14 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   PrivacidadRoute: PrivacidadRoute,
   TerminosRoute: TerminosRoute,
+  ConnectPartnerSlugRoute: ConnectPartnerSlugRoute,
+  PSlugRoute: PSlugRoute,
   TiendaSlugRoute: TiendaSlugRoute,
+  ApiWebhookWhatsappRoute: ApiWebhookWhatsappRoute,
   OauthCallbackProviderRoute: OauthCallbackProviderRoute,
+  ApiV1PartnersConnectRoute: ApiV1PartnersConnectRoute,
+  ApiV1PartnersPublishRoute: ApiV1PartnersPublishRoute,
+  ApiV1PartnersUsersRoute: ApiV1PartnersUsersRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

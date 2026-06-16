@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
-const LOGO_SRC = "/logo-publivende.png";
+const LOGO_ICON_SRC = "/logo-icon.svg";
+const LOGO_FULL_SRC = "/logo-publivende.png";
 
 const HEIGHTS = {
   xs: "h-6",
@@ -16,15 +17,29 @@ type LogoSize = keyof typeof HEIGHTS;
 interface PubliVendeMarkProps {
   size?: LogoSize;
   className?: string;
+  /** Recorta el PNG completo (con texto) en lugar del icono SVG. */
+  variant?: "icon" | "full";
 }
 
-/** Logo PubliVende (imagen completa con nombre). */
-export function PubliVendeMark({ size = "md", className }: PubliVendeMarkProps) {
+/** Icono PubliVende sin esquinas blancas (SVG transparente). */
+export function PubliVendeMark({ size = "md", className, variant = "icon" }: PubliVendeMarkProps) {
+  if (variant === "full") {
+    return (
+      <span className={cn("inline-flex shrink-0 overflow-hidden rounded-[18%]", HEIGHTS[size], "aspect-square", className)}>
+        <img
+          src={LOGO_FULL_SRC}
+          alt="PubliVende"
+          className="h-full w-full object-cover object-top scale-[1.14]"
+        />
+      </span>
+    );
+  }
+
   return (
     <img
-      src={LOGO_SRC}
+      src={LOGO_ICON_SRC}
       alt="PubliVende"
-      className={cn(HEIGHTS[size], "w-auto object-contain shrink-0", className)}
+      className={cn(HEIGHTS[size], "w-auto aspect-square object-contain shrink-0", className)}
     />
   );
 }
@@ -69,4 +84,4 @@ export function PubliVendeLogo({
   return content;
 }
 
-export const PUBLIVENDE_LOGO_URL = LOGO_SRC;
+export const PUBLIVENDE_LOGO_URL = LOGO_ICON_SRC;

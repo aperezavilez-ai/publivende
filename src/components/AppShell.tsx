@@ -1,5 +1,5 @@
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, PlusSquare, Calendar, MessageCircle, Zap, BarChart3, Settings, LogOut, FolderOpen, Inbox, ShoppingBag, ChefHat, Menu, Megaphone, Brain, Target, Wifi, WifiOff, FlaskConical } from "lucide-react";
+import { LayoutDashboard, PlusSquare, Calendar, MessageCircle, Zap, BarChart3, Settings, LogOut, FolderOpen, Inbox, ShoppingBag, ChefHat, Menu, Megaphone, Brain, Target, Wifi, WifiOff, FlaskConical, Layers } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/mock/auth";
 import { Button } from "@/components/ui/button";
@@ -78,6 +78,21 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+          {user.is_admin && (
+            <Link
+              to="/plataforma"
+              onClick={() => setOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5",
+                pathname === "/plataforma"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              )}
+            >
+              <Layers className="w-4 h-4 shrink-0" />
+              Plataforma API
+            </Link>
+          )}
         </nav>
         <div className="p-3 border-t border-sidebar-border">
           <div className="flex items-center gap-2 px-2 py-2 mb-2">

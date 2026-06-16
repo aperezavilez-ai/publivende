@@ -1,4 +1,4 @@
-import { detectPlatform, type SourcePlatform } from "./detectPlatform";
+import { detectPlatform, SOURCE_LABELS, type SourcePlatform } from "./detectPlatform";
 import type { TipoPost } from "@/lib/mock/types";
 import { scrapeLinkOgTags } from "@/lib/api/link-metadata.functions";
 import { fetchFacebookPostContent } from "@/lib/api/facebook-post.functions";
@@ -48,6 +48,8 @@ export interface SourceMetadata {
   mediaUrl: string;
   mediaType: TipoPost;
   title?: string;
+  /** Descripción OG del enlace (preview al compartir). */
+  linkDescription?: string;
   fetchedFromLink: boolean;
   needsManualInput?: boolean;
   fetchWarning?: string;
@@ -139,6 +141,7 @@ export async function fetchMetadataFromLink(
           needsManualInput: false,
           pageName: graph.pageName ?? resolvedPageName,
           title: graph.title,
+          linkDescription: graph.caption,
           importSource: "graph_api",
         };
       }
@@ -154,6 +157,7 @@ export async function fetchMetadataFromLink(
           fetchWarning: buildPartialWarning("facebook", graph.pageName ?? resolvedPageName, "image"),
           pageName: graph.pageName ?? resolvedPageName,
           title: graph.title,
+          linkDescription: graph.caption,
           importSource: "graph_api",
         };
       }
@@ -183,6 +187,8 @@ export async function fetchMetadataFromLink(
 
     const { og } = result;
     const caption = pickCaption(og);
+    const linkTitle = og.title?.trim();
+    const linkDescription = og.description?.trim();
     let image = sanitizeMediaUrl(og.image);
     const useful = isUsefulOg(og);
 
@@ -223,14 +229,26 @@ export async function fetchMetadataFromLink(
     }
 
     const hasAll = !!caption && !!image;
+    const previewTitle =
+      linkTitle && !isLoginWallText(linkTitle)
+        ? linkTitle
+        : resolvedPageName
+          ? `Publicación de ${resolvedPageName}`
+          : SOURCE_LABELS[platform];
+    const previewDescription =
+      linkDescription && !isLoginWallText(linkDescription)
+        ? linkDescription
+        : caption || undefined;
+
     return {
       ...base(),
-      originalCaption: caption || (resolvedPageName ? `Contenido de ${resolvedPageName}` : ""),
+      originalCaption: caption || previewDescription || (resolvedPageName ? `Contenido de ${resolvedPageName}` : ""),
       mediaUrl: image,
       fetchedFromLink: useful,
       needsManualInput: !hasAll,
       fetchWarning: !hasAll ? buildPartialWarning(platform, resolvedPageName, !caption ? "text" : "image") : undefined,
-      title: platform === "youtube" ? (og.title ?? caption).slice(0, 70) : og.title,
+      title: platform === "youtube" ? (previewTitle ?? caption).slice(0, 70) : previewTitle,
+      linkDescription: previewDescription,
       importSource: "og_scrape",
     };
   } catch {
