@@ -1,13 +1,28 @@
 import OpenAI from "openai";
-import { getOpenAIKey } from "../config";
+import { getOpenAIKey, getGafcoreProxyProjectKey } from "../config";
 
 let client: OpenAI | null = null;
 
+// Ruteado via GafCore API Proxy (pool-cheap: Groq -> Cerebras -> GPTPRO4ALL
+// con fallback automatico). Si no hay project key del proxy configurada,
+// cae a OPENAI_API_KEY directo como respaldo.
 function getClient(): OpenAI {
   if (!client) {
-    const key = getOpenAIKey();
-    if (!key) throw new Error("OPENAI_API_KEY no configurada");
-    client = new OpenAI({ apiKey: key });
+    const proxyProjectKey = getGafcoreProxyProjectKey();
+    if (proxyProjectKey) {
+      client = new OpenAI({
+        apiKey: "gafcore-proxy", // no se usa: el proxy autentica via headers
+        baseURL: "https://gafcore-api-proxy.vercel.app/api/proxy/v1",
+        defaultHeaders: {
+          "x-project-key": proxyProjectKey,
+          "x-provider-id": "pool-cheap",
+        },
+      });
+    } else {
+      const key = getOpenAIKey();
+      if (!key) throw new Error("Ni GAFCORE_PROXY_PROJECT_KEY ni OPENAI_API_KEY estan configuradas");
+      client = new OpenAI({ apiKey: key });
+    }
   }
   return client;
 }

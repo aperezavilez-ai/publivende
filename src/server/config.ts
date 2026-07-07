@@ -20,6 +20,10 @@ export function getOpenAIKey(): string | undefined {
   return process.env.OPENAI_API_KEY;
 }
 
+export function getGafcoreProxyProjectKey(): string | undefined {
+  return process.env.GAFCORE_PROXY_PROJECT_KEY;
+}
+
 export function getWhatsAppConfig() {
   const token = process.env.WHATSAPP_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -45,7 +49,7 @@ export function isRealWhatsAppEnabled(): boolean {
 }
 
 export function isRealAIEnabled(): boolean {
-  return !!getOpenAIKey();
+  return !!getGafcoreProxyProjectKey() || !!getOpenAIKey();
 }
 
 export function isRealPaymentsEnabled(): boolean {
