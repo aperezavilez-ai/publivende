@@ -10,10 +10,10 @@ let db: any = null;
 let pgClient: postgres.Sql | null = null;
 
 function proxyConfiguration() {
-  const baseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!baseUrl || !serviceRoleKey) {
-    throw new Error("Base de datos no configurada. Define SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY.");
+  const baseUrl = (process.env.SUPABASE_URL || "https://publivende.gafcore.com").replace(/\/$/, "");
+  const serviceRoleKey = process.env.PUBLIVENDE_SQL_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    throw new Error("Base de datos no configurada. Define PUBLIVENDE_SQL_SECRET o SUPABASE_SERVICE_ROLE_KEY.");
   }
   return { url: `${baseUrl}/functions/v1/publivende-sql`, serviceRoleKey };
 }
@@ -39,8 +39,9 @@ export function getDb() {
     throw new Error("Base de datos no configurada. Define DATABASE_URL y SESSION_SECRET.");
   }
   if (!db) {
+    const isVercel = !!process.env.VERCEL;
     const databaseUrl = process.env.DATABASE_URL;
-    if (databaseUrl) {
+    if (databaseUrl && !isVercel) {
       pgClient = postgres(databaseUrl, {
         max: 10,
         idle_timeout: 20,
