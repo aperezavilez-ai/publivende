@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requirePlatformAdmin } from "@/lib/auth/require-platform-admin";
 import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/lib/mock/auth";
 import { useDB } from "@/lib/mock/useDB";
@@ -19,7 +20,10 @@ import { createCampaign, updateCampaign, deleteCampaign, generarKeywordsIA, gene
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import type { AdObjetivo, AdTipo } from "@/lib/mock/types";
 
-export const Route = createFileRoute("/_app/anuncios")({ component: Anuncios });
+export const Route = createFileRoute("/_app/anuncios")({
+  beforeLoad: () => requirePlatformAdmin(),
+  component: Anuncios,
+});
 
 const OBJETIVOS: Record<AdObjetivo, { label: string; icon: string; desc: string }> = {
   mensajes_whatsapp: { label: "Mensajes a WhatsApp", icon: "💬", desc: "Lleva clientes a tu WhatsApp para vender 1 a 1" },

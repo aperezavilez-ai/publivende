@@ -7,10 +7,33 @@ export async function sendMessage(
   texto: string,
   automatico = false,
   post_id?: string,
-) {
+  opts?: { localOnly?: boolean },
+): Promise<{ delivered: boolean; error?: string }> {
+  let id: string = uid();
+  let delivered = false;
+  let error: string | undefined;
+  if (!automatico && !opts?.localOnly) {
+    try {
+      const { getSessionToken, isProductionModeClient } = await import("@/lib/production/session");
+      const token = getSessionToken();
+      if (isProductionModeClient() && token) {
+        const { sendWhatsAppReplyServer } = await import("@/lib/api/whatsapp.functions");
+        const res = await sendWhatsAppReplyServer({ data: { token, contactId: contact_id, texto, postId: post_id } });
+        if (res.ok) {
+          delivered = true;
+          if (res.messageId) id = res.messageId;
+        } else {
+          error = res.error;
+        }
+      }
+    } catch {
+      /* se guarda solo localmente */
+    }
+  }
+
   const db = loadDB();
   db.whatsapp_messages.push({
-    id: uid(),
+    id,
     contact_id,
     direccion: "saliente",
     texto,
@@ -19,6 +42,7 @@ export async function sendMessage(
     timestamp: new Date().toISOString(),
   });
   saveDB(db);
+  return { delivered, error };
 }
 
 export async function updateContact(
@@ -36,7 +60,7 @@ export async function broadcastPostLink(
   userId: string,
   postId: string,
   opts?: { contactIds?: string[] },
-): Promise<{ sent: number; skipped: number }> {
+): Promise<{ sent: number; skipped: number; useWaMe?: boolean }> {
   try {
     const { getSessionToken, isProductionModeClient } = await import("@/lib/production/session");
     const token = getSessionToken();
@@ -67,7 +91,7 @@ export async function broadcastPostLink(
 
   let sent = 0;
   for (const contact of contacts) {
-    await sendMessage(contact.id, msg, false, post.id);
+    await sendMessage(contact.id, msg, false, post.id, { localOnly: true });
     if (!contact.post_origen_id) contact.post_origen_id = post.id;
     sent++;
   }

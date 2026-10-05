@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "threadId": "thread_1790803059865_fau56y",
+  "updatedAt": "2026-09-30T21:17:41.194Z",
+  "turns": [
+    {
+      "role": "user",
+      "content": "hola",
+      "at": 1790711051317
+    },
+    {
+      "role": "assistant",
+      "content": "Algo falló durante la ejecución: No pude autenticar el modelo. Revisa la API key en Modelos e intenta de nuevo.",
+      "at": 1790711051317
+    },
+    {
+      "role": "user",
+      "content": "que hora es?",
+      "at": 1790803059995
+    },
+    {
+      "role": "user",
+      "content": "que hora es?",
+      "at": 1790803061194
+    },
+    {
+      "role": "assistant",
+      "content": "Algo falló durante la ejecución: No pude autenticar el modelo. Revisa la API key en Modelos e intenta de nuevo.",
+      "at": 1790803061194
+    }
+  ],
+  "workingOn": "que hora es?"
+}

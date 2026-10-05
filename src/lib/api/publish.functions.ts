@@ -3,8 +3,28 @@ import { z } from "zod";
 import { isProductionMode } from "@/server/config";
 import { verifySessionToken } from "@/server/auth/crypto";
 import { publishForUser } from "@/server/publish/service";
+import { stageDataUrlMedia } from "@/server/publish/host-media";
 
 const redSchema = z.enum(["facebook", "instagram", "tiktok", "youtube"]);
+
+export const stagePublishMedia = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      token: z.string(),
+      dataUrl: z.string().min(32),
+    }),
+  )
+  .handler(async ({ data }) => {
+    if (!isProductionMode()) {
+      return { ok: false as const, error: "Requiere modo producción" };
+    }
+    const session = await verifySessionToken(data.token);
+    if (!session) return { ok: false as const, error: "Sesión inválida" };
+
+    const publicUrl = await stageDataUrlMedia(session.userId, data.dataUrl);
+    if (!publicUrl) return { ok: false as const, error: "No se pudo procesar la imagen" };
+    return { ok: true as const, publicUrl };
+  });
 
 export const publishPostReal = createServerFn({ method: "POST" })
   .inputValidator(
@@ -57,6 +77,7 @@ export const publishPostReal = createServerFn({ method: "POST" })
         ok: false as const,
         error: result.error ?? "Error al publicar",
         externalIds: result.externalIds,
+        surfaces: result.surfaces,
         errors: result.errors,
         useLocal: false,
       };
@@ -66,6 +87,7 @@ export const publishPostReal = createServerFn({ method: "POST" })
       ok: true as const,
       post: result.post!,
       externalIds: result.externalIds,
+      surfaces: result.surfaces,
       errors: result.errors,
       waSent: result.waSent,
       useLocal: false,

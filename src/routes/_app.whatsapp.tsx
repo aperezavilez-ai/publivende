@@ -13,6 +13,7 @@ import { sendMessage, updateContact } from "@/services/whatsapp/mock";
 import { processIncomingMessage } from "@/services/whatsapp/engine";
 import { generatePostAwareReply } from "@/services/whatsapp/post-reply";
 import { buildPostPageUrl } from "@/lib/whatsapp-post";
+import { isProductionModeClient } from "@/lib/production/session";
 import {
   reproducirAudio,
   detenerAudio,
@@ -23,7 +24,9 @@ import {
   startRecording,
   type VoiceRecorder,
 } from "@/services/voice/mock";
-import { Bot, Send, ShoppingBag, Sparkles, Mic, Play, Square, Flame, MicOff, Filter, DollarSign, Copy as CopyIcon, ExternalLink } from "lucide-react";
+import { Bot, Send, ShoppingBag, Sparkles, Mic, Play, Square, Flame, MicOff, Filter, DollarSign, Copy as CopyIcon, ExternalLink, ArrowLeft, Info, Settings } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { EtapaLead, PagoProvider } from "@/lib/mock/types";
 import { generarLinkCobro, PROVIDER_LABEL, parseCobrarCommand, type CobroLink } from "@/lib/payments";
@@ -45,7 +48,16 @@ function WA() {
   const posts = useDB((db) => db.posts.filter((p) => p.user_id === user?.id));
   const productos = useDB((db) => db.productos.filter((p) => p.user_id === user?.id && p.activo));
   const [selId, setSelId] = useState<string | null>(null);
+  const [mobilePanel, setMobilePanel] = useState<"list" | "chat">("list");
+  const [detailOpen, setDetailOpen] = useState(false);
   const sel = contacts.find((c) => c.id === selId);
+
+  const selectContact = (id: string) => {
+    setSelId(id);
+    const c = contacts.find((x) => x.id === id);
+    if (c?.no_leidos) updateContact(id, { no_leidos: 0 });
+    setMobilePanel("chat");
+  };
   const selPost = sel?.post_origen_id ? posts.find((p) => p.id === sel.post_origen_id) : undefined;
 
   useEffect(() => {
@@ -55,6 +67,10 @@ function WA() {
   useEffect(() => {
     if (contacts.length > 0 && !selId) setSelId(contacts[0].id);
   }, [contacts, selId]);
+
+  useEffect(() => {
+    if (contacts.length === 0) setMobilePanel("list");
+  }, [contacts.length]);
   const [onlyAudio, setOnlyAudio] = useState(false);
   const chat = useMemo(() => {
     const list = messages.filter((m) => m.contact_id === selId);
@@ -83,20 +99,28 @@ function WA() {
     setCobroMonto(monto); setCobroDesc(desc); setCobroLink(null); setCobroOpen(true);
   }
 
-  function generarCobro() {
+  async function generarCobro() {
     const monto = Number(cobroMonto);
     if (!Number.isFinite(monto) || monto <= 0) return toast.error("Monto inválido");
-    const link = generarLinkCobro({ provider: cobroProvider, monto, moneda: cobroMoneda, descripcion: cobroDesc || "Pago PubliVende" });
+    const link = await generarLinkCobro({ provider: cobroProvider, monto, moneda: cobroMoneda, descripcion: cobroDesc || "Pago PubliVende" });
     setCobroLink(link);
     toast.success(`Link de cobro generado vía ${PROVIDER_LABEL[cobroProvider]}`);
+  }
+
+  function avisarSiNoEntregado(r: { delivered: boolean; error?: string }) {
+    if (!r.delivered && r.error && isProductionModeClient()) {
+      toast.warning(`Guardado en el CRM, pero no se envió por WhatsApp: ${r.error}`);
+      return true;
+    }
+    return false;
   }
 
   async function enviarLinkCobro() {
     if (!cobroLink || !selId) return;
     const msg = `💳 *Link de pago seguro*\n${cobroLink.descripcion}\n*Total:* $${cobroLink.monto} ${cobroLink.moneda}\nVía ${PROVIDER_LABEL[cobroLink.provider]}\n\n👉 ${cobroLink.url}\n\nRef: ${cobroLink.referencia}`;
-    await sendMessage(selId, msg);
+    const r = await sendMessage(selId, msg);
     setCobroOpen(false);
-    toast.success("Link enviado al cliente 💸");
+    if (!avisarSiNoEntregado(r)) toast.success("Link enviado al cliente 💸");
   }
 
   async function enviar() {
@@ -108,8 +132,9 @@ function WA() {
       abrirCobro(String(cmd.monto), cmd.descripcion);
       return;
     }
-    await sendMessage(selId, txt);
+    const r = await sendMessage(selId, txt);
     setTxt("");
+    avisarSiNoEntregado(r);
   }
 
   async function enviarAudioTTS() {
@@ -229,6 +254,7 @@ function WA() {
       origen: lastPost ? `Broadcast: ${lastPost.copy.slice(0, 40)}…` : "Reel de Instagram (demo)",
     });
     setSelId(result.contact.id);
+    setMobilePanel("chat");
     toast.success(result.autoReplies.length
       ? `IA respondió sobre la publicación (${result.autoReplies.length} mensaje${result.autoReplies.length > 1 ? "s" : ""})`
       : "Contacto creado en CRM");
@@ -237,9 +263,52 @@ function WA() {
   async function enviarProducto(pid: string) {
     const p = productos.find((x) => x.id === pid);
     if (!p || !selId) return;
-    await sendMessage(selId, `🛍️ *${p.nombre}*\n💰 $${p.precio} ${p.moneda}\n${p.descripcion}\n\n👉 Compra aquí: ${p.link_pago}`);
-    toast.success("Producto enviado");
+    const r = await sendMessage(selId, `🛍️ *${p.nombre}*\n💰 $${p.precio} ${p.moneda}\n${p.descripcion}\n\n👉 Compra aquí: ${p.link_pago}`);
+    if (!avisarSiNoEntregado(r)) toast.success("Producto enviado");
   }
+
+  const contactDetailPanel = sel ? (
+    <div>
+      <div className="font-semibold">{sel.nombre}</div>
+      <div className="text-xs text-muted-foreground">{sel.celular}</div>
+      <div className="mt-4 space-y-3">
+        <div><label className="text-xs text-muted-foreground">Etapa</label>
+          <Select value={sel.etapa} onValueChange={(v) => updateContact(sel.id, { etapa: v })}>
+            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>{ETAPAS.map((e) => <SelectItem key={e} value={e} className="capitalize">{e}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        {sel.etapa === "ganado" && (
+          <div><label className="text-xs text-muted-foreground">Monto venta (MXN)</label>
+            <Input type="number" value={sel.monto_venta ?? ""} onChange={(e) => updateContact(sel.id, { monto_venta: Number(e.target.value) })} />
+          </div>
+        )}
+        <div><label className="text-xs text-muted-foreground">Origen</label>
+          <div className="text-sm bg-accent rounded px-2 py-1">{sel.origen}</div>
+          {selPost && (
+            <div className="mt-2 rounded-lg border p-2 text-xs space-y-1">
+              <p className="font-semibold text-[10px] uppercase text-muted-foreground">Publicación vinculada</p>
+              <p className="line-clamp-3">{selPost.copy}</p>
+              <a
+                href={buildPostPageUrl(selPost.tracking_slug)}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary flex items-center gap-1 hover:underline"
+              >
+                <ExternalLink className="w-3 h-3" /> Ver publicación
+              </a>
+            </div>
+          )}
+          {sel.post_origen_id && !selPost && (
+            <div className="text-[10px] text-success mt-1">✓ Atribuido a publicación</div>
+          )}
+        </div>
+        <div><label className="text-xs text-muted-foreground">Notas</label>
+          <Textarea rows={4} value={sel.notas} onChange={(e) => updateContact(sel.id, { notas: e.target.value })} />
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div className="space-y-4">
@@ -257,20 +326,25 @@ function WA() {
       )}
 
       {view === "inbox" ? (
-        <div className="grid lg:grid-cols-[280px_1fr_280px] gap-3 h-[calc(100vh-12rem)]">
-          <Card className="overflow-y-auto">
+        <div className="grid lg:grid-cols-[280px_1fr_280px] gap-3 h-[calc(100dvh-11rem)] lg:h-[calc(100vh-12rem)]">
+          <Card className={cn(
+            "overflow-y-auto min-h-0",
+            mobilePanel === "chat" ? "hidden lg:block" : "block",
+          )}>
             {contacts.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground space-y-3">
-                <p>Tu CRM se llena solo cuando clientes escriben por WhatsApp.</p>
-                <p className="text-xs">Completa el onboarding con tus productos para activar respuestas automáticas.</p>
-                {user?.onboarding_completado ? (
-                  <Button size="sm" variant="outline" onClick={simularCliente}>
-                    Simular cliente que pregunta precio
-                  </Button>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={() => navigate({ to: "/onboarding" })}>
-                    Completar configuración
-                  </Button>
+                <p>Tu CRM se llena cuando clientes escriben por WhatsApp o cuando publicas con WhatsApp activo.</p>
+                <p className="text-xs">Conecta tu número en Configuración para recibir mensajes reales.</p>
+                <Button size="sm" variant="outline" onClick={() => navigate({ to: "/configuracion" })} className="gap-1">
+                  <Settings className="w-3.5 h-3.5" />Conectar WhatsApp
+                </Button>
+                <Button size="sm" variant="outline" onClick={simularCliente}>
+                  Simular cliente que pregunta precio
+                </Button>
+                {!user?.onboarding_completado && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Tip: completa el onboarding cuando quieras activar respuestas automáticas con tus productos.
+                  </p>
                 )}
                 {user?.is_admin && (
                   <Button size="sm" variant="ghost" onClick={() => {
@@ -281,8 +355,8 @@ function WA() {
                 )}
               </div>
             ) : contacts.map((c) => (
-              <button key={c.id} onClick={() => { setSelId(c.id); if (c.no_leidos) updateContact(c.id, { no_leidos: 0 }); }}
-                className={`w-full text-left p-3 border-b hover:bg-muted ${selId === c.id ? "bg-accent" : ""}`}>
+              <button key={c.id} onClick={() => selectContact(c.id)}
+                className={`w-full text-left p-3 border-b hover:bg-muted active:bg-muted/80 ${selId === c.id ? "bg-accent" : ""}`}>
                 <div className="flex justify-between items-start"><div className="font-semibold text-sm">{c.nombre}</div>
                   {c.no_leidos > 0 && <span className="bg-whatsapp text-white text-[10px] rounded-full px-1.5 min-w-5 text-center">{c.no_leidos}</span>}
                 </div>
@@ -299,33 +373,57 @@ function WA() {
             ))}
           </Card>
 
-          <Card className="flex flex-col overflow-hidden">
-            {sel ? (<div className="flex flex-col h-full">
-              <div className="p-3 border-b bg-whatsapp/10 flex items-center justify-between">
-                <div className="font-semibold">{sel.nombre} <span className="text-xs text-muted-foreground font-normal">· {sel.celular}</span></div>
+          <Card className={cn(
+            "flex flex-col overflow-hidden min-h-0",
+            mobilePanel === "list" ? "hidden lg:flex" : "flex",
+          )}>
+            {sel ? (<div className="flex flex-col h-full min-h-0">
+              <div className="p-2.5 lg:p-3 border-b bg-whatsapp/10 flex items-center gap-2 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="lg:hidden shrink-0 h-9 w-9"
+                  onClick={() => setMobilePanel("list")}
+                  aria-label="Volver a conversaciones"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm truncate">{sel.nombre}</div>
+                  <div className="text-[11px] text-muted-foreground truncate">{sel.celular}</div>
+                </div>
                 <button
                   onClick={() => setOnlyAudio((v) => !v)}
-                  className={`text-[11px] flex items-center gap-1 px-2 py-1 rounded ${onlyAudio ? "bg-whatsapp text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                  className={`text-[11px] flex items-center gap-1 px-2 py-1 rounded shrink-0 ${onlyAudio ? "bg-whatsapp text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
                 >
-                  <Filter className="w-3 h-3" />Solo audios
+                  <Filter className="w-3 h-3" /><span className="hidden sm:inline">Solo audios</span>
                 </button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="lg:hidden shrink-0 h-9 w-9"
+                  onClick={() => setDetailOpen(true)}
+                  aria-label="Detalle del contacto"
+                >
+                  <Info className="w-4 h-4" />
+                </Button>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-muted/30">
+              <div className="flex-1 overflow-y-auto p-3 lg:p-4 space-y-2 bg-muted/30 min-h-0">
                 {chat.length === 0 && <div className="text-center text-xs text-muted-foreground py-8">Sin mensajes en este filtro.</div>}
                 {chat.map((m) => (
                   <div key={m.id} className={`flex ${m.direccion === "saliente" ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${m.direccion === "saliente" ? "bg-whatsapp text-white" : "bg-white border"}`}>
+                    <div className={`max-w-[88%] sm:max-w-[75%] rounded-2xl px-3 py-2 text-sm ${m.direccion === "saliente" ? "bg-whatsapp text-white" : "bg-white border shadow-sm"}`}>
                       {m.tipo_media === "audio" ? (
                         <div className="space-y-1">
                           {m.audio_url ? (
-                            <audio controls src={m.audio_url} className="w-56 h-9" />
+                            <audio controls src={m.audio_url} className="w-full max-w-56 h-9" />
                           ) : (
                             <div className="flex items-center gap-2">
                               <button onClick={() => togglePlay(m.id, m.texto, m.audio_url)} className={`w-7 h-7 rounded-full flex items-center justify-center ${m.direccion === "saliente" ? "bg-white/20" : "bg-whatsapp/20"}`}>
                                 {playingId === m.id ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                               </button>
                               <div className="flex-1">
-                                <div className="h-1 rounded bg-current/30 w-32" />
+                                <div className="h-1 rounded bg-current/30 w-24 sm:w-32" />
                                 <div className="text-[10px] opacity-70 mt-1">🎤 {m.duracion_seg ?? 5}s {!ttsOK && "(sin TTS)"}</div>
                               </div>
                             </div>
@@ -340,91 +438,74 @@ function WA() {
                           )}
                         </div>
                       ) : (
-                        <div className="whitespace-pre-wrap">{m.texto}</div>
+                        <div className="whitespace-pre-wrap break-words">{m.texto}</div>
                       )}
                       <div className="text-[10px] opacity-70 mt-1 flex items-center gap-1 justify-end">{m.automatico && <Bot className="w-3 h-3" />}{new Date(m.timestamp).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</div>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="p-3 border-t space-y-2">
-                <div className="flex gap-2 flex-wrap">
-                  <Button size="sm" variant="outline" onClick={sugerirIA} className="gap-1"><Sparkles className="w-3 h-3" />Sugerir IA</Button>
-                  <Button size="sm" variant="outline" onClick={enviarAudioTTS} disabled={!txt || !ttsOK} className="gap-1" title={!ttsOK ? "TTS no soportado" : "Convertir el texto en audio"}>
-                    <Mic className="w-3 h-3" />Enviar como audio
+              <div className="shrink-0 border-t bg-card p-2 lg:p-3 space-y-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+                  <Button size="sm" variant="outline" onClick={sugerirIA} className="gap-1 shrink-0 h-9"><Sparkles className="w-3 h-3" />IA</Button>
+                  <Button size="sm" variant="outline" onClick={enviarAudioTTS} disabled={!txt || !ttsOK} className="gap-1 shrink-0 h-9" title={!ttsOK ? "TTS no soportado" : "Convertir el texto en audio"}>
+                    <Mic className="w-3 h-3" />Audio
                   </Button>
                   {recOK && !recording && (
-                    <Button size="sm" variant="outline" onClick={comenzarGrabacion} className="gap-1">
+                    <Button size="sm" variant="outline" onClick={comenzarGrabacion} className="gap-1 shrink-0 h-9">
                       <Mic className="w-3 h-3" />Grabar
                     </Button>
                   )}
                   {recording && (
                     <>
-                      <Button size="sm" onClick={detenerYEnviar} className="gap-1 bg-red-500 hover:bg-red-600 animate-pulse">
-                        <Square className="w-3 h-3" />Detener y enviar
+                      <Button size="sm" onClick={detenerYEnviar} className="gap-1 bg-red-500 hover:bg-red-600 animate-pulse shrink-0 h-9">
+                        <Square className="w-3 h-3" />Enviar
                       </Button>
-                      <Button size="sm" variant="outline" onClick={cancelarGrabacion} className="gap-1">
+                      <Button size="sm" variant="outline" onClick={cancelarGrabacion} className="gap-1 shrink-0 h-9">
                         <MicOff className="w-3 h-3" />Cancelar
                       </Button>
                     </>
                   )}
-                  <Select onValueChange={enviarProducto}><SelectTrigger className="w-44 h-9"><div className="flex items-center gap-1 text-sm"><ShoppingBag className="w-3 h-3" />Enviar producto</div></SelectTrigger>
+                  <Select onValueChange={enviarProducto}>
+                    <SelectTrigger className="w-36 sm:w-44 h-9 shrink-0"><div className="flex items-center gap-1 text-sm truncate"><ShoppingBag className="w-3 h-3 shrink-0" /><span className="truncate">Producto</span></div></SelectTrigger>
                     <SelectContent>{productos.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombre} - ${p.precio}</SelectItem>)}</SelectContent>
                   </Select>
-                  <Button size="sm" variant="outline" onClick={() => abrirCobro()} className="gap-1 border-green-500 text-green-700 hover:bg-green-50">
+                  <Button size="sm" variant="outline" onClick={() => abrirCobro()} className="gap-1 border-green-500 text-green-700 hover:bg-green-50 shrink-0 h-9">
                     <DollarSign className="w-3 h-3" />Cobrar
                   </Button>
                 </div>
-                <div className="flex gap-2">
-                  <Textarea rows={2} value={txt} onChange={(e) => setTxt(e.target.value)} placeholder='Escribe un mensaje… (tip: "/cobrar 350 Blusa floral")' />
-                  <Button onClick={enviar} size="icon" className="bg-whatsapp hover:bg-whatsapp/90 h-auto"><Send className="w-4 h-4" /></Button>
+                <div className="flex gap-2 items-end">
+                  <Textarea
+                    rows={1}
+                    value={txt}
+                    onChange={(e) => setTxt(e.target.value)}
+                    placeholder='Mensaje… ("/cobrar 350 Blusa")'
+                    className="min-h-[44px] max-h-28 resize-none flex-1 text-base lg:text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        enviar();
+                      }
+                    }}
+                  />
+                  <Button onClick={enviar} size="icon" className="bg-whatsapp hover:bg-whatsapp/90 h-11 w-11 shrink-0 rounded-full"><Send className="w-4 h-4" /></Button>
                 </div>
               </div>
-            </div>) : <div className="flex-1 flex items-center justify-center text-muted-foreground">Selecciona una conversación</div>}
+            </div>) : <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm p-6 text-center">Selecciona una conversación</div>}
           </Card>
 
-          <Card className="p-4 overflow-y-auto">
-            {sel && (<div>
-              <div className="font-semibold">{sel.nombre}</div>
-              <div className="text-xs text-muted-foreground">{sel.celular}</div>
-              <div className="mt-4 space-y-3">
-                <div><label className="text-xs text-muted-foreground">Etapa</label>
-                  <Select value={sel.etapa} onValueChange={(v) => updateContact(sel.id, { etapa: v })}>
-                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>{ETAPAS.map((e) => <SelectItem key={e} value={e} className="capitalize">{e}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                {sel.etapa === "ganado" && (
-                  <div><label className="text-xs text-muted-foreground">Monto venta (MXN)</label>
-                    <Input type="number" value={sel.monto_venta ?? ""} onChange={(e) => updateContact(sel.id, { monto_venta: Number(e.target.value) })} />
-                  </div>
-                )}
-                <div><label className="text-xs text-muted-foreground">Origen</label>
-                  <div className="text-sm bg-accent rounded px-2 py-1">{sel.origen}</div>
-                  {selPost && (
-                    <div className="mt-2 rounded-lg border p-2 text-xs space-y-1">
-                      <p className="font-semibold text-[10px] uppercase text-muted-foreground">Publicación vinculada</p>
-                      <p className="line-clamp-3">{selPost.copy}</p>
-                      <a
-                        href={buildPostPageUrl(selPost.tracking_slug)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-primary flex items-center gap-1 hover:underline"
-                      >
-                        <ExternalLink className="w-3 h-3" /> Ver publicación
-                      </a>
-                    </div>
-                  )}
-                  {sel.post_origen_id && !selPost && (
-                    <div className="text-[10px] text-success mt-1">✓ Atribuido a publicación</div>
-                  )}
-                </div>
-                <div><label className="text-xs text-muted-foreground">Notas</label>
-                  <Textarea rows={4} value={sel.notas} onChange={(e) => updateContact(sel.id, { notas: e.target.value })} />
-                </div>
-              </div>
-            </div>)}
+          <Card className="p-4 overflow-y-auto hidden lg:block min-h-0">
+            {contactDetailPanel}
           </Card>
+
+          <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
+            <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-2xl">
+              <SheetHeader>
+                <SheetTitle>Detalle del contacto</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4">{contactDetailPanel}</div>
+            </SheetContent>
+          </Sheet>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -435,7 +516,8 @@ function WA() {
                 {contacts.filter((c) => c.etapa === etapa).map((c) => (
                   <div key={c.id} draggable
                     onDragStart={(e) => e.dataTransfer.setData("id", c.id)}
-                    className="p-2 bg-card border rounded text-xs cursor-move">
+                    onClick={() => { selectContact(c.id); setView("inbox"); }}
+                    className="p-2 bg-card border rounded text-xs cursor-pointer lg:cursor-move active:bg-muted/50">
                     <div className="font-semibold">{c.nombre}</div>
                     <div className="text-muted-foreground truncate">{c.origen}</div>
                     {c.monto_venta && <div className="text-success font-semibold mt-1">${c.monto_venta}</div>}

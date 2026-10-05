@@ -10,13 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Upload, Trash2, Instagram, Facebook, Youtube, Music2,
-  Hash, Radio, Sparkles, FileImage, Calendar, CheckCircle2, Clock, Pencil, MessageCircle, Copy, Send,
+  Hash, Radio, Sparkles, FileImage, Calendar, CheckCircle2, Clock, Pencil, AlertTriangle, MessageCircle, Copy, Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Post, Red, EstadoPost } from "@/lib/mock/types";
 import { RED_COLORS, RED_LABELS } from "@/services/social/mock";
 import { broadcastPostLink } from "@/services/whatsapp/mock";
 import { buildPostPageUrl } from "@/lib/whatsapp-post";
+import { postStatusLabel } from "@/lib/publish-status";
 import { isProductionModeClient, getSessionToken } from "@/lib/production/session";
 import { listCalendarPosts } from "@/lib/api/calendar.functions";
 
@@ -244,7 +245,8 @@ function PublicationCard({
                 {post.estado === "publicado" && <CheckCircle2 className="w-3 h-3 mr-1" />}
                 {post.estado === "programado" && <Clock className="w-3 h-3 mr-1" />}
                 {post.estado === "borrador" && <Pencil className="w-3 h-3 mr-1" />}
-                {ESTADO_LABELS[post.estado]}
+                {post.estado === "error" && <AlertTriangle className="w-3 h-3 mr-1" />}
+                {postStatusLabel(post)}
               </Badge>
               {post.nicho_label && (
                 <Badge variant="secondary" className="text-[10px] gap-1">
@@ -299,7 +301,7 @@ function PublicationCard({
             <div className="space-y-1.5 rounded-lg border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 p-2.5">
               <p className="text-[10px] font-semibold text-emerald-800 dark:text-emerald-200 flex items-center gap-1">
                 <Radio className="w-3 h-3" />
-                Distribución IA — {post.total_canales ?? post.canales_distribucion.reduce((s, c) => s + c.cantidad, 0)} canales/grupos
+                Canales sugeridos — {post.total_canales ?? post.canales_distribucion.reduce((s, c) => s + c.cantidad, 0)} ideas
               </p>
               <div className="grid sm:grid-cols-2 gap-1">
                 {post.canales_distribucion.map((c, i) => {
@@ -324,6 +326,45 @@ function PublicationCard({
 
           {(post.estado === "publicado" || post.estado === "programado") && (
             <div className="flex flex-wrap gap-2 pt-1">
+              {post.estado === "publicado" && isProductionModeClient() && (
+                <Button asChild size="sm" variant="default" className="h-8 gap-1 text-xs">
+                  <Link to="/distribuir" search={{ post: post.id }}>
+                    <Radio className="w-3 h-3" /> Ver distribución
+                  </Link>
+                </Button>
+              )}
+              {post.copy_por_red && Object.entries(post.copy_por_red).map(([red, text]) => {
+                const r = red as Red;
+                const Icon = ICONS[r];
+                return (
+                  <Button
+                    key={red}
+                    size="sm"
+                    variant="secondary"
+                    className="h-8 gap-1 text-xs"
+                    onClick={() => {
+                      navigator.clipboard.writeText(text);
+                      toast.success(`Copy de ${RED_LABELS[r]} copiado`);
+                    }}
+                  >
+                    <Icon className="w-3 h-3" style={{ color: RED_COLORS[r] }} />
+                    Copiar {RED_LABELS[r]}
+                  </Button>
+                );
+              })}
+              {!post.copy_por_red && post.estado === "publicado" && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-8 gap-1 text-xs"
+                  onClick={() => {
+                    navigator.clipboard.writeText(post.copy);
+                    toast.success("Copy copiado");
+                  }}
+                >
+                  <Copy className="w-3 h-3" />Copiar texto
+                </Button>
+              )}
               <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={onBroadcast}>
                 <Send className="w-3 h-3" />
                 Enviar a {waContactCount} contacto{waContactCount !== 1 ? "s" : ""} WA

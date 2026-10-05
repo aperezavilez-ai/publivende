@@ -57,7 +57,7 @@ function Landing() {
               <Sparkles className="w-3 h-3" /> Paso 1 — Elige tu plan
             </div>
             <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight max-w-3xl mx-auto">
-              Publica en todas tus redes y vende por <span className="text-gradient">WhatsApp</span>
+              Publica en todas tus redes y vende por <span className="text-[#25D366]">WhatsApp</span>
             </h1>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
               Selecciona un paquete y crea tu cuenta. Al registrarte accedes al panel para conectar redes, importar posts y publicar con IA.
@@ -79,7 +79,7 @@ function Landing() {
             <Music2 className="w-6 h-6" />
             <Facebook className="w-6 h-6" />
             <Youtube className="w-6 h-6" />
-            <MessageCircle className="w-6 h-6 text-whatsapp" />
+            <MessageCircle className="w-6 h-6 text-[#25D366]" />
           </div>
           <p className="mt-4 text-sm">
             Onboarding guiado → conectas tus redes → importas un link → publicas en el panel
@@ -94,15 +94,23 @@ function Landing() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { i: Upload, t: "1. Importa o crea", d: "Pega el link de un post o sube media. La IA adapta el copy por red." },
-              { i: Share2, t: "2. Publica en todas", d: "Instagram, TikTok, Facebook y YouTube desde un solo panel." },
-              { i: MessageCircle, t: "3. Vende por WhatsApp", d: "CRM, automatizaciones y catálogo con respuestas IA." },
+              { i: Upload, t: "1. Importa o crea", d: "Pega el link de un post o sube media. La IA adapta el copy por red.", wa: false },
+              { i: Share2, t: "2. Publica en todas", d: "Instagram, TikTok, Facebook y YouTube desde un solo panel.", wa: false },
+              { i: MessageCircle, t: "3. Vende por WhatsApp", d: "CRM, automatizaciones y catálogo con respuestas IA.", wa: true },
             ].map((s) => (
               <Card key={s.t} className="p-6 hover:shadow-elegant transition-shadow">
                 <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center mb-4">
                   <s.i className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="font-bold text-lg mb-2">{s.t}</h3>
+                <h3 className="font-bold text-lg mb-2">
+                  {s.wa ? (
+                    <>
+                      3. Vende por <span className="text-[#25D366]">WhatsApp</span>
+                    </>
+                  ) : (
+                    s.t
+                  )}
+                </h3>
                 <p className="text-sm text-muted-foreground">{s.d}</p>
               </Card>
             ))}
@@ -117,16 +125,24 @@ function Landing() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { i: BarChart3, t: "Atribución contenido → venta", d: "Cada post genera un link/QR único de WhatsApp." },
-              { i: Bot, t: "Vendedor IA con tu catálogo", d: "Responde, recomienda y manda link de pago 24/7." },
-              { i: Zap, t: "Recetas por industria LATAM", d: "Ropa, belleza, comida… Listo en minutos." },
+              { i: BarChart3, t: "Atribución contenido → venta", d: "Cada post genera un link/QR único de WhatsApp.", wa: true },
+              { i: Bot, t: "Vendedor IA con tu catálogo", d: "Responde, recomienda y manda link de pago 24/7.", wa: false },
+              { i: Zap, t: "Recetas por industria LATAM", d: "Ropa, belleza, comida… Listo en minutos.", wa: false },
             ].map((d) => (
               <div key={d.t} className="text-center">
                 <div className="w-14 h-14 mx-auto rounded-2xl bg-accent flex items-center justify-center mb-4">
                   <d.i className="w-7 h-7 text-primary" />
                 </div>
                 <h3 className="font-bold mb-2">{d.t}</h3>
-                <p className="text-sm text-muted-foreground">{d.d}</p>
+                <p className="text-sm text-muted-foreground">
+                  {d.wa ? (
+                    <>
+                      Cada post genera un link/QR único de <span className="text-[#25D366] font-medium">WhatsApp</span>.
+                    </>
+                  ) : (
+                    d.d
+                  )}
+                </p>
               </div>
             ))}
           </div>

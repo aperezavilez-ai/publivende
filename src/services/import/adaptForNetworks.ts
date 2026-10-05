@@ -9,6 +9,7 @@ export interface NetworkVariant {
   hashtags: string[];
   title?: string;
   tags?: string[];
+  hook?: string;
 }
 
 const CTAS = [
@@ -27,7 +28,7 @@ function stripHashtags(text: string): string {
   return text.replace(/#\w+/g, "").replace(/\s+/g, " ").trim();
 }
 
-function buildInstagram(caption: string, hashtags: string[], tono: Tono): string {
+function buildInstagramFallback(caption: string, hashtags: string[], tono: Tono): string {
   const body = stripHashtags(caption);
   const hook = body.split(/[.!?]/)[0]?.trim() || body.slice(0, 80);
   const rest = body.slice(hook.length).trim();
@@ -37,7 +38,7 @@ function buildInstagram(caption: string, hashtags: string[], tono: Tono): string
   return truncate(copy, RED_LIMITS.instagram);
 }
 
-function buildFacebook(caption: string, hashtags: string[], tono: Tono): string {
+function buildFacebookFallback(caption: string, hashtags: string[], tono: Tono): string {
   const body = stripHashtags(caption);
   let copy = `${body}\n\n¿Te gustaría que te enviemos más info? Déjanos un comentario 👇\n\n${CTAS[1]}`;
   if (tono === "profesional") copy = `${body}\n\nCalidad garantizada y atención personalizada.\n\n${CTAS[1]}`;
@@ -45,13 +46,13 @@ function buildFacebook(caption: string, hashtags: string[], tono: Tono): string 
   return truncate(copy, RED_LIMITS.facebook);
 }
 
-function buildTikTok(caption: string, hashtags: string[]): string {
+function buildTikTokFallback(caption: string, hashtags: string[]): string {
   const body = stripHashtags(caption).slice(0, 120);
   const tags = hashtags.slice(0, 8).join(" ");
   return truncate(`${body} ${tags}`, RED_LIMITS.tiktok);
 }
 
-function buildYouTube(caption: string, hashtags: string[], title?: string): NetworkVariant {
+function buildYouTubeFallback(caption: string, hashtags: string[], title?: string): NetworkVariant {
   const body = stripHashtags(caption);
   const ytTitle = truncate(title ?? body.split("|")[0]?.trim() ?? body.slice(0, 60), 70);
   const tags = hashtags.slice(0, 10);
@@ -73,29 +74,69 @@ export async function adaptForNetworks(
   industria: string,
   tono: Tono = "casual",
 ): Promise<Partial<Record<Red, NetworkVariant>>> {
-  await new Promise((r) => setTimeout(r, 1100));
-
-  const result: Partial<Record<Red, NetworkVariant>> = {};
   const base = source.originalCaption.trim();
+
+  // 1. Intentar llamar al motor de IA real (Claude Haiku 4.5 vía MeAI)
+  try {
+    const { adaptMultiNetworkAI } = await import("@/lib/api/ai.functions");
+    const aiRes = await adaptMultiNetworkAI({
+      data: {
+        sourceCaption: base,
+        title: source.title,
+        redes: targets,
+        industria,
+        tono,
+        negocio: source.pageName,
+      },
+    });
+
+    if (aiRes.ok && aiRes.result?.variants) {
+      const aiVariants = aiRes.result.variants;
+      const result: Partial<Record<Red, NetworkVariant>> = {};
+
+      for (const red of targets) {
+        const v = aiVariants[red];
+        if (v && v.copy) {
+          result[red] = {
+            copy: v.copy,
+            hook: v.hook,
+            hashtags: v.hashtags || [],
+            title: v.title,
+            tags: v.tags,
+          };
+        }
+      }
+
+      // Si obtuvimos al menos una variante de IA, retornamos
+      if (Object.keys(result).length > 0) {
+        return result;
+      }
+    }
+  } catch (err) {
+    console.warn("Fallo temporal de IA, aplicando motor de contingencia:", err);
+  }
+
+  // 2. Fallback por reglas heurísticas
+  const result: Partial<Record<Red, NetworkVariant>> = {};
   const contentHint = [base, source.title ?? "", source.pageName ?? ""].filter(Boolean).join(" ");
 
   for (const red of targets) {
     const hashtags = getNicheHashtags(industria, red, undefined, contentHint);
 
     if (red === "youtube") {
-      result.youtube = buildYouTube(base, hashtags, source.title);
+      result.youtube = buildYouTubeFallback(base, hashtags, source.title);
       continue;
     }
     if (red === "instagram") {
-      result.instagram = { copy: buildInstagram(base, hashtags, tono), hashtags };
+      result.instagram = { copy: buildInstagramFallback(base, hashtags, tono), hashtags };
       continue;
     }
     if (red === "facebook") {
-      result.facebook = { copy: buildFacebook(base, hashtags, tono), hashtags };
+      result.facebook = { copy: buildFacebookFallback(base, hashtags, tono), hashtags };
       continue;
     }
     if (red === "tiktok") {
-      result.tiktok = { copy: buildTikTok(base, hashtags), hashtags };
+      result.tiktok = { copy: buildTikTokFallback(base, hashtags), hashtags };
     }
   }
 

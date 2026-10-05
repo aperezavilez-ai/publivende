@@ -22,6 +22,59 @@ export interface ScheduleMeta {
     leads_min: number;
     leads_max: number;
   };
+  /** Publicación creada por el piloto automático. */
+  autopilot?: {
+    estado: "pendiente" | "aprobado";
+    /** "auto" = programado por el modo automático; se reemplaza si se regenera la semana. */
+    aprobado_por?: "cliente" | "auto";
+    fuente: "ia" | "reglas";
+    formula?: string;
+    /** Falta el medio: el cliente debe grabar el video o subir la foto antes de aprobar. */
+    requiere_media?: "video" | "imagen";
+    generado_at: string;
+  };
+}
+
+export type AutopilotModo = "aprobar" | "automatico";
+
+export interface AutopilotSettings {
+  activo: boolean;
+  modo: AutopilotModo;
+  posts_semana: number;
+  redes: Red[];
+  ultima_generacion?: string | null;
+}
+
+export type BenchmarkMetric =
+  | "posts_30d"
+  | "engagement_pct"
+  | "video_pct"
+  | "leads_por_mil_vistas"
+  | "respuesta_mediana_min"
+  | "tasa_cierre_pct"
+  | "score";
+
+export interface BenchmarkStat {
+  p25: number;
+  p50: number;
+  p75: number;
+  n: number;
+}
+
+export interface HookInsight {
+  rasgo: string;
+  label: string;
+  /** Interacción con el rasgo ÷ interacción sin él (1.8 = 80% más). */
+  lift: number;
+  posts: number;
+}
+
+export interface NicheBenchmark {
+  nicho: string;
+  negocios: number;
+  metricas: Partial<Record<BenchmarkMetric, BenchmarkStat>>;
+  ganchos: HookInsight[];
+  actualizado_at: string;
 }
 export type TipoPost = "imagen" | "video" | "texto";
 export type PagoProvider = "mercadopago" | "payu" | "wompi" | "kushki" | "stripe" | "manual";
@@ -96,14 +149,27 @@ export interface Post {
   hashtags_por_red?: Partial<Record<Red, string[]>>;
   /** Top hashtags virales para el producto/servicio. */
   hashtags_virales?: string[];
-  /** Canales y grupos donde la IA distribuirá el contenido. */
+  /** Superficies de las cuentas conectadas donde se publica el contenido. */
   canales_distribucion?: CanalDistribucion[];
   nicho_label?: string;
   total_canales?: number;
   /** Último envío masivo por WhatsApp CRM. */
   whatsapp_enviado_at?: string;
   whatsapp_broadcast_count?: number;
+  /** IDs en la API de la red (solo si auto-publicó con OAuth). */
+  external_ids?: Partial<Record<Red, string>>;
+  /** Detalle por superficie: feed, reel, grupo, etc. */
+  publish_surfaces?: PublishSurfaceResult[];
   schedule_meta?: ScheduleMeta;
+}
+
+export interface PublishSurfaceResult {
+  red: Red;
+  surface: string;
+  channel_name?: string;
+  external_id?: string;
+  ok: boolean;
+  error?: string;
 }
 
 export interface PostMetric {
@@ -116,6 +182,28 @@ export interface PostMetric {
   compartidos: number;
   seguidores_ganados: number;
   mensajes_generados: number;
+  alcance?: number | null;
+  guardados?: number | null;
+  clics?: number | null;
+  /** "real" = leída de la API de la red; ausente = estimada o demo. */
+  fuente?: "real";
+  actualizado_at?: string;
+}
+
+export interface AccountSnapshot {
+  red: Red;
+  fecha: string;
+  seguidores: number;
+  publicaciones?: number | null;
+  vistas_totales?: number | null;
+}
+
+export interface MetricsSyncStatus {
+  red: Red;
+  conectada: boolean;
+  synced_at?: string | null;
+  error?: string | null;
+  reconectar?: boolean;
 }
 
 export interface WaContact {
@@ -274,6 +362,8 @@ export interface DB {
   social_accounts: SocialAccount[];
   posts: Post[];
   post_metrics: PostMetric[];
+  account_snapshots?: AccountSnapshot[];
+  metrics_sync?: MetricsSyncStatus[];
   whatsapp_contacts: WaContact[];
   whatsapp_messages: WaMessage[];
   automation_rules: AutomationRule[];
@@ -284,6 +374,10 @@ export interface DB {
   ad_metrics: AdMetric[];
   marketplace_recetas: MarketplaceReceta[];
   ab_experiments?: ABExperiment[];
+  brain_reports?: import("@/lib/brain/plan").BrainReport[];
+  /** Configuración local del piloto automático (modo demo; en producción vive en Postgres). */
+  autopilot_settings?: Record<string, AutopilotSettings>;
+  niche_benchmark?: NicheBenchmark | null;
   session_user_id: string | null;
 }
 

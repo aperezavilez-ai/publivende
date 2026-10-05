@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "threadId": "thread_1790706636894_alb5dh",
+  "updatedAt": "2026-09-29T18:30:42.362Z",
+  "turns": [
+    {
+      "role": "user",
+      "content": "hola",
+      "at": 1790706637082
+    },
+    {
+      "role": "user",
+      "content": "hola",
+      "at": 1790706642361
+    },
+    {
+      "role": "assistant",
+      "content": "Hola!\n\nTodo bien por acá.\n\n¿En qué te ayudo con Publivende?",
+      "at": 1790706642361
+    }
+  ],
+  "workingOn": "hola"
+}

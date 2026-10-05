@@ -1,14 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { completeOAuthCallback } from "@/lib/api/oauth.functions";
-import { saveOAuthTokenServer } from "@/lib/api/auth.functions";
-import { connectAccountOAuth } from "@/services/social/mock";
-import { useAuth } from "@/lib/mock/auth";
-import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
+import { OAuthCallbackView } from "@/components/oauth/OAuthCallbackView";
+import type { OAuthProvider } from "@/lib/oauth/providers";
 import { Card } from "@/components/ui/card";
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { XCircle } from "lucide-react";
 import { PubliVendeMark } from "@/components/PubliVendeLogo";
 
 const searchSchema = z.object({
@@ -29,138 +25,22 @@ function OAuthCallbackPage() {
   const { provider } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
-  const [message, setMessage] = useState("Completando conexión…");
-  const [returnTo, setReturnTo] = useState("/configuracion");
-  const ran = useRef(false);
 
-  useEffect(() => {
-    if (ran.current) return;
-    ran.current = true;
-
-    async function run() {
-      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-      const code = search.code ?? hashParams.get("code") ?? undefined;
-      const state = search.state ?? hashParams.get("state") ?? undefined;
-      const error =
-        search.error ??
-        search.error_message ??
-        hashParams.get("error") ??
-        hashParams.get("error_message") ??
-        undefined;
-      const errorDescription =
-        search.error_description ??
-        hashParams.get("error_description") ??
-        undefined;
-
-      if (error || search.error_code) {
-        setStatus("error");
-        setMessage(
-          errorDescription
-            ?? error
-            ?? (search.error_code ? `Meta OAuth error (${search.error_code})` : "Autorización cancelada"),
-        );
-        return;
-      }
-      if (!code || !state) {
-        setStatus("error");
-        setMessage(
-          "Meta no devolvió code/state OAuth. Revisa App Domains y Redirect URI en developers.facebook.com.",
-        );
-        return;
-      }
-      if (provider !== "meta" && provider !== "google" && provider !== "tiktok") {
-        setStatus("error");
-        setMessage("Proveedor OAuth no reconocido");
-        return;
-      }
-
-      const result = await completeOAuthCallback({
-        data: { provider, code, state },
-      });
-
-      if (!result.ok) {
-        setStatus("error");
-        setMessage(result.error);
-        return;
-      }
-
-      connectAccountOAuth(result.userId, result.account.red, {
-        nombre_cuenta: result.account.nombre_cuenta,
-        access_token: result.account.access_token,
-        external_account_id: result.account.external_account_id,
-        token_expires_at: result.account.token_expires_at,
-        avatar: result.account.avatar,
-        oauth_provider: result.account.provider,
-      });
-
-      const token = getSessionToken();
-      if (isProductionModeClient() && token) {
-        await saveOAuthTokenServer({
-          data: {
-            token,
-            red: result.account.red,
-            account: {
-              nombre_cuenta: result.account.nombre_cuenta,
-              access_token: result.account.access_token,
-              external_account_id: result.account.external_account_id,
-              token_expires_at: result.account.token_expires_at,
-              avatar: result.account.avatar,
-              oauth_provider: result.account.provider,
-            },
-          },
-        });
-      }
-
-      setReturnTo(result.returnTo);
-      setStatus("ok");
-      setMessage(`${result.account.nombre_cuenta} conectado correctamente`);
-
-      if (result.partnerReturnUrl) {
-        try {
-          const u = new URL(result.partnerReturnUrl);
-          u.searchParams.set("publivende_connected", "1");
-          u.searchParams.set("red", result.account.red);
-          if (result.externalUserId) u.searchParams.set("external_user_id", result.externalUserId);
-          setTimeout(() => {
-            window.location.href = u.toString();
-          }, 1200);
-          return;
-        } catch {
-          /* fallback to internal returnTo */
-        }
-      }
-
-      setTimeout(() => navigate({ to: result.returnTo as "/" }), 1800);
-    }
-
-    run().catch((err) => {
-      setStatus("error");
-      setMessage(err instanceof Error ? err.message : "Error inesperado");
-    });
-  }, [provider, search, user, navigate]);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
-      <Card className="p-8 max-w-md w-full text-center space-y-4">
-        <PubliVendeMark size="lg" className="mx-auto" />
-        {status === "loading" && <Loader2 className="w-10 h-10 animate-spin mx-auto text-primary" />}
-        {status === "ok" && <CheckCircle2 className="w-10 h-10 mx-auto text-green-600" />}
-        {status === "error" && <XCircle className="w-10 h-10 mx-auto text-destructive" />}
-        <h1 className="text-lg font-semibold">
-          {status === "loading" ? "Conectando red social" : status === "ok" ? "¡Conectado!" : "No se pudo conectar"}
-        </h1>
-        <p className="text-sm text-muted-foreground">{message}</p>
-        {status === "error" && (
+  if (provider !== "meta" && provider !== "google" && provider !== "tiktok") {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+        <Card className="p-8 max-w-md w-full text-center space-y-4">
+          <PubliVendeMark size="lg" className="mx-auto" />
+          <XCircle className="w-10 h-10 mx-auto text-destructive" />
+          <h1 className="text-lg font-semibold">No se pudo conectar</h1>
+          <p className="text-sm text-muted-foreground">Proveedor OAuth no reconocido</p>
           <Button variant="outline" onClick={() => navigate({ to: "/configuracion" })}>
             Volver a Configuración
           </Button>
-        )}
-        {status === "ok" && (
-          <p className="text-xs text-muted-foreground">Redirigiendo a {returnTo}…</p>
-        )}
-      </Card>
-    </div>
-  );
+        </Card>
+      </div>
+    );
+  }
+
+  return <OAuthCallbackView provider={provider as OAuthProvider} search={search} />;
 }

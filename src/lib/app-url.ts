@@ -1,5 +1,5 @@
-/** URL pública de producción (dominio propio). */
-export const PRODUCTION_APP_URL = "https://publivende.mx";
+/** URL pública de producción (dominio canónico con www). */
+export const PRODUCTION_APP_URL = "https://www.publivende.mx";
 
 export function normalizeAppUrl(url: string): string {
   return url.replace(/\/$/, "");

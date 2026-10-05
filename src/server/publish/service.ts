@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm";
 import { resolveAppBaseUrl } from "@/lib/app-url";
 import { getDb, schema } from "@/server/db";
-import { getOAuthAccount, findUserById } from "@/server/auth/users";
-import { publishToNetwork } from "@/server/publish/networks";
+import { findUserById } from "@/server/auth/users";
+import { ensurePublicMediaUrl } from "@/server/publish/host-media";
+import { expandDistribution } from "@/server/distribution/expand";
 import { broadcastWhatsAppMessages, userHasWhatsAppSending } from "@/server/whatsapp/cloud-api";
 import { buildBroadcastMessage } from "@/lib/whatsapp-post";
-import type { Red, Post } from "@/lib/mock/types";
+import type { Red, Post, PublishSurfaceResult } from "@/lib/mock/types";
 import type { ScheduleMeta } from "@/lib/mock/types";
 
 export function dbPostToClient(row: typeof schema.posts.$inferSelect): Post {
@@ -30,6 +31,8 @@ export function dbPostToClient(row: typeof schema.posts.$inferSelect): Post {
     total_canales: row.totalCanales ?? undefined,
     whatsapp_enviado_at: row.whatsappEnviadoAt?.toISOString(),
     whatsapp_broadcast_count: row.whatsappBroadcastCount ?? undefined,
+    external_ids: row.externalIds ?? undefined,
+    publish_surfaces: (row.publishSurfaces as PublishSurfaceResult[] | null) ?? undefined,
     schedule_meta: row.scheduleMeta as Post["schedule_meta"],
     created_at: row.createdAt.toISOString(),
   };
@@ -63,6 +66,7 @@ export interface PublishForUserResult {
   ok: boolean;
   post?: Post;
   externalIds: Partial<Record<Red, string>>;
+  surfaces: PublishSurfaceResult[];
   errors: string[];
   waSent: number;
   error?: string;
@@ -70,47 +74,23 @@ export interface PublishForUserResult {
 
 export async function publishForUser(input: PublishForUserInput): Promise<PublishForUserResult> {
   const db = getDb();
-  const appUrl = resolveAppBaseUrl();
   const now = new Date();
   const trackingSlug = input.post.tracking_slug ?? Math.random().toString(36).slice(2, 10);
-  const estado = input.post.programar ? "programado" : "publicado";
 
-  const externalIds: Partial<Record<Red, string>> = {};
-  const errors: string[] = [];
-
-  if (!input.post.programar) {
-    for (const red of input.post.redes) {
-      const acc = await getOAuthAccount(input.userId, red);
-      if (!acc?.accessToken) {
-        errors.push(`${red}: cuenta no conectada`);
-        continue;
-      }
-      const copy = input.post.copy_por_red?.[red] ?? input.post.copy;
-      const result = await publishToNetwork({
-        red,
-        accessToken: acc.accessToken,
-        pageId: acc.externalAccountId ?? undefined,
-        copy,
-        mediaUrl: input.post.media_url,
-        mediaType: input.post.tipo === "video" ? "video" : "imagen",
-        trackingSlug,
-        appUrl,
-      });
-      if (result.ok && result.externalId) externalIds[red] = result.externalId;
-      else if (result.error) errors.push(`${red}: ${result.error}`);
-    }
-  }
+  const publicMediaUrl = input.post.media_url
+    ? await ensurePublicMediaUrl(input.userId, input.post.media_url)
+    : "";
 
   const postValues = {
     userId: input.userId,
     tipo: input.post.tipo,
-    mediaUrl: input.post.media_url,
+    mediaUrl: publicMediaUrl || input.post.media_url,
     copy: input.post.copy,
     copyPorRed: input.post.copy_por_red,
     sourceUrl: input.post.source_url,
     alcance: input.post.alcance,
     redesDestino: input.post.redes,
-    estado: estado as "publicado" | "programado",
+    estado: (input.post.programar ? "programado" : "publicado") as "publicado" | "programado" | "error",
     fechaProgramada: input.post.programar ? new Date(input.post.programar) : undefined,
     fechaPublicacion: input.post.programar ? undefined : now,
     trackingSlug,
@@ -119,7 +99,6 @@ export async function publishForUser(input: PublishForUserInput): Promise<Publis
     canalesDistribucion: input.post.canales_distribucion,
     nichoLabel: input.post.nicho_label,
     totalCanales: input.post.total_canales,
-    externalIds,
     scheduleMeta: input.post.schedule_meta,
   };
 
@@ -137,7 +116,41 @@ export async function publishForUser(input: PublishForUserInput): Promise<Publis
     saved = rows[0];
   }
 
-  if (!saved) return { ok: false, error: "No se pudo guardar el post", externalIds, errors, waSent: 0 };
+  if (!saved) {
+    return { ok: false, error: "No se pudo guardar el post", externalIds: {}, surfaces: [], errors: [], waSent: 0 };
+  }
+
+  const externalIds: Partial<Record<Red, string>> = {};
+  const errors: string[] = [];
+  let surfaces: PublishSurfaceResult[] = [];
+
+  if (!input.post.programar && input.post.redes.length > 0) {
+    const expanded = await expandDistribution({
+      userId: input.userId,
+      postId: saved.id,
+      redes: input.post.redes,
+      copy: input.post.copy,
+      copyPorRed: input.post.copy_por_red,
+      mediaUrl: publicMediaUrl || input.post.media_url,
+      mediaType: input.post.tipo,
+      trackingSlug,
+      nichoLabel: input.post.nicho_label,
+    });
+    surfaces = expanded.surfaces;
+
+    for (const s of surfaces) {
+      if (!s.ok && s.error) errors.push(`${s.red}/${s.surface}: ${s.error}`);
+      if (s.ok && s.external_id && !externalIds[s.red]) externalIds[s.red] = s.external_id;
+    }
+
+    const anyOk = surfaces.some((s) => s.ok);
+    if (!anyOk) {
+      await db.update(schema.posts).set({ estado: "error" }).where(eq(schema.posts.id, saved.id));
+      saved = { ...saved, estado: "error" as const };
+    }
+  }
+
+  const publishedCount = Object.keys(externalIds).length;
 
   let waSent = 0;
   if (input.notifyWhatsApp && !input.post.programar && (await userHasWhatsAppSending(input.userId))) {
@@ -172,16 +185,19 @@ export async function publishForUser(input: PublishForUserInput): Promise<Publis
     }
   }
 
-  const publishedCount = Object.keys(externalIds).length;
-  const ok = input.post.programar ? true : publishedCount > 0 || input.post.redes.length === 0;
+  const refreshed = await db.select().from(schema.posts).where(eq(schema.posts.id, saved.id)).limit(1);
 
   return {
-    ok,
-    post: dbPostToClient(saved),
+    ok: input.post.programar ? true : input.post.redes.length === 0 ? true : publishedCount > 0 || surfaces.some((s) => s.ok),
+    post: dbPostToClient(refreshed[0] ?? saved),
     externalIds,
+    surfaces,
     errors,
     waSent,
-    error: !ok && !input.post.programar ? "No se publicó en ninguna red" : undefined,
+    error:
+      !input.post.programar && input.post.redes.length > 0 && publishedCount === 0 && !surfaces.some((s) => s.ok)
+        ? errors.join(" · ") || "No se publicó en ninguna red"
+        : undefined,
   };
 }
 

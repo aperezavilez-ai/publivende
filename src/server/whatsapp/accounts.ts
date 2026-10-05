@@ -24,10 +24,22 @@ export interface WhatsAppAccountPublic {
   wabaId?: string;
 }
 
+function emptyPublic(): WhatsAppAccountPublic {
+  return {
+    connected: false,
+    mode: "none",
+    apiConnected: false,
+    linkConnected: false,
+  };
+}
+
 function toPublic(acc: DbWhatsAppAccount | null): WhatsAppAccountPublic {
-  if (!acc || acc.estadoConexion !== "conectada") return { connected: false };
+  if (!acc || acc.estadoConexion !== "conectada") return emptyPublic();
   return {
     connected: true,
+    mode: "api",
+    apiConnected: true,
+    linkConnected: false,
     phoneNumberId: acc.phoneNumberId,
     displayPhoneNumber: acc.displayPhoneNumber,
     verifiedName: acc.verifiedName ?? undefined,

@@ -1,0 +1,14 @@
+{
+  "id": "20260919-105644-016",
+  "reason": "implementer",
+  "createdAt": "2026-09-19T17:56:44.018Z",
+  "projectRoot": "D:\\PROGRAMAS IA\\PUBLIVENDE",
+  "files": [
+    {
+      "path": "src/routes/api.v1.partners.users.tsx",
+      "existed": true,
+      "backup": "src__routes__api.v1.partners.users.tsx.bak",
+      "bytes": 425
+    }
+  ]
+}

@@ -9,6 +9,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Eye, MessageCircle, DollarSign, ArrowRight, Users, FileDown, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import { buildFunnel } from "@/lib/attribution";
+import { BrainSummaryCard } from "@/components/brain/BrainSummaryCard";
 import type { Red } from "@/lib/mock/types";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -139,6 +140,8 @@ function Dashboard() {
           </Button>
         </div>
       </div>
+
+      <BrainSummaryCard />
 
       {/* Embudo */}
       <Card className="p-5">

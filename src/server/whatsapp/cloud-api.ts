@@ -21,6 +21,8 @@ async function resolveCredentials(userId?: string): Promise<WhatsAppCredentials 
   if (userId) {
     const userCreds = await getWhatsAppCredentialsForUser(userId);
     if (userCreds) return userCreds;
+    // El número de plataforma solo responde por el usuario legacy configurado, nunca por otros clientes.
+    if (userId !== process.env.WHATSAPP_DEFAULT_USER_ID) return null;
   }
 
   const cfg = getWhatsAppConfig();

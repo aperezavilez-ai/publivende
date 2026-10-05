@@ -9,52 +9,56 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TerminosRouteImport } from './routes/terminos'
-import { Route as PrivacidadRouteImport } from './routes/privacidad'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TiendaSlugRouteImport } from './routes/tienda.$slug'
-import { Route as PSlugRouteImport } from './routes/p.$slug'
-import { Route as ConnectPartnerSlugRouteImport } from './routes/connect.$partnerSlug'
-import { Route as AppWhatsappRouteImport } from './routes/_app.whatsapp'
-import { Route as AppRecetasRouteImport } from './routes/_app.recetas'
-import { Route as AppPublicarRouteImport } from './routes/_app.publicar'
-import { Route as AppProductosRouteImport } from './routes/_app.productos'
-import { Route as AppPlataformaRouteImport } from './routes/_app.plataforma'
-import { Route as AppInteligenciaRouteImport } from './routes/_app.inteligencia'
-import { Route as AppExperimentosRouteImport } from './routes/_app.experimentos'
-import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
-import { Route as AppConfiguracionRouteImport } from './routes/_app.configuracion'
-import { Route as AppCoachRouteImport } from './routes/_app.coach'
-import { Route as AppCalendarioRouteImport } from './routes/_app.calendario'
-import { Route as AppBibliotecaRouteImport } from './routes/_app.biblioteca'
-import { Route as AppBandejaRouteImport } from './routes/_app.bandeja'
-import { Route as AppAutomatizacionesRouteImport } from './routes/_app.automatizaciones'
-import { Route as AppAnunciosRouteImport } from './routes/_app.anuncios'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PrivacidadRouteImport } from './routes/privacidad'
+import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as AppAnaliticasRouteImport } from './routes/_app.analiticas'
-import { Route as OauthCallbackProviderRouteImport } from './routes/oauth.callback.$provider'
-import { Route as ApiWebhookWhatsappRouteImport } from './routes/api.webhook.whatsapp'
+import { Route as AppAnunciosRouteImport } from './routes/_app.anuncios'
+import { Route as AppAutomatizacionesRouteImport } from './routes/_app.automatizaciones'
+import { Route as AppBandejaRouteImport } from './routes/_app.bandeja'
+import { Route as AppBibliotecaRouteImport } from './routes/_app.biblioteca'
+import { Route as AppCalendarioRouteImport } from './routes/_app.calendario'
+import { Route as AppCoachRouteImport } from './routes/_app.coach'
+import { Route as AppConfiguracionRouteImport } from './routes/_app.configuracion'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppDiagnosticoRouteImport } from './routes/_app.diagnostico'
+import { Route as AppDistribuirRouteImport } from './routes/_app.distribuir'
+import { Route as AppExperimentosRouteImport } from './routes/_app.experimentos'
+import { Route as AppInteligenciaRouteImport } from './routes/_app.inteligencia'
+import { Route as AppPilotoRouteImport } from './routes/_app.piloto'
+import { Route as AppPlataformaRouteImport } from './routes/_app.plataforma'
+import { Route as AppProductosRouteImport } from './routes/_app.productos'
+import { Route as AppPublicarRouteImport } from './routes/_app.publicar'
+import { Route as AppRecetasRouteImport } from './routes/_app.recetas'
+import { Route as AppRedRouteImport } from './routes/_app.red'
+import { Route as AppWhatsappRouteImport } from './routes/_app.whatsapp'
+import { Route as ConnectPartnerSlugRouteImport } from './routes/connect.$partnerSlug'
+import { Route as FacebookCallbackRouteImport } from './routes/facebook.callback'
+import { Route as PSlugRouteImport } from './routes/p.$slug'
+import { Route as TiendaSlugRouteImport } from './routes/tienda.$slug'
+import { Route as ApiCronAutopilotRouteImport } from './routes/api.cron.autopilot'
+import { Route as ApiCronBenchmarksRouteImport } from './routes/api.cron.benchmarks'
 import { Route as ApiCronPublishScheduledRouteImport } from './routes/api.cron.publish-scheduled'
-import { Route as ApiV1PartnersUsersRouteImport } from './routes/api.v1.partners.users'
-import { Route as ApiV1PartnersPublishRouteImport } from './routes/api.v1.partners.publish'
+import { Route as ApiCronSyncMetricsRouteImport } from './routes/api.cron.sync-metrics'
+import { Route as ApiMediaTokenRouteImport } from './routes/api.media.$token'
+import { Route as ApiWebhookStripeRouteImport } from './routes/api.webhook.stripe'
+import { Route as ApiWebhookWhatsappRouteImport } from './routes/api.webhook.whatsapp'
+import { Route as OauthCallbackProviderRouteImport } from './routes/oauth.callback.$provider'
 import { Route as ApiV1PartnersConnectRouteImport } from './routes/api.v1.partners.connect'
+import { Route as ApiV1PartnersPublishRouteImport } from './routes/api.v1.partners.publish'
+import { Route as ApiV1PartnersUsersRouteImport } from './routes/api.v1.partners.users'
 import { Route as ApiV1PartnersUsersExternalIdConnectionsRouteImport } from './routes/api.v1.partners.users.$externalId.connections'
 
-const TerminosRoute = TerminosRouteImport.update({
-  id: '/terminos',
-  path: '/terminos',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PrivacidadRoute = PrivacidadRouteImport.update({
-  id: '/privacidad',
-  path: '/privacidad',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingRoute = OnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -62,98 +66,24 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const PrivacidadRoute = PrivacidadRouteImport.update({
+  id: '/privacidad',
+  path: '/privacidad',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TiendaSlugRoute = TiendaSlugRouteImport.update({
-  id: '/tienda/$slug',
-  path: '/tienda/$slug',
+const TerminosRoute = TerminosRouteImport.update({
+  id: '/terminos',
+  path: '/terminos',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PSlugRoute = PSlugRouteImport.update({
-  id: '/p/$slug',
-  path: '/p/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConnectPartnerSlugRoute = ConnectPartnerSlugRouteImport.update({
-  id: '/connect/$partnerSlug',
-  path: '/connect/$partnerSlug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppWhatsappRoute = AppWhatsappRouteImport.update({
-  id: '/whatsapp',
-  path: '/whatsapp',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppRecetasRoute = AppRecetasRouteImport.update({
-  id: '/recetas',
-  path: '/recetas',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPublicarRoute = AppPublicarRouteImport.update({
-  id: '/publicar',
-  path: '/publicar',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppProductosRoute = AppProductosRouteImport.update({
-  id: '/productos',
-  path: '/productos',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPlataformaRoute = AppPlataformaRouteImport.update({
-  id: '/plataforma',
-  path: '/plataforma',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppInteligenciaRoute = AppInteligenciaRouteImport.update({
-  id: '/inteligencia',
-  path: '/inteligencia',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppExperimentosRoute = AppExperimentosRouteImport.update({
-  id: '/experimentos',
-  path: '/experimentos',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDashboardRoute = AppDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppConfiguracionRoute = AppConfiguracionRouteImport.update({
-  id: '/configuracion',
-  path: '/configuracion',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppCoachRoute = AppCoachRouteImport.update({
-  id: '/coach',
-  path: '/coach',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppCalendarioRoute = AppCalendarioRouteImport.update({
-  id: '/calendario',
-  path: '/calendario',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppBibliotecaRoute = AppBibliotecaRouteImport.update({
-  id: '/biblioteca',
-  path: '/biblioteca',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppBandejaRoute = AppBandejaRouteImport.update({
-  id: '/bandeja',
-  path: '/bandeja',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAutomatizacionesRoute = AppAutomatizacionesRouteImport.update({
-  id: '/automatizaciones',
-  path: '/automatizaciones',
+const AppAnaliticasRoute = AppAnaliticasRouteImport.update({
+  id: '/analiticas',
+  path: '/analiticas',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAnunciosRoute = AppAnunciosRouteImport.update({
@@ -161,19 +91,124 @@ const AppAnunciosRoute = AppAnunciosRouteImport.update({
   path: '/anuncios',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAnaliticasRoute = AppAnaliticasRouteImport.update({
-  id: '/analiticas',
-  path: '/analiticas',
+const AppAutomatizacionesRoute = AppAutomatizacionesRouteImport.update({
+  id: '/automatizaciones',
+  path: '/automatizaciones',
   getParentRoute: () => AppRoute,
 } as any)
-const OauthCallbackProviderRoute = OauthCallbackProviderRouteImport.update({
-  id: '/oauth/callback/$provider',
-  path: '/oauth/callback/$provider',
+const AppBandejaRoute = AppBandejaRouteImport.update({
+  id: '/bandeja',
+  path: '/bandeja',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBibliotecaRoute = AppBibliotecaRouteImport.update({
+  id: '/biblioteca',
+  path: '/biblioteca',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCalendarioRoute = AppCalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCoachRoute = AppCoachRouteImport.update({
+  id: '/coach',
+  path: '/coach',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConfiguracionRoute = AppConfiguracionRouteImport.update({
+  id: '/configuracion',
+  path: '/configuracion',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDiagnosticoRoute = AppDiagnosticoRouteImport.update({
+  id: '/diagnostico',
+  path: '/diagnostico',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDistribuirRoute = AppDistribuirRouteImport.update({
+  id: '/distribuir',
+  path: '/distribuir',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppExperimentosRoute = AppExperimentosRouteImport.update({
+  id: '/experimentos',
+  path: '/experimentos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInteligenciaRoute = AppInteligenciaRouteImport.update({
+  id: '/inteligencia',
+  path: '/inteligencia',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPilotoRoute = AppPilotoRouteImport.update({
+  id: '/piloto',
+  path: '/piloto',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlataformaRoute = AppPlataformaRouteImport.update({
+  id: '/plataforma',
+  path: '/plataforma',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProductosRoute = AppProductosRouteImport.update({
+  id: '/productos',
+  path: '/productos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPublicarRoute = AppPublicarRouteImport.update({
+  id: '/publicar',
+  path: '/publicar',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRecetasRoute = AppRecetasRouteImport.update({
+  id: '/recetas',
+  path: '/recetas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRedRoute = AppRedRouteImport.update({
+  id: '/red',
+  path: '/red',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWhatsappRoute = AppWhatsappRouteImport.update({
+  id: '/whatsapp',
+  path: '/whatsapp',
+  getParentRoute: () => AppRoute,
+} as any)
+const ConnectPartnerSlugRoute = ConnectPartnerSlugRouteImport.update({
+  id: '/connect/$partnerSlug',
+  path: '/connect/$partnerSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiWebhookWhatsappRoute = ApiWebhookWhatsappRouteImport.update({
-  id: '/api/webhook/whatsapp',
-  path: '/api/webhook/whatsapp',
+const FacebookCallbackRoute = FacebookCallbackRouteImport.update({
+  id: '/facebook/callback',
+  path: '/facebook/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PSlugRoute = PSlugRouteImport.update({
+  id: '/p/$slug',
+  path: '/p/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TiendaSlugRoute = TiendaSlugRouteImport.update({
+  id: '/tienda/$slug',
+  path: '/tienda/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronAutopilotRoute = ApiCronAutopilotRouteImport.update({
+  id: '/api/cron/autopilot',
+  path: '/api/cron/autopilot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronBenchmarksRoute = ApiCronBenchmarksRouteImport.update({
+  id: '/api/cron/benchmarks',
+  path: '/api/cron/benchmarks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCronPublishScheduledRoute = ApiCronPublishScheduledRouteImport.update({
@@ -181,9 +216,34 @@ const ApiCronPublishScheduledRoute = ApiCronPublishScheduledRouteImport.update({
   path: '/api/cron/publish-scheduled',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiV1PartnersUsersRoute = ApiV1PartnersUsersRouteImport.update({
-  id: '/api/v1/partners/users',
-  path: '/api/v1/partners/users',
+const ApiCronSyncMetricsRoute = ApiCronSyncMetricsRouteImport.update({
+  id: '/api/cron/sync-metrics',
+  path: '/api/cron/sync-metrics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMediaTokenRoute = ApiMediaTokenRouteImport.update({
+  id: '/api/media/$token',
+  path: '/api/media/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebhookStripeRoute = ApiWebhookStripeRouteImport.update({
+  id: '/api/webhook/stripe',
+  path: '/api/webhook/stripe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebhookWhatsappRoute = ApiWebhookWhatsappRouteImport.update({
+  id: '/api/webhook/whatsapp',
+  path: '/api/webhook/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthCallbackProviderRoute = OauthCallbackProviderRouteImport.update({
+  id: '/oauth/callback/$provider',
+  path: '/oauth/callback/$provider',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1PartnersConnectRoute = ApiV1PartnersConnectRouteImport.update({
+  id: '/api/v1/partners/connect',
+  path: '/api/v1/partners/connect',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiV1PartnersPublishRoute = ApiV1PartnersPublishRouteImport.update({
@@ -191,9 +251,9 @@ const ApiV1PartnersPublishRoute = ApiV1PartnersPublishRouteImport.update({
   path: '/api/v1/partners/publish',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiV1PartnersConnectRoute = ApiV1PartnersConnectRouteImport.update({
-  id: '/api/v1/partners/connect',
-  path: '/api/v1/partners/connect',
+const ApiV1PartnersUsersRoute = ApiV1PartnersUsersRouteImport.update({
+  id: '/api/v1/partners/users',
+  path: '/api/v1/partners/users',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiV1PartnersUsersExternalIdConnectionsRoute =
@@ -218,17 +278,27 @@ export interface FileRoutesByFullPath {
   '/coach': typeof AppCoachRoute
   '/configuracion': typeof AppConfiguracionRoute
   '/dashboard': typeof AppDashboardRoute
+  '/diagnostico': typeof AppDiagnosticoRoute
+  '/distribuir': typeof AppDistribuirRoute
   '/experimentos': typeof AppExperimentosRoute
   '/inteligencia': typeof AppInteligenciaRoute
+  '/piloto': typeof AppPilotoRoute
   '/plataforma': typeof AppPlataformaRoute
   '/productos': typeof AppProductosRoute
   '/publicar': typeof AppPublicarRoute
   '/recetas': typeof AppRecetasRoute
+  '/red': typeof AppRedRoute
   '/whatsapp': typeof AppWhatsappRoute
   '/connect/$partnerSlug': typeof ConnectPartnerSlugRoute
+  '/facebook/callback': typeof FacebookCallbackRoute
   '/p/$slug': typeof PSlugRoute
   '/tienda/$slug': typeof TiendaSlugRoute
+  '/api/cron/autopilot': typeof ApiCronAutopilotRoute
+  '/api/cron/benchmarks': typeof ApiCronBenchmarksRoute
   '/api/cron/publish-scheduled': typeof ApiCronPublishScheduledRoute
+  '/api/cron/sync-metrics': typeof ApiCronSyncMetricsRoute
+  '/api/media/$token': typeof ApiMediaTokenRoute
+  '/api/webhook/stripe': typeof ApiWebhookStripeRoute
   '/api/webhook/whatsapp': typeof ApiWebhookWhatsappRoute
   '/oauth/callback/$provider': typeof OauthCallbackProviderRoute
   '/api/v1/partners/connect': typeof ApiV1PartnersConnectRoute
@@ -251,17 +321,27 @@ export interface FileRoutesByTo {
   '/coach': typeof AppCoachRoute
   '/configuracion': typeof AppConfiguracionRoute
   '/dashboard': typeof AppDashboardRoute
+  '/diagnostico': typeof AppDiagnosticoRoute
+  '/distribuir': typeof AppDistribuirRoute
   '/experimentos': typeof AppExperimentosRoute
   '/inteligencia': typeof AppInteligenciaRoute
+  '/piloto': typeof AppPilotoRoute
   '/plataforma': typeof AppPlataformaRoute
   '/productos': typeof AppProductosRoute
   '/publicar': typeof AppPublicarRoute
   '/recetas': typeof AppRecetasRoute
+  '/red': typeof AppRedRoute
   '/whatsapp': typeof AppWhatsappRoute
   '/connect/$partnerSlug': typeof ConnectPartnerSlugRoute
+  '/facebook/callback': typeof FacebookCallbackRoute
   '/p/$slug': typeof PSlugRoute
   '/tienda/$slug': typeof TiendaSlugRoute
+  '/api/cron/autopilot': typeof ApiCronAutopilotRoute
+  '/api/cron/benchmarks': typeof ApiCronBenchmarksRoute
   '/api/cron/publish-scheduled': typeof ApiCronPublishScheduledRoute
+  '/api/cron/sync-metrics': typeof ApiCronSyncMetricsRoute
+  '/api/media/$token': typeof ApiMediaTokenRoute
+  '/api/webhook/stripe': typeof ApiWebhookStripeRoute
   '/api/webhook/whatsapp': typeof ApiWebhookWhatsappRoute
   '/oauth/callback/$provider': typeof OauthCallbackProviderRoute
   '/api/v1/partners/connect': typeof ApiV1PartnersConnectRoute
@@ -286,17 +366,27 @@ export interface FileRoutesById {
   '/_app/coach': typeof AppCoachRoute
   '/_app/configuracion': typeof AppConfiguracionRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/diagnostico': typeof AppDiagnosticoRoute
+  '/_app/distribuir': typeof AppDistribuirRoute
   '/_app/experimentos': typeof AppExperimentosRoute
   '/_app/inteligencia': typeof AppInteligenciaRoute
+  '/_app/piloto': typeof AppPilotoRoute
   '/_app/plataforma': typeof AppPlataformaRoute
   '/_app/productos': typeof AppProductosRoute
   '/_app/publicar': typeof AppPublicarRoute
   '/_app/recetas': typeof AppRecetasRoute
+  '/_app/red': typeof AppRedRoute
   '/_app/whatsapp': typeof AppWhatsappRoute
   '/connect/$partnerSlug': typeof ConnectPartnerSlugRoute
+  '/facebook/callback': typeof FacebookCallbackRoute
   '/p/$slug': typeof PSlugRoute
   '/tienda/$slug': typeof TiendaSlugRoute
+  '/api/cron/autopilot': typeof ApiCronAutopilotRoute
+  '/api/cron/benchmarks': typeof ApiCronBenchmarksRoute
   '/api/cron/publish-scheduled': typeof ApiCronPublishScheduledRoute
+  '/api/cron/sync-metrics': typeof ApiCronSyncMetricsRoute
+  '/api/media/$token': typeof ApiMediaTokenRoute
+  '/api/webhook/stripe': typeof ApiWebhookStripeRoute
   '/api/webhook/whatsapp': typeof ApiWebhookWhatsappRoute
   '/oauth/callback/$provider': typeof OauthCallbackProviderRoute
   '/api/v1/partners/connect': typeof ApiV1PartnersConnectRoute
@@ -321,17 +411,27 @@ export interface FileRouteTypes {
     | '/coach'
     | '/configuracion'
     | '/dashboard'
+    | '/diagnostico'
+    | '/distribuir'
     | '/experimentos'
     | '/inteligencia'
+    | '/piloto'
     | '/plataforma'
     | '/productos'
     | '/publicar'
     | '/recetas'
+    | '/red'
     | '/whatsapp'
     | '/connect/$partnerSlug'
+    | '/facebook/callback'
     | '/p/$slug'
     | '/tienda/$slug'
+    | '/api/cron/autopilot'
+    | '/api/cron/benchmarks'
     | '/api/cron/publish-scheduled'
+    | '/api/cron/sync-metrics'
+    | '/api/media/$token'
+    | '/api/webhook/stripe'
     | '/api/webhook/whatsapp'
     | '/oauth/callback/$provider'
     | '/api/v1/partners/connect'
@@ -354,17 +454,27 @@ export interface FileRouteTypes {
     | '/coach'
     | '/configuracion'
     | '/dashboard'
+    | '/diagnostico'
+    | '/distribuir'
     | '/experimentos'
     | '/inteligencia'
+    | '/piloto'
     | '/plataforma'
     | '/productos'
     | '/publicar'
     | '/recetas'
+    | '/red'
     | '/whatsapp'
     | '/connect/$partnerSlug'
+    | '/facebook/callback'
     | '/p/$slug'
     | '/tienda/$slug'
+    | '/api/cron/autopilot'
+    | '/api/cron/benchmarks'
     | '/api/cron/publish-scheduled'
+    | '/api/cron/sync-metrics'
+    | '/api/media/$token'
+    | '/api/webhook/stripe'
     | '/api/webhook/whatsapp'
     | '/oauth/callback/$provider'
     | '/api/v1/partners/connect'
@@ -388,17 +498,27 @@ export interface FileRouteTypes {
     | '/_app/coach'
     | '/_app/configuracion'
     | '/_app/dashboard'
+    | '/_app/diagnostico'
+    | '/_app/distribuir'
     | '/_app/experimentos'
     | '/_app/inteligencia'
+    | '/_app/piloto'
     | '/_app/plataforma'
     | '/_app/productos'
     | '/_app/publicar'
     | '/_app/recetas'
+    | '/_app/red'
     | '/_app/whatsapp'
     | '/connect/$partnerSlug'
+    | '/facebook/callback'
     | '/p/$slug'
     | '/tienda/$slug'
+    | '/api/cron/autopilot'
+    | '/api/cron/benchmarks'
     | '/api/cron/publish-scheduled'
+    | '/api/cron/sync-metrics'
+    | '/api/media/$token'
+    | '/api/webhook/stripe'
     | '/api/webhook/whatsapp'
     | '/oauth/callback/$provider'
     | '/api/v1/partners/connect'
@@ -415,9 +535,15 @@ export interface RootRouteChildren {
   PrivacidadRoute: typeof PrivacidadRoute
   TerminosRoute: typeof TerminosRoute
   ConnectPartnerSlugRoute: typeof ConnectPartnerSlugRoute
+  FacebookCallbackRoute: typeof FacebookCallbackRoute
   PSlugRoute: typeof PSlugRoute
   TiendaSlugRoute: typeof TiendaSlugRoute
+  ApiCronAutopilotRoute: typeof ApiCronAutopilotRoute
+  ApiCronBenchmarksRoute: typeof ApiCronBenchmarksRoute
   ApiCronPublishScheduledRoute: typeof ApiCronPublishScheduledRoute
+  ApiCronSyncMetricsRoute: typeof ApiCronSyncMetricsRoute
+  ApiMediaTokenRoute: typeof ApiMediaTokenRoute
+  ApiWebhookStripeRoute: typeof ApiWebhookStripeRoute
   ApiWebhookWhatsappRoute: typeof ApiWebhookWhatsappRoute
   OauthCallbackProviderRoute: typeof OauthCallbackProviderRoute
   ApiV1PartnersConnectRoute: typeof ApiV1PartnersConnectRoute
@@ -427,32 +553,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/terminos': {
-      id: '/terminos'
-      path: '/terminos'
-      fullPath: '/terminos'
-      preLoaderRoute: typeof TerminosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacidad': {
-      id: '/privacidad'
-      path: '/privacidad'
-      fullPath: '/privacidad'
-      preLoaderRoute: typeof PrivacidadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -462,130 +567,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tienda/$slug': {
-      id: '/tienda/$slug'
-      path: '/tienda/$slug'
-      fullPath: '/tienda/$slug'
-      preLoaderRoute: typeof TiendaSlugRouteImport
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/p/$slug': {
-      id: '/p/$slug'
-      path: '/p/$slug'
-      fullPath: '/p/$slug'
-      preLoaderRoute: typeof PSlugRouteImport
+    '/privacidad': {
+      id: '/privacidad'
+      path: '/privacidad'
+      fullPath: '/privacidad'
+      preLoaderRoute: typeof PrivacidadRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/connect/$partnerSlug': {
-      id: '/connect/$partnerSlug'
-      path: '/connect/$partnerSlug'
-      fullPath: '/connect/$partnerSlug'
-      preLoaderRoute: typeof ConnectPartnerSlugRouteImport
+    '/terminos': {
+      id: '/terminos'
+      path: '/terminos'
+      fullPath: '/terminos'
+      preLoaderRoute: typeof TerminosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/whatsapp': {
-      id: '/_app/whatsapp'
-      path: '/whatsapp'
-      fullPath: '/whatsapp'
-      preLoaderRoute: typeof AppWhatsappRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/recetas': {
-      id: '/_app/recetas'
-      path: '/recetas'
-      fullPath: '/recetas'
-      preLoaderRoute: typeof AppRecetasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/publicar': {
-      id: '/_app/publicar'
-      path: '/publicar'
-      fullPath: '/publicar'
-      preLoaderRoute: typeof AppPublicarRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/productos': {
-      id: '/_app/productos'
-      path: '/productos'
-      fullPath: '/productos'
-      preLoaderRoute: typeof AppProductosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/plataforma': {
-      id: '/_app/plataforma'
-      path: '/plataforma'
-      fullPath: '/plataforma'
-      preLoaderRoute: typeof AppPlataformaRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/inteligencia': {
-      id: '/_app/inteligencia'
-      path: '/inteligencia'
-      fullPath: '/inteligencia'
-      preLoaderRoute: typeof AppInteligenciaRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/experimentos': {
-      id: '/_app/experimentos'
-      path: '/experimentos'
-      fullPath: '/experimentos'
-      preLoaderRoute: typeof AppExperimentosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/dashboard': {
-      id: '/_app/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AppDashboardRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/configuracion': {
-      id: '/_app/configuracion'
-      path: '/configuracion'
-      fullPath: '/configuracion'
-      preLoaderRoute: typeof AppConfiguracionRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/coach': {
-      id: '/_app/coach'
-      path: '/coach'
-      fullPath: '/coach'
-      preLoaderRoute: typeof AppCoachRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/calendario': {
-      id: '/_app/calendario'
-      path: '/calendario'
-      fullPath: '/calendario'
-      preLoaderRoute: typeof AppCalendarioRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/biblioteca': {
-      id: '/_app/biblioteca'
-      path: '/biblioteca'
-      fullPath: '/biblioteca'
-      preLoaderRoute: typeof AppBibliotecaRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/bandeja': {
-      id: '/_app/bandeja'
-      path: '/bandeja'
-      fullPath: '/bandeja'
-      preLoaderRoute: typeof AppBandejaRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/automatizaciones': {
-      id: '/_app/automatizaciones'
-      path: '/automatizaciones'
-      fullPath: '/automatizaciones'
-      preLoaderRoute: typeof AppAutomatizacionesRouteImport
+    '/_app/analiticas': {
+      id: '/_app/analiticas'
+      path: '/analiticas'
+      fullPath: '/analiticas'
+      preLoaderRoute: typeof AppAnaliticasRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/anuncios': {
@@ -595,25 +609,172 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnunciosRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/analiticas': {
-      id: '/_app/analiticas'
-      path: '/analiticas'
-      fullPath: '/analiticas'
-      preLoaderRoute: typeof AppAnaliticasRouteImport
+    '/_app/automatizaciones': {
+      id: '/_app/automatizaciones'
+      path: '/automatizaciones'
+      fullPath: '/automatizaciones'
+      preLoaderRoute: typeof AppAutomatizacionesRouteImport
       parentRoute: typeof AppRoute
     }
-    '/oauth/callback/$provider': {
-      id: '/oauth/callback/$provider'
-      path: '/oauth/callback/$provider'
-      fullPath: '/oauth/callback/$provider'
-      preLoaderRoute: typeof OauthCallbackProviderRouteImport
+    '/_app/bandeja': {
+      id: '/_app/bandeja'
+      path: '/bandeja'
+      fullPath: '/bandeja'
+      preLoaderRoute: typeof AppBandejaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/biblioteca': {
+      id: '/_app/biblioteca'
+      path: '/biblioteca'
+      fullPath: '/biblioteca'
+      preLoaderRoute: typeof AppBibliotecaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/calendario': {
+      id: '/_app/calendario'
+      path: '/calendario'
+      fullPath: '/calendario'
+      preLoaderRoute: typeof AppCalendarioRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/coach': {
+      id: '/_app/coach'
+      path: '/coach'
+      fullPath: '/coach'
+      preLoaderRoute: typeof AppCoachRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/configuracion': {
+      id: '/_app/configuracion'
+      path: '/configuracion'
+      fullPath: '/configuracion'
+      preLoaderRoute: typeof AppConfiguracionRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/diagnostico': {
+      id: '/_app/diagnostico'
+      path: '/diagnostico'
+      fullPath: '/diagnostico'
+      preLoaderRoute: typeof AppDiagnosticoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/distribuir': {
+      id: '/_app/distribuir'
+      path: '/distribuir'
+      fullPath: '/distribuir'
+      preLoaderRoute: typeof AppDistribuirRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/experimentos': {
+      id: '/_app/experimentos'
+      path: '/experimentos'
+      fullPath: '/experimentos'
+      preLoaderRoute: typeof AppExperimentosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/inteligencia': {
+      id: '/_app/inteligencia'
+      path: '/inteligencia'
+      fullPath: '/inteligencia'
+      preLoaderRoute: typeof AppInteligenciaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/piloto': {
+      id: '/_app/piloto'
+      path: '/piloto'
+      fullPath: '/piloto'
+      preLoaderRoute: typeof AppPilotoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/plataforma': {
+      id: '/_app/plataforma'
+      path: '/plataforma'
+      fullPath: '/plataforma'
+      preLoaderRoute: typeof AppPlataformaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/productos': {
+      id: '/_app/productos'
+      path: '/productos'
+      fullPath: '/productos'
+      preLoaderRoute: typeof AppProductosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/publicar': {
+      id: '/_app/publicar'
+      path: '/publicar'
+      fullPath: '/publicar'
+      preLoaderRoute: typeof AppPublicarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/recetas': {
+      id: '/_app/recetas'
+      path: '/recetas'
+      fullPath: '/recetas'
+      preLoaderRoute: typeof AppRecetasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/red': {
+      id: '/_app/red'
+      path: '/red'
+      fullPath: '/red'
+      preLoaderRoute: typeof AppRedRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/whatsapp': {
+      id: '/_app/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/whatsapp'
+      preLoaderRoute: typeof AppWhatsappRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/connect/$partnerSlug': {
+      id: '/connect/$partnerSlug'
+      path: '/connect/$partnerSlug'
+      fullPath: '/connect/$partnerSlug'
+      preLoaderRoute: typeof ConnectPartnerSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/webhook/whatsapp': {
-      id: '/api/webhook/whatsapp'
-      path: '/api/webhook/whatsapp'
-      fullPath: '/api/webhook/whatsapp'
-      preLoaderRoute: typeof ApiWebhookWhatsappRouteImport
+    '/facebook/callback': {
+      id: '/facebook/callback'
+      path: '/facebook/callback'
+      fullPath: '/facebook/callback'
+      preLoaderRoute: typeof FacebookCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$slug': {
+      id: '/p/$slug'
+      path: '/p/$slug'
+      fullPath: '/p/$slug'
+      preLoaderRoute: typeof PSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tienda/$slug': {
+      id: '/tienda/$slug'
+      path: '/tienda/$slug'
+      fullPath: '/tienda/$slug'
+      preLoaderRoute: typeof TiendaSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/autopilot': {
+      id: '/api/cron/autopilot'
+      path: '/api/cron/autopilot'
+      fullPath: '/api/cron/autopilot'
+      preLoaderRoute: typeof ApiCronAutopilotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/benchmarks': {
+      id: '/api/cron/benchmarks'
+      path: '/api/cron/benchmarks'
+      fullPath: '/api/cron/benchmarks'
+      preLoaderRoute: typeof ApiCronBenchmarksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/cron/publish-scheduled': {
@@ -623,11 +784,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronPublishScheduledRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/partners/users': {
-      id: '/api/v1/partners/users'
-      path: '/api/v1/partners/users'
-      fullPath: '/api/v1/partners/users'
-      preLoaderRoute: typeof ApiV1PartnersUsersRouteImport
+    '/api/cron/sync-metrics': {
+      id: '/api/cron/sync-metrics'
+      path: '/api/cron/sync-metrics'
+      fullPath: '/api/cron/sync-metrics'
+      preLoaderRoute: typeof ApiCronSyncMetricsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/media/$token': {
+      id: '/api/media/$token'
+      path: '/api/media/$token'
+      fullPath: '/api/media/$token'
+      preLoaderRoute: typeof ApiMediaTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhook/stripe': {
+      id: '/api/webhook/stripe'
+      path: '/api/webhook/stripe'
+      fullPath: '/api/webhook/stripe'
+      preLoaderRoute: typeof ApiWebhookStripeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhook/whatsapp': {
+      id: '/api/webhook/whatsapp'
+      path: '/api/webhook/whatsapp'
+      fullPath: '/api/webhook/whatsapp'
+      preLoaderRoute: typeof ApiWebhookWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/callback/$provider': {
+      id: '/oauth/callback/$provider'
+      path: '/oauth/callback/$provider'
+      fullPath: '/oauth/callback/$provider'
+      preLoaderRoute: typeof OauthCallbackProviderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/partners/connect': {
+      id: '/api/v1/partners/connect'
+      path: '/api/v1/partners/connect'
+      fullPath: '/api/v1/partners/connect'
+      preLoaderRoute: typeof ApiV1PartnersConnectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/v1/partners/publish': {
@@ -637,11 +833,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1PartnersPublishRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/partners/connect': {
-      id: '/api/v1/partners/connect'
-      path: '/api/v1/partners/connect'
-      fullPath: '/api/v1/partners/connect'
-      preLoaderRoute: typeof ApiV1PartnersConnectRouteImport
+    '/api/v1/partners/users': {
+      id: '/api/v1/partners/users'
+      path: '/api/v1/partners/users'
+      fullPath: '/api/v1/partners/users'
+      preLoaderRoute: typeof ApiV1PartnersUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/v1/partners/users/$externalId/connections': {
@@ -664,12 +860,16 @@ interface AppRouteChildren {
   AppCoachRoute: typeof AppCoachRoute
   AppConfiguracionRoute: typeof AppConfiguracionRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppDiagnosticoRoute: typeof AppDiagnosticoRoute
+  AppDistribuirRoute: typeof AppDistribuirRoute
   AppExperimentosRoute: typeof AppExperimentosRoute
   AppInteligenciaRoute: typeof AppInteligenciaRoute
+  AppPilotoRoute: typeof AppPilotoRoute
   AppPlataformaRoute: typeof AppPlataformaRoute
   AppProductosRoute: typeof AppProductosRoute
   AppPublicarRoute: typeof AppPublicarRoute
   AppRecetasRoute: typeof AppRecetasRoute
+  AppRedRoute: typeof AppRedRoute
   AppWhatsappRoute: typeof AppWhatsappRoute
 }
 
@@ -683,12 +883,16 @@ const AppRouteChildren: AppRouteChildren = {
   AppCoachRoute: AppCoachRoute,
   AppConfiguracionRoute: AppConfiguracionRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppDiagnosticoRoute: AppDiagnosticoRoute,
+  AppDistribuirRoute: AppDistribuirRoute,
   AppExperimentosRoute: AppExperimentosRoute,
   AppInteligenciaRoute: AppInteligenciaRoute,
+  AppPilotoRoute: AppPilotoRoute,
   AppPlataformaRoute: AppPlataformaRoute,
   AppProductosRoute: AppProductosRoute,
   AppPublicarRoute: AppPublicarRoute,
   AppRecetasRoute: AppRecetasRoute,
+  AppRedRoute: AppRedRoute,
   AppWhatsappRoute: AppWhatsappRoute,
 }
 
@@ -714,9 +918,15 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadRoute: PrivacidadRoute,
   TerminosRoute: TerminosRoute,
   ConnectPartnerSlugRoute: ConnectPartnerSlugRoute,
+  FacebookCallbackRoute: FacebookCallbackRoute,
   PSlugRoute: PSlugRoute,
   TiendaSlugRoute: TiendaSlugRoute,
+  ApiCronAutopilotRoute: ApiCronAutopilotRoute,
+  ApiCronBenchmarksRoute: ApiCronBenchmarksRoute,
   ApiCronPublishScheduledRoute: ApiCronPublishScheduledRoute,
+  ApiCronSyncMetricsRoute: ApiCronSyncMetricsRoute,
+  ApiMediaTokenRoute: ApiMediaTokenRoute,
+  ApiWebhookStripeRoute: ApiWebhookStripeRoute,
   ApiWebhookWhatsappRoute: ApiWebhookWhatsappRoute,
   OauthCallbackProviderRoute: OauthCallbackProviderRoute,
   ApiV1PartnersConnectRoute: ApiV1PartnersConnectRoute,

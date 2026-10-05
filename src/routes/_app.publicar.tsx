@@ -6,6 +6,7 @@ import { loadDB, saveDB, uid } from "@/lib/mock/db";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { HookMeter } from "@/components/brain/HookMeter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -62,10 +63,13 @@ import {
   type PublishAlcance,
 } from "@/lib/geo-targeting";
 import type { Red, PostAlcance } from "@/lib/mock/types";
+import { PLAN_LIMITS } from "@/lib/mock/types";
+import { planLabel } from "@/lib/plans";
+import { buildPublishResultMessage, disconnectedRedes, resolveMediaForPublish } from "@/lib/publish-status";
 
 export const Route = createFileRoute("/_app/publicar")({
   component: Publicar,
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { link?: string } => ({
     link: typeof s.link === "string" ? s.link : undefined,
   }),
 });
@@ -112,6 +116,20 @@ function Publicar() {
   const [draftPostId, setDraftPostId] = useState<string | undefined>();
   const [whatsappSelected, setWhatsappSelected] = useState(true);
   const waContactCount = useDB((db) => db.whatsapp_contacts.filter((c) => c.user_id === user?.id).length);
+  const postsEsteMes = useDB((db) =>
+    db.posts.filter((p) => {
+      if (p.user_id !== user?.id || p.estado === "borrador") return false;
+      const d = new Date(p.fecha_publicacion ?? p.created_at);
+      const now = new Date();
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length,
+  );
+  const maxRedesPlan = user ? PLAN_LIMITS[user.plan].redes : 1;
+  const maxPostsMes = user ? PLAN_LIMITS[user.plan].posts_mes : 10;
+  const disconnected = useMemo(
+    () => (user ? disconnectedRedes(redes, accounts) : []),
+    [redes, accounts, user],
+  );
 
   useEffect(() => {
     if (linkFromCalendar) {
@@ -189,12 +207,23 @@ function Publicar() {
   }
 
   function toggleRed(r: Red) {
-    setRedes((rs) => rs.includes(r) ? rs.filter((x) => x !== r) : [...rs, r]);
+    setRedes((rs) => {
+      if (rs.includes(r)) return rs.filter((x) => x !== r);
+      if (rs.length >= maxRedesPlan) {
+        toast.message(`Plan ${planLabel(user!.plan)}: hasta ${maxRedesPlan} red${maxRedesPlan > 1 ? "es" : ""} por publicación`);
+        return rs;
+      }
+      return [...rs, r];
+    });
   }
   function selectAllDestinos() {
-    setRedes([...ALL_REDES]);
+    setRedes([...ALL_REDES].slice(0, maxRedesPlan));
     setWhatsappSelected(true);
-    toast.success("Todas las redes + WhatsApp seleccionadas");
+    toast.success(
+      maxRedesPlan >= ALL_REDES.length
+        ? "Todas las redes + WhatsApp seleccionadas"
+        : `Plan ${planLabel(user!.plan)}: ${maxRedesPlan} red${maxRedesPlan > 1 ? "es" : ""} + WhatsApp`,
+    );
   }
   function onFile(e: React.ChangeEvent<HTMLInputElement>, setter: (s: string) => void) {
     const f = e.target.files?.[0]; if (!f) return; setter(URL.createObjectURL(f));
@@ -286,11 +315,7 @@ function Publicar() {
         copyPorRed: result.copyPorRed,
         fuente: "link_ia",
       });
-      const canales_distribucion = planificarDistribucionIA(
-        redes,
-        iaAlcance?.analysis.nicho ?? "default",
-        alcanceActual,
-      );
+      const canales_distribucion = planificarDistribucionIA(redes);
       const saved = saveDraftPost({
         user_id: user!.id,
         draft_id: draftPostId,
@@ -390,9 +415,8 @@ function Publicar() {
 
   const distribucionIA = useMemo(() => {
     if (!redes.length) return null;
-    const nicho = reachAnalysis?.nicho ?? "default";
-    return planificarDistribucionIA(redes, nicho, alcanceActual);
-  }, [redes, reachAnalysis?.nicho, alcanceActual]);
+    return planificarDistribucionIA(redes);
+  }, [redes]);
 
   const totalCanalesIA = useMemo(
     () => (distribucionIA ? totalCanales(distribucionIA) : 0),
@@ -414,11 +438,7 @@ function Publicar() {
     );
 
     const hashtags_virales = pickViralHashtags(hashtags_por_red);
-    const canales_distribucion = distribucionIA ?? planificarDistribucionIA(
-      redes,
-      reachAnalysis?.nicho ?? "default",
-      alcanceActual,
-    );
+    const canales_distribucion = distribucionIA ?? planificarDistribucionIA(redes);
 
     return {
       hashtags_por_red,
@@ -432,6 +452,9 @@ function Publicar() {
   async function publicar() {
     if (!user) return;
     if (redes.length === 0 && !whatsappSelected) return toast.error("Selecciona al menos una red o WhatsApp");
+    if (!programar && postsEsteMes >= maxPostsMes) {
+      return toast.error(`Límite del plan ${planLabel(user!.plan)}: ${maxPostsMes} publicaciones este mes`);
+    }
     if (!programar && !media && !(publishMode === "link" && sourceUrl)) {
       return toast.error("Sube una imagen o video, o pega un link");
     }
@@ -450,6 +473,16 @@ function Publicar() {
     if (alcanceTipo === "local") {
       if (!paisSel || !estadoSel || !ciudadSel) {
         return toast.error("Completa país, estado y ciudad para alcance local");
+      }
+    }
+
+    if (redes.length > 0) {
+      const missing = disconnectedRedes(redes, accounts);
+      if (missing.length) {
+        return toast.error(
+          `Conecta ${missing.map((r) => RED_LABELS[r]).join(", ")} en Configuración para publicar`,
+          { duration: 8000 },
+        );
       }
     }
 
@@ -486,10 +519,20 @@ function Publicar() {
           }
         : undefined;
 
+    let publishMedia = media;
+    const sessionToken = getSessionToken();
+    if (isProductionModeClient() && sessionToken && publishMedia && !publishMedia.startsWith("http")) {
+      const resolved = await resolveMediaForPublish(publishMedia, sessionToken);
+      if (!resolved) {
+        return toast.error("No pudimos preparar la imagen para publicar. Sube un archivo o usa un link con imagen pública.");
+      }
+      publishMedia = resolved;
+    }
+
     const published = await publishPost({
       user_id: user.id,
       tipo: sourceMeta?.mediaType ?? "imagen",
-      media_url: media,
+      media_url: publishMedia,
       copy: primaryCopy || "⏰ Compartida programada",
       copy_por_red: isLinkMode ? copyPorRed : undefined,
       source_url: (sourceMeta?.url ?? sourceUrl) || undefined,
@@ -502,7 +545,9 @@ function Publicar() {
     });
 
     let realPublishErrors: string[] = [];
-    const sessionToken = getSessionToken();
+    let apiExternalIds: Partial<Record<Red, string>> = {};
+    let surfacesOk = 0;
+    let waSentCount = 0;
     if (isProductionModeClient() && sessionToken) {
       const real = await publishPostReal({
         data: {
@@ -511,7 +556,7 @@ function Publicar() {
             id: published.id,
             draft_id: draftPostId,
             tipo: sourceMeta?.mediaType ?? "imagen",
-            media_url: media,
+            media_url: publishMedia,
             copy: primaryCopy || "⏰ Compartida programada",
             copy_por_red: isLinkMode ? copyPorRed : undefined,
             source_url: (sourceMeta?.url ?? sourceUrl) || undefined,
@@ -527,11 +572,19 @@ function Publicar() {
       });
       if (real.ok) {
         if (real.errors?.length) realPublishErrors = real.errors;
+        if (real.externalIds) apiExternalIds = real.externalIds;
+        if (real.surfaces) surfacesOk = real.surfaces.filter((s) => s.ok).length;
         if (real.waSent) {
-          toast.success(`WhatsApp real: ${real.waSent} contacto${real.waSent > 1 ? "s" : ""} notificados`);
+          waSentCount = real.waSent;
+          toast.success(`WhatsApp: ${real.waSent} contacto${real.waSent > 1 ? "s" : ""} notificados`);
         }
-      } else if (!real.useLocal && real.error && !programar) {
-        toast.warning(`Redes reales: ${real.error}`);
+      } else {
+        if (real.errors?.length) realPublishErrors = real.errors;
+        if (!programar) {
+          toast.error(real.error ?? "No se pudo publicar en tus redes");
+          navigate({ to: "/biblioteca" });
+          return;
+        }
       }
     } else if (whatsappSelected && !programar) {
       if (waContactCount === 0) {
@@ -540,23 +593,45 @@ function Publicar() {
         });
       } else {
         const { sent } = await broadcastPostLink(user.id, published.id);
-        toast.success(`Link enviado a ${sent} contacto${sent > 1 ? "s" : ""} por WhatsApp CRM`);
+        waSentCount = sent;
+        toast.success(`WhatsApp: link enviado a ${sent} contacto${sent > 1 ? "s" : ""}`);
       }
     }
 
-    if (realPublishErrors.length) {
-      toast.message("Algunas redes no publicaron", { description: realPublishErrors.join(" · ") });
+    if (Object.keys(apiExternalIds).length || realPublishErrors.length) {
+      const db = loadDB();
+      const row = db.posts.find((p) => p.id === published.id);
+      if (row) {
+        row.external_ids = apiExternalIds;
+        saveDB(db);
+      }
     }
 
-    const n = redes.length + (whatsappSelected && !programar ? 1 : 0);
+    if (realPublishErrors.length && Object.keys(apiExternalIds).length) {
+      toast.message("Publicado parcialmente", { description: realPublishErrors.join(" · ") });
+    }
+
     toast.success(
-      programar
-        ? "Publicación programada 📅 — aparece en Calendario"
-        : n > 1
-          ? `¡Publicado en ${n} destinos! Guardado en Biblioteca 🎉`
-          : "¡Publicado! Guardado en Biblioteca 🎉",
+      buildPublishResultMessage({
+        redes,
+        apiPublished: apiExternalIds,
+        surfacesOk,
+        errors: realPublishErrors,
+        waSent: waSentCount,
+        programar: !!(programar && fecha),
+      }),
     );
-    navigate({ to: programar ? "/calendario" : "/biblioteca" });
+    navigate({
+      to: programar
+        ? "/calendario"
+        : isProductionModeClient() && surfacesOk > 0
+          ? "/distribuir"
+          : "/biblioteca",
+      search:
+        programar || !isProductionModeClient()
+          ? undefined
+          : { post: published.id },
+    });
   }
 
   function charCountFor(red: Red): number {
@@ -568,7 +643,13 @@ function Publicar() {
   return (
     <div className="space-y-5 max-w-5xl">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl md:text-3xl font-bold">Crear publicación</h1>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">Crear publicación</h1>
+          <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+            Pega tu link → la IA adapta el contenido a cada red → lo publicamos en tus cuentas a la mejor hora.
+            Después puedes impulsarlo en la red oficial PubliVende de tu nicho o con Meta Ads.
+          </p>
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex bg-card border rounded-lg p-1 text-sm">
             <button
@@ -594,6 +675,21 @@ function Publicar() {
         </div>
       </div>
 
+      {disconnected.length > 0 && redes.some((r) => disconnected.includes(r)) && (
+        <Card className="p-4 border-amber-300 bg-amber-50/80 dark:bg-amber-950/20">
+          <div className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-100">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium">Conecta tus redes para publicar</p>
+              <p className="text-xs mt-1 text-amber-800/90 dark:text-amber-200/90">
+                Falta conectar {disconnected.map((r) => RED_LABELS[r]).join(", ")}.{" "}
+                <Link to="/configuracion" className="underline font-medium">Ir a Configuración</Link>
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {publishMode === "link" && (
         <Card className="p-5 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/20">
           <Label className="font-semibold mb-2 flex items-center gap-2">
@@ -604,9 +700,9 @@ function Publicar() {
           </p>
           <div className="mb-3 rounded-lg border p-3 text-xs space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium text-muted-foreground">Auto-publicación (opcional)</span>
+              <span className="font-medium text-muted-foreground">Variantes por red (plan {planLabel(user!.plan)}: {maxRedesPlan})</span>
               <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
-                <Link to="/configuracion">Gestionar conexiones</Link>
+                <Link to="/configuracion">Conectar redes</Link>
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -622,7 +718,7 @@ function Publicar() {
                   >
                     <Icon className="w-3 h-3" />
                     {RED_LABELS[r]}
-                    {ok ? ` · ${acc?.nombre_cuenta}` : " · copiar/pegar OK"}
+                    {ok ? ` · ${acc?.nombre_cuenta}` : " · sin conectar"}
                   </Badge>
                 );
               })}
@@ -872,6 +968,7 @@ function Publicar() {
                   </span>
                 ))}
               </div>
+              <HookMeter copy={copy} />
             </Card>
           ) : null}
 
@@ -905,10 +1002,18 @@ function Publicar() {
           )}
 
           <Card className="p-5">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-1">
               <Label className="font-semibold">Redes destino</Label>
+              <Badge variant="secondary" className="text-[10px]">
+                Plan {planLabel(user!.plan)}: {maxRedesPlan} red{maxRedesPlan > 1 ? "es" : ""}
+              </Badge>
+            </div>
+            <p className="text-[11px] text-muted-foreground mb-3">
+              Generamos el texto adaptado para cada red. Tú lo publicas en tu cuenta (o auto-publicamos si la conectaste).
+            </p>
+            <div className="flex justify-end mb-2">
               <Button size="sm" variant="outline" onClick={selectAllDestinos} className="h-7 text-xs">
-                Todas (5)
+                Máximo del plan ({maxRedesPlan})
               </Button>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -924,7 +1029,7 @@ function Publicar() {
                     <div className="flex-1">
                       <div className="font-medium">{RED_LABELS[r]}</div>
                       <div className="text-[10px] text-muted-foreground">
-                        {acc ? (connected ? acc.nombre_cuenta : "Copy listo — conectar para auto-publicar") : "Disponible"}
+                        {connected ? `Publicará en: ${acc?.nombre_cuenta}` : "Conecta en Configuración"}
                       </div>
                     </div>
                   </button>
@@ -965,12 +1070,17 @@ function Publicar() {
             </Card>
           )}
 
-          <Button onClick={publicar} size="lg" className="w-full bg-gradient-primary border-0 shadow-elegant">
+          <Button
+            onClick={publicar}
+            size="lg"
+            className="w-full bg-gradient-primary border-0 shadow-elegant"
+            disabled={!programar && redes.length > 0 && disconnected.length > 0}
+          >
             {abMode ? "Lanzar experimento A/B" : programar ? "Programar publicación" : (() => {
               const parts = redes.length ? `${redes.length} red${redes.length > 1 ? "es" : ""}` : "";
               const wa = whatsappSelected ? "WhatsApp" : "";
               const label = [parts, wa].filter(Boolean).join(" + ");
-              return label ? `Publicar en ${label}` : "Publicar ahora";
+              return label ? `Publicar en tus redes (${label})` : "Publicar en tus redes";
             })()}
           </Button>
         </div>
@@ -1140,9 +1250,12 @@ function Publicar() {
               <div className="flex items-center justify-between gap-2">
                 <Label className="text-xs font-semibold flex items-center gap-1.5 text-blue-800 dark:text-blue-200">
                   <BarChart3 className="w-3.5 h-3.5" />
-                  Alcance por red (IA + nicho)
+                  Alcance estimado (proyección)
                 </Label>
               </div>
+              <p className="text-[10px] text-muted-foreground -mt-1">
+                Números orientativos según nicho y zona. No son personas que ya vieron tu publicación.
+              </p>
 
               {redes.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
@@ -1156,7 +1269,7 @@ function Publicar() {
                   </p>
                   <p className="text-muted-foreground">
                     {sourceMeta
-                      ? `Origen: ${SOURCE_LABELS[sourceMeta.platform]}. Pulsa «Adaptar con IA» para medir alcance real por nicho en ${redes.map((r) => RED_LABELS[r]).join(", ")}.`
+                      ? `Origen: ${SOURCE_LABELS[sourceMeta.platform]}. Pulsa «Adaptar con IA» para estimar alcance por nicho en ${redes.map((r) => RED_LABELS[r]).join(", ")}.`
                       : "Pega el link, importa y adapta con IA. El alcance se calcula según el nicho de mercado de cada red."}
                   </p>
                 </div>
@@ -1251,11 +1364,11 @@ function Publicar() {
                           Distribución IA
                         </Label>
                         <Badge className="bg-emerald-600 text-[10px]">
-                          {totalCanalesIA} canales/grupos
+                          {totalCanalesIA} canal{totalCanalesIA > 1 ? "es" : ""}
                         </Badge>
                       </div>
                       <p className="text-[10px] text-muted-foreground">
-                        La IA republicará tu contenido en estos canales según tu nicho y zona.
+                        Dónde se publica automáticamente en tus cuentas conectadas.
                       </p>
                       <div className="space-y-1.5 max-h-40 overflow-y-auto">
                         {distribucionIA.map((c, i) => {

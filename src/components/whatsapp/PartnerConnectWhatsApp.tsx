@@ -42,7 +42,7 @@ export function PartnerConnectWhatsApp({ partnerSlug, externalUserId }: Props) {
     }
     setConnected(true);
     setDisplayPhone(res.display_phone);
-    toast.success("WhatsApp conectado");
+    toast.success(<span><span className="text-[#25D366] font-semibold">WhatsApp</span> conectado</span>);
   }
 
   const testUrl =
@@ -52,7 +52,7 @@ export function PartnerConnectWhatsApp({ partnerSlug, externalUserId }: Props) {
     <div className="space-y-3 p-3 border rounded-lg bg-background">
       {connected ? (
         <div className="flex items-center gap-2 text-sm">
-          <CheckCircle2 className="w-4 h-4 text-green-600" />
+          <CheckCircle2 className="w-4 h-4 text-[#25D366]" />
           <Badge variant="outline" className="text-green-700 border-green-300">
             Conectado
           </Badge>
@@ -65,7 +65,7 @@ export function PartnerConnectWhatsApp({ partnerSlug, externalUserId }: Props) {
             <Input value={codigoPais} onChange={(e) => setCodigoPais(e.target.value)} />
           </div>
           <div>
-            <Label className="text-xs">Celular WhatsApp</Label>
+            <Label className="text-xs">Celular <span className="text-[#25D366] font-semibold">WhatsApp</span></Label>
             <Input
               value={celular}
               onChange={(e) => setCelular(e.target.value.replace(/\D/g, ""))}
@@ -76,9 +76,9 @@ export function PartnerConnectWhatsApp({ partnerSlug, externalUserId }: Props) {
       )}
       <div className="flex gap-2">
         {!connected && (
-          <Button size="sm" disabled={loading} onClick={onConnect} className="gap-1 bg-green-600 hover:bg-green-700">
+          <Button size="sm" disabled={loading} onClick={onConnect} className="gap-1 bg-[#25D366] hover:bg-[#1da851]">
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5" />}
-            Conectar WhatsApp
+            Conectar <span className="font-semibold">WhatsApp</span>
           </Button>
         )}
         {testUrl && (

@@ -1,7 +1,10 @@
 import process from "node:process";
 
 export function isProductionMode(): boolean {
-  return !!(process.env.DATABASE_URL && process.env.SESSION_SECRET);
+  return !!(
+    (process.env.DATABASE_URL || (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)) &&
+    process.env.SESSION_SECRET
+  );
 }
 
 export function getSessionSecret(): string {
@@ -16,12 +19,12 @@ export function getDatabaseUrl(): string {
   return url;
 }
 
-export function getOpenAIKey(): string | undefined {
-  return process.env.OPENAI_API_KEY;
+export function getMeaiKey(): string | undefined {
+  return process.env.MEAI_API_KEY;
 }
 
-export function getGafcoreProxyProjectKey(): string | undefined {
-  return process.env.GAFCORE_PROXY_PROJECT_KEY;
+export function getMeaiModel(): string {
+  return process.env.MEAI_MODEL || "claude-haiku-4-5";
 }
 
 export function getWhatsAppConfig() {
@@ -49,7 +52,7 @@ export function isRealWhatsAppEnabled(): boolean {
 }
 
 export function isRealAIEnabled(): boolean {
-  return !!getGafcoreProxyProjectKey() || !!getOpenAIKey();
+  return !!getMeaiKey();
 }
 
 export function isRealPaymentsEnabled(): boolean {

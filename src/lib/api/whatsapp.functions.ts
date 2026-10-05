@@ -1,11 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { isProductionMode, isRealAIEnabled } from "@/server/config";
 import { getDb, schema } from "@/server/db";
 import { verifySessionToken } from "@/server/auth/crypto";
 import { findUserById } from "@/server/auth/users";
-import { broadcastWhatsAppMessages, userHasWhatsAppSending } from "@/server/whatsapp/cloud-api";
+import { broadcastWhatsAppMessages, sendWhatsAppMessage, userHasWhatsAppSending } from "@/server/whatsapp/cloud-api";
+import { mergeTablesIntoSnapshot, mirrorSnapshotToTables, scopeSnapshotToUser } from "@/server/sync/user-data";
 import {
   disconnectWhatsAppAccount,
   getWhatsAppFullStatus,
@@ -39,16 +40,21 @@ export const getWhatsAppAccountStatus = createServerFn({ method: "POST" })
     if (!isProductionMode()) {
       return { ok: true as const, account: { connected: false, mode: "none" as const, apiConnected: false, linkConnected: false }, useLocal: true };
     }
-    const session = await verifySessionToken(data.token);
-    if (!session) return { ok: false as const, error: "Sesión inválida" };
-    const profile = await findUserById(session.userId);
-    if (!profile) return { ok: false as const, error: "Usuario no encontrado" };
-    const account = await getWhatsAppFullStatus(session.userId, {
-      celular: profile.celular,
-      codigoPais: profile.codigoPais,
-      whatsappConfigurado: profile.whatsappConfigurado,
-    });
-    return { ok: true as const, account, useLocal: false };
+    try {
+      const session = await verifySessionToken(data.token);
+      if (!session) return { ok: false as const, error: "Sesión inválida" };
+      const profile = await findUserById(session.userId);
+      if (!profile) return { ok: false as const, error: "Usuario no encontrado" };
+      const account = await getWhatsAppFullStatus(session.userId, {
+        celular: profile.celular,
+        codigoPais: profile.codigoPais,
+        whatsappConfigurado: profile.whatsappConfigurado,
+      });
+      return { ok: true as const, account, useLocal: false };
+    } catch (err) {
+      console.error("[getWhatsAppAccountStatus]", err);
+      return { ok: false as const, error: "Error al consultar WhatsApp" };
+    }
   });
 
 /** Conecta WhatsApp con el número del perfil (enlaces wa.me — funciona sin Meta API). */
@@ -266,7 +272,7 @@ export const generateAIReplyServer = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     if (!isRealAIEnabled()) {
-      return { ok: false as const, error: "OPENAI_API_KEY no configurada", useLocal: true };
+      return { ok: false as const, error: "MEAI_API_KEY no configurada", useLocal: true };
     }
     const session = await verifySessionToken(data.token);
     if (!session) return { ok: false as const, error: "Sesión inválida" };
@@ -285,12 +291,19 @@ export const generateAIReplyServer = createServerFn({ method: "POST" })
       ? await getPostContextBlockServer(session.userId, postId)
       : "Sin publicación vinculada";
     const businessContext = await getBusinessContextServer(session.userId);
+    const history = await db
+      .select({ direccion: schema.whatsappMessages.direccion, texto: schema.whatsappMessages.texto })
+      .from(schema.whatsappMessages)
+      .where(eq(schema.whatsappMessages.contactId, contact.id))
+      .orderBy(desc(schema.whatsappMessages.createdAt))
+      .limit(12);
 
     const reply = await generatePostReplyOpenAI({
       businessContext,
       postContext,
       customerMessage: data.message,
       customerName: contact.nombre,
+      history: history.reverse(),
     });
 
     return { ok: true as const, reply };
@@ -308,20 +321,68 @@ export const syncUserDataServer = createServerFn({ method: "POST" })
     const session = await verifySessionToken(data.token);
     if (!session) return { ok: false as const, error: "Sesión inválida" };
 
+    const scoped = scopeSnapshotToUser(session.userId, data.data);
     const db = getDb();
     await db
       .insert(schema.userDataSnapshots)
       .values({
         userId: session.userId,
-        data: data.data,
+        data: scoped,
         updatedAt: new Date(),
       })
       .onConflictDoUpdate({
         target: schema.userDataSnapshots.userId,
-        set: { data: data.data, updatedAt: new Date() },
+        set: { data: scoped, updatedAt: new Date() },
       });
 
+    try {
+      await mirrorSnapshotToTables(session.userId, scoped);
+    } catch (err) {
+      console.error("[syncUserDataServer] mirror", err);
+    }
+
     return { ok: true as const };
+  });
+
+/** Respuesta manual desde el CRM: la envía por WhatsApp Cloud API y la registra. */
+export const sendWhatsAppReplyServer = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      token: z.string(),
+      contactId: z.string().uuid(),
+      texto: z.string().min(1).max(4096),
+      postId: z.string().uuid().optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    if (!isProductionMode()) return { ok: false as const, error: "Modo demo", useLocal: true };
+    const session = await verifySessionToken(data.token);
+    if (!session) return { ok: false as const, error: "Sesión inválida" };
+
+    const db = getDb();
+    const [contact] = await db
+      .select()
+      .from(schema.whatsappContacts)
+      .where(and(eq(schema.whatsappContacts.id, data.contactId), eq(schema.whatsappContacts.userId, session.userId)))
+      .limit(1);
+    if (!contact) return { ok: false as const, error: "Contacto no registrado en WhatsApp Business", useLocal: true };
+
+    const sent = await sendWhatsAppMessage({ to: contact.celular, text: data.texto, userId: session.userId });
+    if (!sent.ok) return { ok: false as const, error: sent.error ?? "No se pudo enviar", useLocal: true };
+
+    const [row] = await db
+      .insert(schema.whatsappMessages)
+      .values({
+        contactId: contact.id,
+        userId: session.userId,
+        direccion: "saliente",
+        texto: data.texto,
+        automatico: false,
+        postId: data.postId,
+        waMessageId: sent.messageId,
+      })
+      .returning();
+    return { ok: true as const, messageId: row?.id };
   });
 
 export const loadUserDataServer = createServerFn({ method: "POST" })
@@ -338,5 +399,11 @@ export const loadUserDataServer = createServerFn({ method: "POST" })
       .where(eq(schema.userDataSnapshots.userId, session.userId))
       .limit(1);
 
-    return { ok: true as const, data: rows[0]?.data ?? null };
+    const snapshot = rows[0]?.data ? scopeSnapshotToUser(session.userId, rows[0].data) : null;
+    try {
+      return { ok: true as const, data: await mergeTablesIntoSnapshot(session.userId, snapshot) };
+    } catch (err) {
+      console.error("[loadUserDataServer] merge", err);
+      return { ok: true as const, data: snapshot };
+    }
   });

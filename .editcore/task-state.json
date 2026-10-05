@@ -1,0 +1,22 @@
+{
+  "project": "Publivende",
+  "objective": "Auditar, completar y estabilizar el sistema Publivende",
+  "status": "in_progress",
+  "phase": "validacion_middleware_auth",
+  "tasks": [
+    {
+      "id": "migracion-drizzle",
+      "title": "Migrar mocks a Drizzle ORM",
+      "status": "completed",
+      "updatedAt": "2026-09-19T17:58:00.000Z"
+    },
+    {
+      "id": "validacion-middleware-auth",
+      "title": "Validar middleware y auth",
+      "status": "in_progress",
+      "updatedAt": "2026-09-19T17:58:00.000Z"
+    }
+  ],
+  "blockers": [],
+  "lastUpdated": "2026-09-19T17:58:00.000Z"
+}

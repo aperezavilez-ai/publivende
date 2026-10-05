@@ -118,10 +118,11 @@ En producción normal, **cada usuario** guarda su token en `whatsapp_accounts` a
 
 ---
 
-## Paso 5 — IA real (OpenAI)
+## Paso 5 — IA real (MeAI)
 
 ```
-OPENAI_API_KEY=sk-...
+MEAI_API_KEY=sk-...
+MEAI_MODEL=claude-haiku-4-5
 ```
 
 Activa: captions, respuestas WhatsApp contextuales sobre publicaciones.
@@ -157,7 +158,7 @@ Verifica en la app: si producción está activa, login usa servidor y no guarda 
 - [ ] OAuth Meta/Google/TikTok en Live
 - [ ] `WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID` + webhook verificado
 - [ ] Migración `whatsapp_accounts` aplicada
-- [ ] `OPENAI_API_KEY` (opcional pero recomendado)
+- [ ] `MEAI_API_KEY` (opcional pero recomendado)
 - [ ] `STRIPE_SECRET_KEY` (opcional)
 - [ ] `MERCADOPAGO_ACCESS_TOKEN` (opcional, LATAM)
 - [ ] Redeploy en Vercel

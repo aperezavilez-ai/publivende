@@ -38,15 +38,26 @@ function buildListaPrecios(productos: OnboardingProductInput[]): string {
 /**
  * Convierte la info del onboarding en la base de datos del cliente:
  * perfil enriquecido, catálogo, reglas CRM/IA y borrador de primer post.
+ * En producción el snapshot se sincroniza al servidor (productos y reglas incluidos).
  */
-export function bootstrapClientFromOnboarding(userId: string, input: OnboardingBootstrapInput) {
+export async function bootstrapClientFromOnboarding(userId: string, input: OnboardingBootstrapInput) {
+  const cobros = await Promise.all(
+    input.productos.map((p) =>
+      generarLinkCobro({
+        provider: input.pago_provider,
+        monto: p.precio > 0 ? p.precio : 1,
+        moneda: "MXN",
+        descripcion: p.nombre,
+      }),
+    ),
+  );
+
   const db = loadDB();
   const profile = db.profiles.find((p) => p.id === userId);
   if (!profile) return;
 
   const listaPrecios = buildListaPrecios(input.productos);
 
-  // Reemplazar catálogo, borradores y reglas previas del onboarding
   db.productos = db.productos.filter((p) => p.user_id !== userId);
   db.posts = db.posts.filter((p) => !(p.user_id === userId && p.estado === "borrador"));
   db.media_assets = db.media_assets.filter((m) => m.user_id !== userId);
@@ -62,15 +73,8 @@ export function bootstrapClientFromOnboarding(userId: string, input: OnboardingB
     pago_provider_default: input.pago_provider,
   } satisfies Partial<Profile>);
 
-  // Catálogo real del negocio (alimenta CRM → Enviar producto, IA, cobros)
-  input.productos.forEach((p) => {
+  input.productos.forEach((p, i) => {
     const img = p.imagen || DEFAULT_IMG;
-    const cobro = generarLinkCobro({
-      provider: input.pago_provider,
-      monto: p.precio > 0 ? p.precio : 1,
-      moneda: "MXN",
-      descripcion: p.nombre,
-    });
     db.productos.push({
       id: uid(),
       user_id: userId,
@@ -79,7 +83,7 @@ export function bootstrapClientFromOnboarding(userId: string, input: OnboardingB
       moneda: "MXN",
       descripcion: p.descripcion || input.descripcion_negocio,
       imagen: img,
-      link_pago: cobro.url,
+      link_pago: cobros[i]?.url ?? "",
       pago_provider: input.pago_provider,
       slug_publico: slug() + "-" + p.nombre.toLowerCase().replace(/\s+/g, "-"),
       activo: true,
@@ -95,7 +99,6 @@ export function bootstrapClientFromOnboarding(userId: string, input: OnboardingB
     });
   });
 
-  // Borradores de publicación — uno por producto (máx. 4)
   input.productos.slice(0, 4).forEach((p) => {
     const img = p.imagen || DEFAULT_IMG;
     const copy = p.copy_publicacion
@@ -113,7 +116,6 @@ export function bootstrapClientFromOnboarding(userId: string, input: OnboardingB
     });
   });
 
-  // Reglas que alimentan el CRM automático (WhatsApp entrante → respuesta)
   const reglas = [
     {
       nombre: "Bienvenida",
@@ -148,7 +150,6 @@ export function bootstrapClientFromOnboarding(userId: string, input: OnboardingB
     });
   });
 
-  // CRM vacío al inicio — se llena cuando lleguen mensajes reales de WhatsApp
   saveDB(db);
 }
 

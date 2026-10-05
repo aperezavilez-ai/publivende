@@ -18,48 +18,36 @@ interface AuthCtx {
   signIn: (email: string, password: string) => Promise<Profile>;
   signOut: () => void;
   updateUser: (patch: Partial<Profile>) => void;
-  changePlan: (plan: Plan) => void;
+  /** En producción redirige a Stripe Checkout; en demo cambia el plan localmente. */
+  changePlan: (plan: Plan) => Promise<void>;
+  openBillingPortal: () => Promise<void>;
+}
+
+async function redirectToPlanCheckout(token: string, plan: Exclude<Plan, "free">) {
+  const { createPlanCheckoutServer } = await import("@/lib/api/billing.functions");
+  const res = await createPlanCheckoutServer({ data: { token, plan } });
+  if (!res.ok) throw new Error(res.error);
+  window.location.href = res.url;
 }
 
 const Ctx = createContext<AuthCtx | null>(null);
 
-const ADMIN_ACCOUNTS: Array<{ email: string; password: string; nombre: string }> = [
-  { email: "aperezavilez@gmail.com", password: "Calurore1028@", nombre: "Administrador" },
-  { email: "alfonsoavilery@icloud.com", password: "Calurore1028@", nombre: "Alfonso" },
-];
+/** Solo modo demo (sin base de datos): emails que se vuelven admin al registrarse localmente. */
+const DEMO_ADMIN_EMAILS = (import.meta.env.VITE_DEMO_ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((e: string) => e.trim().toLowerCase())
+  .filter(Boolean);
 
 function ensureAdmin() {
+  if (!DEMO_ADMIN_EMAILS.length) return;
   const db = loadDB();
   let changed = false;
 
-  for (const { email, password, nombre } of ADMIN_ACCOUNTS) {
-    const existing = db.profiles.find((p) => p.email === email);
-    if (existing) {
-      if (!existing.is_admin) { existing.is_admin = true; changed = true; }
-      if (existing.plan !== "business") { existing.plan = "business"; changed = true; }
-      if (existing.password !== password) { existing.password = password; changed = true; }
-      if (!userHasSeedData(existing.id)) { seedForUser(existing.id); changed = true; }
-      continue;
-    }
-    const adminId = uid();
-    const admin: Profile = {
-      id: adminId,
-      nombre,
-      email,
-      password,
-      celular: "5555555555",
-      codigo_pais: "+52",
-      nombre_negocio: "PubliVende Admin",
-      industria: "moda",
-      plan: "business",
-      is_admin: true,
-      whatsapp_configurado: true,
-      onboarding_completado: true,
-      fecha_registro: new Date().toISOString(),
-    };
-    db.profiles.push(admin);
-    changed = true;
-    seedForUser(adminId);
+  for (const existing of db.profiles) {
+    if (!DEMO_ADMIN_EMAILS.includes(existing.email.toLowerCase())) continue;
+    if (!existing.is_admin) { existing.is_admin = true; changed = true; }
+    if (existing.plan !== "business") { existing.plan = "business"; changed = true; }
+    if (!userHasSeedData(existing.id)) { seedForUser(existing.id); changed = true; }
   }
 
   if (changed) saveDB(db);
@@ -96,6 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (session.ok) {
             await hydrateLocalFromServer(token);
             const db = loadDB();
+            const idx = db.profiles.findIndex((p) => p.id === session.user.id);
+            if (idx >= 0) db.profiles[idx] = session.user;
+            else db.profiles.push(session.user);
             db.session_user_id = session.user.id;
             saveDB(db);
             setUser(session.user);
@@ -124,6 +115,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const sessionUserId = user?.id;
+  useEffect(() => {
+    if (!productionMode || !sessionUserId) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const flush = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      const token = getSessionToken();
+      if (token) syncLocalToServer(token).catch(() => undefined);
+    };
+    const schedule = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(flush, 2500);
+    };
+    const onHide = () => {
+      if (document.visibilityState === "hidden" && timer) flush();
+    };
+    window.addEventListener("publivende-db-change", schedule);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("publivende-db-change", schedule);
+      document.removeEventListener("visibilitychange", onHide);
+      if (timer) flush();
+    };
+  }, [productionMode, sessionUserId]);
+
   const signUp: AuthCtx["signUp"] = async (data) => {
     if (productionMode) {
       const res = await authSignUp({ data });
@@ -136,6 +153,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       saveDB(db);
       await syncLocalToServer(res.token);
       setUser(res.user);
+      if (data.plan && data.plan !== "free") {
+        await redirectToPlanCheckout(res.token, data.plan).catch(() => undefined);
+      }
       return res.user;
     }
 
@@ -158,8 +178,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     db.session_user_id = profile.id;
     saveDB(db);
     initMinimalUser(profile.id, profile.nombre_negocio);
-    setUser(profile);
-    return profile;
+    ensureAdmin();
+    const fresh = getCurrentUser() ?? profile;
+    setUser(fresh);
+    return fresh;
   };
 
   const signIn: AuthCtx["signIn"] = async (email, password) => {
@@ -211,10 +233,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const changePlan = (plan: Plan) => updateUser({ plan });
+  const changePlan = async (plan: Plan) => {
+    const token = getSessionToken();
+    if (!productionMode || !token) {
+      updateUser({ plan });
+      return;
+    }
+    if (plan === "free") {
+      await openBillingPortal();
+      return;
+    }
+    await redirectToPlanCheckout(token, plan);
+  };
+
+  const openBillingPortal = async () => {
+    const token = getSessionToken();
+    if (!productionMode || !token) throw new Error("Disponible solo en producción");
+    const { createBillingPortalServer } = await import("@/lib/api/billing.functions");
+    const res = await createBillingPortalServer({ data: { token } });
+    if (!res.ok) throw new Error(res.error);
+    window.location.href = res.url;
+  };
 
   return (
-    <Ctx.Provider value={{ user, loading, productionMode, signUp, signIn, signOut, updateUser, changePlan }}>
+    <Ctx.Provider value={{ user, loading, productionMode, signUp, signIn, signOut, updateUser, changePlan, openBillingPortal }}>
       {children}
     </Ctx.Provider>
   );

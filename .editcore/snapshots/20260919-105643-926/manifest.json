@@ -1,0 +1,14 @@
+{
+  "id": "20260919-105643-926",
+  "reason": "replace_in_file",
+  "createdAt": "2026-09-19T17:56:43.928Z",
+  "projectRoot": "D:\\PROGRAMAS IA\\PUBLIVENDE",
+  "files": [
+    {
+      "path": "src/routes/api.v1.partners.publish.tsx",
+      "existed": true,
+      "backup": "src__routes__api.v1.partners.publish.tsx.bak",
+      "bytes": 431
+    }
+  ]
+}

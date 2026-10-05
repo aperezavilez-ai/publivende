@@ -20,7 +20,7 @@ export function dbUserToProfile(u: DbUser): Profile {
     ciudad: u.ciudad ?? undefined,
     horario_atencion: u.horarioAtencion ?? undefined,
     pago_provider_default: u.pagoProviderDefault ?? undefined,
-    plan: u.plan as Plan,
+    plan: (u.isAdmin ? "business" : u.plan) as Plan,
     is_admin: u.isAdmin,
     whatsapp_configurado: u.whatsappConfigurado,
     onboarding_completado: u.onboardingCompletado,
@@ -28,16 +28,22 @@ export function dbUserToProfile(u: DbUser): Profile {
   };
 }
 
+/** Los administradores de la plataforma no tienen límites: siempre operan con el plan más alto. */
+function withEffectivePlan(u: DbUser | undefined): DbUser | null {
+  if (!u) return null;
+  return u.isAdmin ? { ...u, plan: "business" } : u;
+}
+
 export async function findUserByEmail(email: string): Promise<DbUser | null> {
   const db = getDb();
   const rows = await db.select().from(schema.users).where(eq(schema.users.email, email.toLowerCase())).limit(1);
-  return rows[0] ?? null;
+  return withEffectivePlan(rows[0]);
 }
 
 export async function findUserById(id: string): Promise<DbUser | null> {
   const db = getDb();
   const rows = await db.select().from(schema.users).where(eq(schema.users.id, id)).limit(1);
-  return rows[0] ?? null;
+  return withEffectivePlan(rows[0]);
 }
 
 export async function createUser(input: {
@@ -99,6 +105,29 @@ export async function updateUserProfile(userId: string, patch: Partial<Profile>)
   return rows[0] ?? null;
 }
 
+export async function setUserBilling(
+  userId: string,
+  billing: {
+    plan?: Plan;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    planStatus?: string | null;
+    planRenewsAt?: Date | null;
+  },
+): Promise<void> {
+  const db = getDb();
+  await db
+    .update(schema.users)
+    .set({ ...billing, updatedAt: new Date() })
+    .where(eq(schema.users.id, userId));
+}
+
+export async function findUserByStripeCustomerId(customerId: string): Promise<DbUser | null> {
+  const db = getDb();
+  const rows = await db.select().from(schema.users).where(eq(schema.users.stripeCustomerId, customerId)).limit(1);
+  return rows[0] ?? null;
+}
+
 export async function upsertOAuthAccount(
   userId: string,
   data: {
@@ -130,6 +159,7 @@ export async function upsertOAuthAccount(
     avatar: data.avatar,
     oauthProvider: data.oauth_provider,
     estadoConexion: "conectada" as const,
+    metricsError: null,
     updatedAt: new Date(),
   };
 

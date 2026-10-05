@@ -71,21 +71,6 @@ export async function publishPost(input: PublishInput): Promise<Post> {
     db.posts.push(post);
   }
 
-  if (!input.programar) {
-    input.redes.forEach((red) => {
-      const vistas = 100 + Math.floor(Math.random() * 1500);
-      db.post_metrics.push({
-        id: uid(), post_id: post.id, red,
-        vistas,
-        likes: Math.floor(vistas * 0.06),
-        comentarios: Math.floor(vistas * 0.012),
-        compartidos: Math.floor(vistas * 0.005),
-        seguidores_ganados: Math.floor(vistas * 0.002),
-        mensajes_generados: Math.floor(vistas * 0.003),
-      });
-    });
-  }
-
   saveDB(db);
   return post;
 }

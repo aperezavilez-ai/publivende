@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/mock/auth";
+import { requirePlatformAdmin } from "@/lib/auth/require-platform-admin";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,10 @@ import {
 import { resolveAppBaseUrl } from "@/lib/app-url";
 import { Copy, Key, Plus, ExternalLink } from "lucide-react";
 
-export const Route = createFileRoute("/_app/plataforma")({ component: PlataformaPage });
+export const Route = createFileRoute("/_app/plataforma")({
+  beforeLoad: requirePlatformAdmin,
+  component: PlataformaPage,
+});
 
 function PlataformaPage() {
   const { user } = useAuth();
@@ -48,13 +52,7 @@ function PlataformaPage() {
     else setLoading(false);
   }, [user?.is_admin]);
 
-  if (!user?.is_admin) {
-    return (
-      <Card className="p-8 text-center">
-        <p className="text-muted-foreground">Solo administradores pueden gestionar la plataforma.</p>
-      </Card>
-    );
-  }
+  if (!user?.is_admin) return null;
 
   async function onCreatePartner(e: React.FormEvent) {
     e.preventDefault();

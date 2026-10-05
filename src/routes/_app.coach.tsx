@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { requirePlatformAdmin } from "@/lib/auth/require-platform-admin";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/mock/auth";
 import { useDB } from "@/lib/mock/useDB";
@@ -11,7 +12,10 @@ import { generarPlanSemanal, HEATMAP_LATAM, type PlanSemanal } from "@/services/
 import { setPublishDraft } from "@/lib/draft";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_app/coach")({ component: Coach });
+export const Route = createFileRoute("/_app/coach")({
+  beforeLoad: requirePlatformAdmin,
+  component: Coach,
+});
 
 const FRANJAS = ["6 AM", "9 AM", "12 PM", "3 PM", "6 PM", "9 PM"];
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];

@@ -164,11 +164,11 @@ function Onboarding() {
     navigate({ to: "/dashboard" });
   }
 
-  function finalizar() {
+  async function finalizar() {
     const validProducts = productos.filter((p) => p.nombre.trim().length >= 2 && (p.precio > 0 || p.tipo === "servicio"));
     if (validProducts.length === 0) return toast.error("Agrega al menos un producto o servicio con nombre y precio");
 
-    bootstrapClientFromOnboarding(user!.id, {
+    await bootstrapClientFromOnboarding(user!.id, {
       industria: negocio.industria,
       descripcion_negocio: negocio.descripcion,
       publico_objetivo: negocio.publico,
@@ -401,19 +401,19 @@ function Onboarding() {
 
         {step === 3 && (
           <Card className="p-6">
-            <h1 className="text-2xl font-bold">Redes sociales (opcional)</h1>
+            <h1 className="text-2xl font-bold">Conecta tus redes</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              Puedes empezar <b>solo pegando links</b> — la IA adapta el contenido, distribuye por WhatsApp y genera
-              copy listo para copiar. Conecta tus cuentas <b>solo si quieres publicación automática</b> en tus perfiles.
+              PubliVende publica en <b>tus</b> cuentas (Facebook, Instagram, TikTok, YouTube).
+              Conecta al menos una red para poder publicar desde el panel.
             </p>
             <div className="mt-3 flex items-center gap-2 text-xs flex-wrap">
               <Badge variant={conectadas >= 1 ? "default" : "secondary"}>
                 {conectadas}/4 conectadas
               </Badge>
               {conectadas === 0 ? (
-                <span className="text-muted-foreground">Modo simple: links + IA + WhatsApp (sin OAuth)</span>
+                <span className="text-amber-700">Conecta al menos una red para publicar</span>
               ) : (
-                <span className="text-green-700">Auto-publicación disponible en {conectadas} red{conectadas !== 1 ? "es" : ""}</span>
+                <span className="text-green-700">Listo para publicar en {conectadas} red{conectadas !== 1 ? "es" : ""}</span>
               )}
             </div>
             <div className="grid sm:grid-cols-2 gap-3 mt-4">
@@ -431,7 +431,7 @@ function Onboarding() {
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-sm">{RED_LABELS[a.red]}</div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {ok ? a.nombre_cuenta : "Opcional — toca para conectar"}
+                        {ok ? a.nombre_cuenta : "Toca para conectar"}
                       </div>
                     </div>
                     {ok ? <Check className="w-5 h-5 text-success" /> : <span className="text-[10px] text-primary font-medium">Conectar</span>}

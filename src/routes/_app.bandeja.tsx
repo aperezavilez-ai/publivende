@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requirePlatformAdmin } from "@/lib/auth/require-platform-admin";
 import { useState } from "react";
 import { useAuth } from "@/lib/mock/auth";
 import { useDB } from "@/lib/mock/useDB";
@@ -15,7 +16,10 @@ import type { Red } from "@/lib/mock/types";
 import { exportCSV, exportXLSX } from "@/lib/exporters";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
-export const Route = createFileRoute("/_app/bandeja")({ component: Bandeja });
+export const Route = createFileRoute("/_app/bandeja")({
+  beforeLoad: () => requirePlatformAdmin(),
+  component: Bandeja,
+});
 
 const ICONS: Record<Red, typeof Instagram> = { instagram: Instagram, facebook: Facebook, tiktok: Music2, youtube: Youtube };
 

@@ -17,6 +17,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-title", content: "PubliVende" },
       { title: "PubliVende — Publica en todas tus redes y vende por WhatsApp" },
       { name: "description", content: "La herramienta todo-en-uno para creadores y pymes de LATAM. Publica en Instagram, TikTok, Facebook y YouTube + CRM de WhatsApp con IA." },
+      { name: "facebook-domain-verification", content: "rm93pfvri9a9ro4v6ltnwjzi0im7bs" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

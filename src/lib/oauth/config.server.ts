@@ -2,6 +2,7 @@ import process from "node:process";
 
 import { providerForRed as providerForRedShared, type OAuthProvider } from "./providers";
 import { resolveAppBaseUrl } from "@/lib/app-url";
+import type { Red } from "@/lib/mock/types";
 
 export type { OAuthProvider };
 export { providerForRedShared as providerForRed };
@@ -14,6 +15,19 @@ export function getOAuthStateSecret(): string {
   return process.env.OAUTH_STATE_SECRET ?? process.env.META_APP_SECRET ?? "dev-oauth-secret-change-me";
 }
 
+export function getMetaScopesForRed(red: Red): string[] {
+  // Meta retiró publish_to_groups (Groups API) y read_insights en v21.0: pedirlo causa "Invalid Scopes".
+  const base = [
+    "pages_show_list",
+    "pages_read_engagement",
+    "pages_manage_posts",
+  ];
+  if (red === "instagram") {
+    return [...base, "instagram_basic", "instagram_content_publish"];
+  }
+  return base;
+}
+
 export function getMetaOAuthConfig() {
   const appId = process.env.META_APP_ID;
   const appSecret = process.env.META_APP_SECRET;
@@ -21,15 +35,8 @@ export function getMetaOAuthConfig() {
   return {
     appId,
     appSecret,
-    redirectUri: `${getAppBaseUrl()}/oauth/callback/meta`,
-    scopes: [
-      "pages_show_list",
-      "pages_read_engagement",
-      "pages_manage_posts",
-      "instagram_basic",
-      "instagram_content_publish",
-      "business_management",
-    ],
+    redirectUri: `${getAppBaseUrl()}/facebook/callback`,
+    scopes: getMetaScopesForRed("facebook"),
   };
 }
 
@@ -57,7 +64,7 @@ export function getTikTokOAuthConfig() {
     clientKey,
     clientSecret,
     redirectUri: `${getAppBaseUrl()}/oauth/callback/tiktok`,
-    scopes: ["user.info.basic", "video.publish", "video.upload"],
+    scopes: ["user.info.basic", "user.info.stats", "video.publish", "video.upload", "video.list"],
   };
 }
 

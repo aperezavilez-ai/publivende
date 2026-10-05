@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { requirePlatformAdmin } from "@/lib/auth/require-platform-admin";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,10 @@ import { analizarCompetidor, COMPETIDORES_SUGERIDOS, type CompetitorSnapshot } f
 import { setPublishDraft, setCampaignDraft } from "@/lib/draft";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_app/inteligencia")({ component: Inteligencia });
+export const Route = createFileRoute("/_app/inteligencia")({
+  beforeLoad: requirePlatformAdmin,
+  component: Inteligencia,
+});
 
 function Inteligencia() {
   const navigate = useNavigate();

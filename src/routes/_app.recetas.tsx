@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requirePlatformAdmin } from "@/lib/auth/require-platform-admin";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/mock/auth";
 import { loadDB, saveDB, uid, slug } from "@/lib/mock/db";
@@ -16,7 +17,10 @@ import { Star, Download, Upload, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { MarketplaceReceta } from "@/lib/mock/types";
 
-export const Route = createFileRoute("/_app/recetas")({ component: Recetas });
+export const Route = createFileRoute("/_app/recetas")({
+  beforeLoad: requirePlatformAdmin,
+  component: Recetas,
+});
 
 const RATINGS_KEY = "publivende_market_ratings";
 function loadMyRatings(): Record<string, number> {

@@ -12,6 +12,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { setPublishDraft } from "@/lib/draft";
 import { RED_LABELS } from "@/services/social/mock";
 import type { Red } from "@/lib/mock/types";
+import { MetricsSyncPanel } from "@/components/metrics/MetricsSyncPanel";
 
 export const Route = createFileRoute("/_app/analiticas")({ component: Analiticas });
 
@@ -29,10 +30,13 @@ function Analiticas() {
   const ranked = posts.map((p) => {
     const m = metrics.filter((x) => x.post_id === p.id);
     const vistas = m.reduce((s, x) => s + x.vistas, 0);
+    const interacciones = m.reduce((s, x) => s + x.likes + x.comentarios + x.compartidos + (x.guardados ?? 0), 0);
+    const alcance = m.some((x) => x.alcance != null) ? m.reduce((s, x) => s + (x.alcance ?? 0), 0) : null;
+    const real = m.some((x) => x.fuente === "real");
     const cs = contacts.filter((c) => c.post_origen_id === p.id);
     const ganadas = cs.filter((c) => c.etapa === "ganado");
     const ingresos = ganadas.reduce((s, c) => s + (c.monto_venta ?? 0), 0);
-    return { p, vistas, msgs: cs.length, ventas: ganadas.length, ingresos };
+    return { p, vistas, interacciones, alcance, real, msgs: cs.length, ventas: ganadas.length, ingresos };
   }).sort((a, b) => b.vistas - a.vistas);
 
   const totalVistas = ranked.reduce((s, x) => s + x.vistas, 0);
@@ -57,6 +61,7 @@ function Analiticas() {
         <TabsList><TabsTrigger value="general">General</TabsTrigger><TabsTrigger value="atribucion">Atribución a ventas</TabsTrigger><TabsTrigger value="reciclar">Reciclador IA</TabsTrigger></TabsList>
 
         <TabsContent value="general" className="space-y-4">
+          <MetricsSyncPanel />
           <Card className="p-5">
             <h2 className="font-semibold mb-3">Vistas por red</h2>
             <ResponsiveContainer width="100%" height={260}>
@@ -68,8 +73,15 @@ function Analiticas() {
               {ranked.slice(0, 10).map((r) => (
                 <div key={r.p.id} className="flex items-center gap-3 border-b pb-2">
                   <img src={r.p.media_url} className="w-12 h-12 rounded object-cover" alt="" />
-                  <div className="flex-1 truncate">{r.p.copy}</div>
-                  <div className="text-right text-xs"><div className="font-bold">{r.vistas.toLocaleString()} vistas</div><div className="text-muted-foreground">{r.msgs} msgs</div></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate">{r.p.copy}</div>
+                    {r.real && <span className="text-[10px] uppercase tracking-wide text-success font-semibold">Medido en la red</span>}
+                  </div>
+                  <div className="text-right text-xs">
+                    <div className="font-bold">{r.vistas.toLocaleString()} vistas</div>
+                    {r.alcance != null && <div className="text-muted-foreground">{r.alcance.toLocaleString()} personas</div>}
+                    <div className="text-muted-foreground">{r.interacciones.toLocaleString()} interacciones · {r.msgs} msgs</div>
+                  </div>
                 </div>
               ))}
             </div>

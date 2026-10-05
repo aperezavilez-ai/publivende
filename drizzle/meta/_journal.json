@@ -29,6 +29,55 @@
       "when": 1781600000000,
       "tag": "0004_schedule_meta",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781700000000,
+      "tag": "0005_hosted_media",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781800000000,
+      "tag": "0006_distribution",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781900000000,
+      "tag": "0007_billing",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782000000000,
+      "tag": "0008_metrics",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782100000000,
+      "tag": "0009_brain",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782200000000,
+      "tag": "0010_autopilot_benchmarks",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782300000000,
+      "tag": "0011_red_publivende",
+      "breakpoints": true
     }
   ]
 }

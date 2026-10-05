@@ -9,8 +9,9 @@ export async function startSocialOAuthConnect(
   userId: string,
   red: Red,
   returnTo = "/configuracion",
+  pageHint?: string,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  const result = await buildOAuthStartUrl({ data: { red, userId, returnTo } });
+  const result = await buildOAuthStartUrl({ data: { red, userId, returnTo, pageHint } });
   if (!result.ok) return { ok: false, error: result.error };
   return { ok: true, url: result.url };
 }

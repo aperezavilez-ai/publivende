@@ -1,5 +1,6 @@
 import { repurposeFromLink } from "@/services/import";
 import { loadDB, saveDB } from "@/lib/mock/db";
+import { broadcastPostLink } from "@/services/whatsapp/mock";
 import type { Post, Red, ScheduleMeta } from "@/lib/mock/types";
 
 /** Ejecuta una publicación programada en modo demo (localStorage). */
@@ -17,13 +18,13 @@ export async function runLocalScheduledPost(post: Post, userId: string): Promise
       post.source_url,
       redes.length ? redes : (["instagram"] as Red[]),
       profile.industria ?? "general",
-      meta.tono ?? "casual",
+      meta.tono === "formal" ? "profesional" : (meta.tono ?? "casual"),
     );
 
     const primaryCopy =
       Object.values(copyPorRed).find(Boolean) ??
       source.originalCaption ??
-      source.ogDescription ??
+      source.linkDescription ??
       "Nueva publicación";
 
     const idx = db.posts.findIndex((p) => p.id === post.id);

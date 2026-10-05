@@ -60,13 +60,13 @@ export async function executeScheduledPost(post: DbPost): Promise<ScheduledRunRe
         post.sourceUrl,
         redes.length ? redes : ["instagram"],
         user.industria ?? "general",
-        meta.tono ?? "casual",
+        meta.tono === "formal" ? "profesional" : (meta.tono ?? "casual"),
       );
 
       primaryCopy =
         Object.values(adapted).find(Boolean) ??
         source.originalCaption ??
-        source.ogDescription ??
+        source.linkDescription ??
         "Nueva publicación";
       copyPorRed = adapted;
       mediaUrl = source.mediaUrl || post.mediaUrl || "";
@@ -96,9 +96,7 @@ export async function executeScheduledPost(post: DbPost): Promise<ScheduledRunRe
         : {};
       const hashtagsPorRed = mergeHashtagMaps(hashtagsNicho);
       const hashtagsVirales = pickViralHashtags(hashtagsPorRed);
-      const distribucion = alcanceIA
-        ? planificarDistribucionIA(redes, alcanceIA.analysis.nicho, alcance)
-        : [];
+      const distribucion = planificarDistribucionIA(redes);
       const totalCanalesValue = totalCanales(distribucion);
       const alcanceTotal = alcanceIA ? totalAlcanceIA(alcanceIA.por_red) : { personas_min: 0, personas_max: 0 };
       const ads = estimateAdsConversion(alcanceTotal.personas_min, alcanceTotal.personas_max);

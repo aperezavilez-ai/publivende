@@ -67,23 +67,39 @@ export function ConnectWhatsApp() {
       return;
     }
 
+    setLoading(true);
+    const userPhone = user.celular ?? "";
+    const phoneDigits = userPhone.replace(/\D/g, "");
     setCodigoPais(user.codigo_pais || "+52");
-    setCelular(user.celular?.replace(/\D/g, "") ?? "");
+    setCelular(phoneDigits);
 
-    const token = getSessionToken();
-    if (!isProductionModeClient() || !token) {
-      const linked = !!(user.whatsapp_configurado && user.celular.replace(/\D/g, "").length >= 10);
-      setMode(linked ? "link" : "none");
-      if (linked) {
-        setDisplayPhone(formatWhatsAppDisplay(user.codigo_pais, user.celular));
+    try {
+      const token = getSessionToken();
+      if (!isProductionModeClient() || !token) {
+        const linked = !!(user.whatsapp_configurado && phoneDigits.length >= 10);
+        setMode(linked ? "link" : "none");
+        setVerifiedName(null);
+        setDisplayPhone(linked ? formatWhatsAppDisplay(user.codigo_pais, userPhone) : null);
+        return;
       }
-      setLoading(false);
-      return;
-    }
 
-    const res = await getWhatsAppAccountStatus({ data: { token } });
-    if (res.ok) applyAccount(res.account);
-    setLoading(false);
+      const res = await getWhatsAppAccountStatus({ data: { token } });
+      if (res.ok) {
+        applyAccount(res.account);
+      } else {
+        const linked = !!(user.whatsapp_configurado && phoneDigits.length >= 10);
+        setMode(linked ? "link" : "none");
+        setDisplayPhone(linked ? formatWhatsAppDisplay(user.codigo_pais, userPhone) : null);
+        setVerifiedName(null);
+      }
+    } catch {
+      const linked = !!(user.whatsapp_configurado && phoneDigits.length >= 10);
+      setMode(linked ? "link" : "none");
+      setDisplayPhone(linked ? formatWhatsAppDisplay(user.codigo_pais, userPhone) : null);
+      setVerifiedName(null);
+    } finally {
+      setLoading(false);
+    }
   }, [user, applyAccount]);
 
   useEffect(() => {
@@ -115,7 +131,7 @@ export function ConnectWhatsApp() {
       }
 
       applyAccount(result.account);
-      toast.success("WhatsApp API conectada");
+      toast.success(<span><span className="text-[#25D366] font-semibold">WhatsApp</span> API conectada</span>);
     },
     [applyAccount],
   );
@@ -191,7 +207,7 @@ export function ConnectWhatsApp() {
       setConnecting(false);
     }
 
-    toast.success("WhatsApp conectado con tu número");
+    toast.success(<span><span className="text-[#25D366] font-semibold">WhatsApp</span> conectado con tu número</span>);
   }
 
   function onConnectApi() {
@@ -225,7 +241,7 @@ export function ConnectWhatsApp() {
     if (!token && !isProductionModeClient()) {
       setMode("none");
       updateUser({ whatsapp_configurado: false });
-      toast.success("WhatsApp desconectado");
+      toast.success(<span><span className="text-[#25D366] font-semibold">WhatsApp</span> desconectado</span>);
       return;
     }
     if (!token) return;
@@ -239,7 +255,7 @@ export function ConnectWhatsApp() {
     setDisplayPhone(null);
     setVerifiedName(null);
     updateUser({ whatsapp_configurado: false });
-    toast.success("WhatsApp desconectado");
+    toast.success(<span><span className="text-[#25D366] font-semibold">WhatsApp</span> desconectado</span>);
   }
 
   const testWaUrl = celular.length >= 10 ? buildWaMeUrl(codigoPais, celular, "Hola, prueba desde PubliVende") : null;
@@ -249,7 +265,7 @@ export function ConnectWhatsApp() {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
         <Loader2 className="w-4 h-4 animate-spin" />
-        Cargando WhatsApp…
+        Cargando <span className="text-[#25D366] font-semibold">WhatsApp</span>…
       </div>
     );
   }
@@ -257,7 +273,7 @@ export function ConnectWhatsApp() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <MessageCircle className="w-4 h-4 text-green-600" />
+        <MessageCircle className="w-4 h-4 text-[#25D366]" />
         {connected ? (
           <Badge variant="outline" className="text-green-700 border-green-300">
             <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -292,7 +308,7 @@ export function ConnectWhatsApp() {
             <Input value={codigoPais} onChange={(e) => setCodigoPais(e.target.value)} placeholder="+52" />
           </div>
           <div>
-            <Label className="text-xs">Tu celular WhatsApp Business</Label>
+            <Label className="text-xs">Tu celular <span className="text-[#25D366] font-semibold">WhatsApp</span> Business</Label>
             <Input
               value={celular}
               onChange={(e) => setCelular(e.target.value.replace(/\D/g, ""))}
@@ -310,10 +326,10 @@ export function ConnectWhatsApp() {
               size="sm"
               disabled={connecting}
               onClick={onConnectNumber}
-              className="gap-1 bg-green-600 hover:bg-green-700"
+              className="gap-1 bg-[#25D366] hover:bg-[#1da851]"
             >
               {connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5" />}
-              Conectar mi WhatsApp
+              Conectar mi <span className="font-semibold">WhatsApp</span>
             </Button>
             {metaAppId && (
               <Button size="sm" variant="outline" disabled={connecting} onClick={onConnectApi} className="gap-1">
@@ -348,12 +364,12 @@ export function ConnectWhatsApp() {
 
       <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
         <p>
-          <b>Conectar mi WhatsApp</b> — usa tu número real. Al publicar, tus clientes te escriben por{" "}
+          <b>Conectar mi <span className="text-[#25D366] font-semibold">WhatsApp</span></b> — usa tu número real. Al publicar, tus clientes te escriben por{" "}
           <code>wa.me</code> directo a tu celular. <b>No requiere Meta.</b>
         </p>
         <p>
           <b>API Meta (opcional)</b> — envío automático masivo y respuestas por API. Si tu número ya está en
-          WhatsApp Business, Meta puede pedir migración con coexistencia.
+          <span className="text-[#25D366] font-semibold"> WhatsApp</span> Business, Meta puede pedir migración con coexistencia.
         </p>
       </div>
     </div>

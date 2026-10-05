@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { requirePlatformAdmin } from "@/lib/auth/require-platform-admin";
 import { useMemo } from "react";
 import { useAuth } from "@/lib/mock/auth";
 import { useDB } from "@/lib/mock/useDB";
@@ -12,6 +13,7 @@ import type { ABExperiment, Post, PostMetric } from "@/lib/mock/types";
 
 export const Route = createFileRoute("/_app/experimentos")({
   ssr: false,
+  beforeLoad: requirePlatformAdmin,
   component: Experimentos,
 });
 

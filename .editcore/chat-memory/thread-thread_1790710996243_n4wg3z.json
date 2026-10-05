@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "threadId": "thread_1790710996243_n4wg3z",
+  "updatedAt": "2026-09-29T19:43:16.897Z",
+  "turns": [
+    {
+      "role": "user",
+      "content": "hola",
+      "at": 1790710996299
+    },
+    {
+      "role": "user",
+      "content": "hola",
+      "at": 1790710996896
+    },
+    {
+      "role": "assistant",
+      "content": "Algo falló durante la ejecución: No pude autenticar el modelo. Revisa la API key en Modelos e intenta de nuevo.",
+      "at": 1790710996896
+    }
+  ],
+  "workingOn": "hola"
+}

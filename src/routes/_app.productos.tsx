@@ -25,18 +25,20 @@ function Prods() {
   const [story, setStory] = useState<Producto | null>(null);
   const [form, setForm] = useState({ nombre: "", precio: 0, moneda: "MXN" as const, descripcion: "", imagen: "", link_pago: "" });
 
-  function crear() {
+  async function crear() {
     if (!user) return;
     const limit = PLAN_LIMITS[user.plan].productos;
     if (productos.length >= limit) return toast.error(`Tu plan permite máximo ${limit} productos`);
     if (!form.nombre || !form.precio) return toast.error("Nombre y precio requeridos");
     const provider = user.pago_provider_default ?? "stripe";
-    const cobro = generarLinkCobro({
-      provider,
-      monto: form.precio,
-      moneda: form.moneda,
-      descripcion: form.nombre,
-    });
+    const cobro = form.link_pago
+      ? null
+      : await generarLinkCobro({
+          provider,
+          monto: form.precio,
+          moneda: form.moneda,
+          descripcion: form.nombre,
+        });
     const db = loadDB();
     db.productos.push({
       id: uid(),
@@ -46,7 +48,7 @@ function Prods() {
       moneda: form.moneda,
       descripcion: form.descripcion,
       imagen: form.imagen,
-      link_pago: form.link_pago || cobro.url,
+      link_pago: form.link_pago || cobro?.url || "",
       pago_provider: provider,
       slug_publico: slug() + "-" + form.nombre.toLowerCase().replace(/\s+/g, "-"),
       activo: true,

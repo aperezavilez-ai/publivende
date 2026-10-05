@@ -1,9 +1,9 @@
 {
   "framework": "tanstack-start",
   "crons": [
-    {
-      "path": "/api/cron/publish-scheduled",
-      "schedule": "* * * * *"
-    }
+    { "path": "/api/cron/publish-scheduled", "schedule": "* * * * *" },
+    { "path": "/api/cron/sync-metrics", "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/autopilot", "schedule": "15 * * * *" },
+    { "path": "/api/cron/benchmarks", "schedule": "40 9 * * *" }
   ]
 }
