@@ -75,7 +75,7 @@ function Conf() {
 
   useEffect(() => {
     const token = getSessionToken();
-    if (!isProductionModeClient() || !token) return;
+    if (!isProductionModeClient() || !token || !user) return;
     void checkMetaPublishHealth({ data: { token } }).then((res) => {
       if (res.ok && "connected" in res && res.connected) {
         setMetaHealth({
@@ -86,9 +86,30 @@ function Conf() {
           recommendations: res.recommendations,
           debug_error: res.debug_error,
         });
+        if (res.can_publish && !res.needs_reconnect) {
+          const db = loadDB();
+          let fb = db.social_accounts.find((x) => x.user_id === user.id && x.red === "facebook");
+          if (!fb) {
+            db.social_accounts.push({
+              id: uid(),
+              user_id: user.id,
+              red: "facebook",
+              nombre_cuenta: res.page_name ?? "Facebook",
+              avatar: "",
+              estado_conexion: "conectada",
+              token_placeholder: "oauth_authenticated",
+              oauth_provider: "meta",
+            });
+            saveDB(db);
+          } else if (fb.estado_conexion !== "conectada" || (res.page_name && fb.nombre_cuenta !== res.page_name)) {
+            fb.estado_conexion = "conectada";
+            if (res.page_name) fb.nombre_cuenta = res.page_name;
+            saveDB(db);
+          }
+        }
       }
     });
-  }, [accounts]);
+  }, [user]);
 
   if (!user) return null;
 
@@ -300,42 +321,50 @@ function Conf() {
         )}
 
         <div className="space-y-2">
-          {accounts.map((a) => (
-            <div key={a.id} className="flex items-center justify-between gap-3 p-3 border rounded-lg">
-              <div className="min-w-0">
-                <div className="font-medium text-sm flex items-center gap-2 flex-wrap">
-                  {RED_LABELS[a.red]}
-                  {a.estado_conexion === "conectada" && (
-                    <Badge variant="outline" className="text-[10px] border-green-400 text-green-800 bg-green-50/80">
-                      Conectado
-                    </Badge>
+          {accounts.map((a) => {
+            const isFb = a.red === "facebook";
+            const fbLive = isFb && !!metaHealth?.can_publish && !metaHealth?.needs_reconnect;
+            const isConectada = a.estado_conexion === "conectada" || fbLive;
+            const nombreMostrado = (isFb && metaHealth?.page_name)
+              ? metaHealth.page_name
+              : (isConectada ? a.nombre_cuenta : "Sin conectar");
+
+            return (
+              <div key={a.id} className="flex items-center justify-between gap-3 p-3 border rounded-lg">
+                <div className="min-w-0">
+                  <div className="font-medium text-sm flex items-center gap-2 flex-wrap">
+                    {RED_LABELS[a.red]}
+                    {isConectada && (
+                      <Badge variant="outline" className="text-[10px] border-green-400 text-green-800 bg-green-50/80">
+                        Conectado
+                      </Badge>
+                    )}
+                    {isAdmin && isConectada && (a.oauth_provider || isFb) && (
+                      <Badge variant="outline" className="text-[10px]">OAuth {a.oauth_provider ?? "meta"}</Badge>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {nombreMostrado}
+                  </div>
+                  {isConectada && metricsSync.find((s) => s.red === a.red)?.reconectar && (
+                    <div className="text-[11px] text-amber-600 flex items-center gap-2 mt-0.5">
+                      Faltan permisos o el acceso expiró.
+                      <button type="button" className="underline font-medium" onClick={() => onConnect(a.red)}>
+                        Reconectar
+                      </button>
+                    </div>
                   )}
-                  {isAdmin && a.estado_conexion === "conectada" && a.oauth_provider && (
-                    <Badge variant="outline" className="text-[10px]">OAuth {a.oauth_provider}</Badge>
+                  {!isConectada && (
+                    <div className="text-[10px] text-muted-foreground">
+                      {isAdmin ? oauthProviderLabel(a.red) : "Pulsa Conectar para vincular tu cuenta"}
+                    </div>
                   )}
                 </div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {a.estado_conexion === "conectada" ? a.nombre_cuenta : "Sin conectar"}
-                </div>
-                {a.estado_conexion === "conectada" && metricsSync.find((s) => s.red === a.red)?.reconectar && (
-                  <div className="text-[11px] text-amber-600 flex items-center gap-2 mt-0.5">
-                    Faltan permisos o el acceso expiró.
-                    <button type="button" className="underline font-medium" onClick={() => onConnect(a.red)}>
-                      Reconectar
-                    </button>
-                  </div>
-                )}
-                {a.estado_conexion !== "conectada" && (
-                  <div className="text-[10px] text-muted-foreground">
-                    {isAdmin ? oauthProviderLabel(a.red) : "Pulsa Conectar para vincular tu cuenta"}
-                  </div>
-                )}
-              </div>
-              {a.estado_conexion === "conectada" ? (
-                <Button size="sm" variant="outline" onClick={() => { disconnectAccount(user.id, a.red); toast.success("Desconectado"); }}>
-                  Desconectar
-                </Button>
-              ) : (
+                {isConectada ? (
+                  <Button size="sm" variant="outline" onClick={() => { disconnectAccount(user.id, a.red); toast.success("Desconectado"); }}>
+                    Desconectar
+                  </Button>
+                ) : (
                 <Button
                   size="sm"
                   className="gap-1"
@@ -347,7 +376,8 @@ function Conf() {
                 </Button>
               )}
             </div>
-          ))}
+          );
+        })}
         </div>
       </Card>
 

@@ -57,6 +57,31 @@ export const listCalendarPosts = createServerFn({ method: "POST" })
     return { ok: true as const, posts: rows.map(dbPostToClient), useLocal: false };
   });
 
+export const deletePostServer = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string(), postId: z.string() }))
+  .handler(async ({ data }) => {
+    if (!isProductionMode()) return { ok: true as const, useLocal: true };
+    const session = await verifySessionToken(data.token);
+    if (!session) return { ok: false as const, error: "Sesión inválida" };
+
+    const db = getDb();
+    try {
+      await db.delete(schema.postMetrics).where(eq(schema.postMetrics.postId, data.postId));
+    } catch {
+      /* ignore if not exists */
+    }
+    try {
+      await db.delete(schema.postDistributions).where(eq(schema.postDistributions.postId, data.postId));
+    } catch {
+      /* ignore if not exists */
+    }
+    await db
+      .delete(schema.posts)
+      .where(and(eq(schema.posts.id, data.postId), eq(schema.posts.userId, session.userId)));
+
+    return { ok: true as const };
+  });
+
 export const scheduleLinkPost = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({

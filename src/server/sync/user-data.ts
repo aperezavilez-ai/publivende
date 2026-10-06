@@ -174,7 +174,7 @@ export async function mergeTablesIntoSnapshot(userId: string, snapshot: Partial<
   const db = getDb();
   const data: Partial<DB> = { ...(snapshot ?? {}) };
 
-  const [contactRows, messageRows, postRows] = await Promise.all([
+  const [contactRows, messageRows, postRows, oauthRows] = await Promise.all([
     db.select().from(schema.whatsappContacts).where(eq(schema.whatsappContacts.userId, userId)),
     db
       .select()
@@ -183,7 +183,26 @@ export async function mergeTablesIntoSnapshot(userId: string, snapshot: Partial<
       .orderBy(desc(schema.whatsappMessages.createdAt))
       .limit(MESSAGE_HISTORY_LIMIT),
     db.select().from(schema.posts).where(eq(schema.posts.userId, userId)),
+    db.select().from(schema.oauthAccounts).where(eq(schema.oauthAccounts.userId, userId)),
   ]);
+
+  const socialMap = new Map((data.social_accounts ?? []).map((s) => [s.red, s]));
+  for (const row of oauthRows) {
+    const existing = socialMap.get(row.red);
+    socialMap.set(row.red, {
+      id: row.id,
+      user_id: row.userId,
+      red: row.red,
+      nombre_cuenta: row.nombreCuenta,
+      avatar: row.avatar ?? existing?.avatar ?? "",
+      estado_conexion: (row.estadoConexion === "conectada" ? "conectada" : "desconectada") as "conectada" | "desconectada",
+      token_placeholder: "oauth_authenticated",
+      external_account_id: row.externalAccountId ?? undefined,
+      token_expires_at: row.tokenExpiresAt?.toISOString() ?? undefined,
+      oauth_provider: (row.oauthProvider as "meta" | "google" | "tiktok") ?? undefined,
+    });
+  }
+  data.social_accounts = Array.from(socialMap.values());
 
   const contacts = new Map((data.whatsapp_contacts ?? []).map((c) => [c.id, c]));
   for (const row of contactRows) {

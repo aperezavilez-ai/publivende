@@ -394,3 +394,189 @@ Reglas: gancho fuerte en la primera línea (máximo 110 caracteres), máximo 700
   });
   return res.choices[0]?.message?.content?.trim() ?? "";
 }
+
+export interface GenerateAICampaignInput {
+  negocio: string;
+  industria?: string;
+  ciudad?: string;
+  descripcion?: string;
+  productos?: Array<{ nombre: string; precio: number; descripcion?: string }>;
+  promptIdea?: string;
+  tono?: string;
+  phone?: string;
+}
+
+export interface GenerateAICampaignOutput {
+  nicho: string;
+  nicho_label: string;
+  estrategia: string;
+  flyerData: {
+    businessName: string;
+    headline: string;
+    subheadline: string;
+    badge: string;
+    ctaText: string;
+    city?: string;
+    phone?: string;
+    theme: "food" | "fashion" | "service" | "tech" | "vibrant";
+  };
+  copies: {
+    facebook: string;
+    instagram: string;
+    tiktok: string;
+    youtube: string;
+  };
+  hooks: {
+    facebook: string;
+    instagram: string;
+    tiktok: string;
+    youtube: string;
+  };
+  hashtags: string[];
+}
+
+/**
+ * Generador de Campaña Integral con IA:
+ * Reconoce el negocio, formula la oferta o promo, diseña el flyer y redacta los copies por red.
+ */
+export async function generateFullAICampaignOpenAI(
+  input: GenerateAICampaignInput,
+): Promise<GenerateAICampaignOutput> {
+  const ai = getClient();
+  const catalogoTxt = (input.productos ?? []).length
+    ? input.productos!.map((p) => `- ${p.nombre} ($${p.precio})`).join("\n")
+    : "Sin catálogo registrado";
+
+  const res = await ai.chat.completions.create({
+    model: getMeaiModel(),
+    messages: [
+      {
+        role: "system",
+        content: `Eres el Director Creativo de PubliVende, la plataforma líder de difusión publicitaria en LATAM.
+Tu tarea es diseñar una CAMPAÑA PUBLICITARIA COMPLETA Y PROFESIONAL a partir de los datos del negocio del usuario.
+
+REGLAS DE GENERACIÓN:
+1. "nicho": Nicho de mercado detectado (ej. "comida y restaurantes", "moda y calzado", "servicios tecnicos", "salud y belleza", "retail", etc.).
+2. "nicho_label": Nombre amigable del nicho en español (ej. "Gastronomía & Antojos", "Moda Urbana", "Servicios Profesionales").
+3. "estrategia": Una breve explicación de por qué esta oferta o ángulo enganchará al público objetivo.
+4. "flyerData": Datos para generar el flyer gráfico publicitario:
+   - "businessName": Nombre del negocio.
+   - "headline": Título publicitario muy potente de 3 a 6 palabras (ej. "¡2X1 EN TACOS AL PASTOR!", "20% OFF EN TU PRIMER CORTE", "LIQUIDACIÓN DE TEMPORADA").
+   - "subheadline": Frase de apoyo con vigencia o beneficio (ej. "Válido este fin de semana. ¡Te esperamos!", "Reserva tu cita hoy mismo").
+   - "badge": Etiqueta de promoción corta (ej. "PROMO ESPECIAL", "OFERTA 2X1", "-20% OFF", "EDICIÓN LIMITADA").
+   - "ctaText": Llamado a la acción (ej. "Pide por WhatsApp", "Agenda tu Cita", "Ordena Aquí").
+   - "theme": Uno de: "food" (restaurantes, comida, bebidas), "fashion" (ropa, calzado, belleza), "service" (talleres, doctores, asesoría, limpieza), "tech" (software, cursos, electrónica), "vibrant" (otro o general).
+5. "copies": Copies adaptados para cada red:
+   - "facebook": Copy persuasivo completo con gancho, desarrollo de la oferta, ubicación y llamado a contactar por WhatsApp.
+   - "instagram": Copy visual con storytelling y llamada a la acción en bio/DM.
+   - "tiktok": Copy dinámico y corto (máx 350 caracteres) con gancho viral en los primeros 3 segundos.
+   - "youtube": Titular llamativo y descripción optimizada para YouTube Shorts.
+6. "hooks": El gancho de apertura (primera línea) para cada red.
+7. "hashtags": Array de 5 a 8 hashtags virales y de nicho (con el símbolo #).
+
+RESPONDE ÚNICAMENTE UN OBJETO JSON VÁLIDO CON ESTA ESTRUCTURA:
+{
+  "nicho": "...",
+  "nicho_label": "...",
+  "estrategia": "...",
+  "flyerData": {
+    "businessName": "...",
+    "headline": "...",
+    "subheadline": "...",
+    "badge": "...",
+    "ctaText": "...",
+    "theme": "food"
+  },
+  "copies": {
+    "facebook": "...",
+    "instagram": "...",
+    "tiktok": "...",
+    "youtube": "..."
+  },
+  "hooks": {
+    "facebook": "...",
+    "instagram": "...",
+    "tiktok": "...",
+    "youtube": "..."
+  },
+  "hashtags": ["#tag1", "#tag2", "#tag3"]
+}`,
+      },
+      {
+        role: "user",
+        content: `DATOS DEL NEGOCIO:
+- Nombre: ${input.negocio || "Mi Negocio"}
+- Giro / Industria: ${input.industria || "Comercio"}
+- Ciudad: ${input.ciudad || "México"}
+- Descripción: ${input.descripcion || "Negocio local"}
+- Catálogo / Productos:
+${catalogoTxt}
+
+IDEA O PEDIDO DEL USUARIO (si está vacío, crea la mejor promo de su giro):
+${input.promptIdea || "Genera una promoción atractiva e irresistible para atraer clientes hoy mismo."}
+
+Tono: ${input.tono || "persuasivo y llamativo"}`,
+      },
+    ],
+    temperature: 0.7,
+    max_tokens: 2200,
+  });
+
+  const rawText = res.choices[0]?.message?.content ?? "{}";
+  let clean = rawText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  clean = clean.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+  let parsed: any = {};
+  if (start !== -1 && end > start) {
+    try {
+      parsed = JSON.parse(clean.slice(start, end + 1));
+    } catch {
+      parsed = {};
+    }
+  }
+
+  const fData = parsed.flyerData || {};
+  let theme: "food" | "fashion" | "service" | "tech" | "vibrant" = "vibrant";
+  const indLower = (input.industria || "").toLowerCase();
+  if (["food", "fashion", "service", "tech", "vibrant"].includes(fData.theme)) {
+    theme = fData.theme;
+  } else if (indLower.includes("comida") || indLower.includes("rest") || indLower.includes("alimento") || indLower.includes("taco") || indLower.includes("cafe")) {
+    theme = "food";
+  } else if (indLower.includes("moda") || indLower.includes("ropa") || indLower.includes("belleza") || indLower.includes("calzado")) {
+    theme = "fashion";
+  } else if (indLower.includes("salud") || indLower.includes("med") || indLower.includes("taller") || indLower.includes("servicio") || indLower.includes("abog")) {
+    theme = "service";
+  }
+
+  return {
+    nicho: String(parsed.nicho || indLower || "general"),
+    nicho_label: String(parsed.nicho_label || "Oferta Especial"),
+    estrategia: String(parsed.estrategia || "Campaña diseñada para maximizar el alcance en tu audiencia objetivo."),
+    flyerData: {
+      businessName: String(fData.businessName || input.negocio || "Tu Negocio"),
+      headline: String(fData.headline || "¡GRAN PROMOCIÓN ESPECIAL!"),
+      subheadline: String(fData.subheadline || "Aprovecha esta oportunidad única. ¡Contáctanos hoy!"),
+      badge: String(fData.badge || "PROMO EXCLUSIVA"),
+      ctaText: String(fData.ctaText || "Escríbenos por WhatsApp"),
+      city: input.ciudad,
+      phone: input.phone,
+      theme,
+    },
+    copies: {
+      facebook: String(parsed.copies?.facebook || "🔥 ¡Gran promoción especial! Escríbenos por WhatsApp para más información."),
+      instagram: String(parsed.copies?.instagram || "✨ Nueva oferta disponible por tiempo limitado. Consulta detalles en el link de nuestro perfil."),
+      tiktok: String(parsed.copies?.tiktok || "🚀 ¡No dejes pasar esta promo! Comenta o escríbenos para apartar la tuya."),
+      youtube: String(parsed.copies?.youtube || "🔥 ¡Increíble promoción por tiempo limitado! Escríbenos y entérate de todo."),
+    },
+    hooks: {
+      facebook: String(parsed.hooks?.facebook || "🔥 ¡Atención! Tenemos una sorpresa para ti."),
+      instagram: String(parsed.hooks?.instagram || "✨ Lo que estabas esperando por fin llegó."),
+      tiktok: String(parsed.hooks?.tiktok || "🚀 Si ves esto hoy, tienes suerte."),
+      youtube: String(parsed.hooks?.youtube || "🔥 Promo relámpago disponible."),
+    },
+    hashtags: Array.isArray(parsed.hashtags) && parsed.hashtags.length
+      ? parsed.hashtags.map(String)
+      : ["#Promo", "#OfertaEspecial", "#PubliVende", "#NegociosLocales"],
+  };
+}

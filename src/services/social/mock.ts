@@ -95,6 +95,19 @@ export async function connectAccountOAuth(user_id: string, red: Red, data: Conne
     acc.token_expires_at = data.token_expires_at;
     acc.oauth_provider = data.oauth_provider;
     if (data.avatar) acc.avatar = data.avatar;
+  } else {
+    db.social_accounts.push({
+      id: uid(),
+      user_id,
+      red,
+      nombre_cuenta: data.nombre_cuenta,
+      avatar: data.avatar ?? "",
+      estado_conexion: "conectada",
+      token_placeholder: data.access_token,
+      external_account_id: data.external_account_id,
+      token_expires_at: data.token_expires_at,
+      oauth_provider: data.oauth_provider,
+    });
   }
   saveDB(db);
 }

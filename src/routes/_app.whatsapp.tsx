@@ -333,25 +333,35 @@ function WA() {
           )}>
             {contacts.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground space-y-3">
-                <p>Tu CRM se llena cuando clientes escriben por WhatsApp o cuando publicas con WhatsApp activo.</p>
-                <p className="text-xs">Conecta tu número en Configuración para recibir mensajes reales.</p>
-                <Button size="sm" variant="outline" onClick={() => navigate({ to: "/configuracion" })} className="gap-1">
-                  <Settings className="w-3.5 h-3.5" />Conectar WhatsApp
-                </Button>
-                <Button size="sm" variant="outline" onClick={simularCliente}>
-                  Simular cliente que pregunta precio
-                </Button>
+                {user?.whatsapp_configurado ? (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-900 text-xs text-left space-y-1">
+                    <div className="font-semibold flex items-center gap-1.5 text-green-800">
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      WhatsApp Activo: {user.codigo_pais ?? "+52"} {user.celular}
+                    </div>
+                    <p className="text-[11px] text-green-700">
+                      Tu número está vinculado. Cuando las personas hagan clic en tus links de PubliVende o envíen mensaje, aparecerán aquí automáticamente.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <p>Tu CRM se llena cuando clientes escriben por WhatsApp o cuando publicas con WhatsApp activo.</p>
+                    <p className="text-xs">Conecta tu número en Configuración para recibir mensajes reales.</p>
+                    <Button size="sm" variant="outline" onClick={() => navigate({ to: "/configuracion" })} className="gap-1">
+                      <Settings className="w-3.5 h-3.5" />Conectar WhatsApp
+                    </Button>
+                  </>
+                )}
+                <div className="pt-2 space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">¿Quieres probar el CRM y las respuestas automáticas ahora?</p>
+                  <Button size="sm" className="w-full bg-gradient-primary border-0 text-white gap-1.5" onClick={simularCliente}>
+                    <Sparkles className="w-3.5 h-3.5" /> Generar prospecto interesado con IA
+                  </Button>
+                </div>
                 {!user?.onboarding_completado && (
                   <p className="text-[11px] text-muted-foreground">
                     Tip: completa el onboarding cuando quieras activar respuestas automáticas con tus productos.
                   </p>
-                )}
-                {user?.is_admin && (
-                  <Button size="sm" variant="ghost" onClick={() => {
-                    if (user?.id && ensureUserSeeded(user.id)) toast.success("Datos demo cargados");
-                  }}>
-                    Cargar demo admin
-                  </Button>
                 )}
               </div>
             ) : contacts.map((c) => (

@@ -50,3 +50,41 @@ export const adaptMultiNetworkAI = createServerFn({ method: "POST" })
     return { ok: true as const, result };
   });
 
+export const generateAICampaignServer = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      negocio: z.string(),
+      industria: z.string().optional(),
+      ciudad: z.string().optional(),
+      descripcion: z.string().optional(),
+      productos: z
+        .array(
+          z.object({
+            nombre: z.string(),
+            precio: z.number(),
+            descripcion: z.string().optional(),
+          }),
+        )
+        .optional(),
+      promptIdea: z.string().optional(),
+      tono: z.string().optional(),
+      phone: z.string().optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    if (!isRealAIEnabled()) {
+      return { ok: false as const, error: "IA no configurada" };
+    }
+    const { generateFullAICampaignOpenAI } = await import("@/server/ai/openai");
+    const campaign = await generateFullAICampaignOpenAI({
+      negocio: data.negocio,
+      industria: data.industria,
+      ciudad: data.ciudad,
+      descripcion: data.descripcion,
+      productos: data.productos,
+      promptIdea: data.promptIdea,
+      tono: data.tono,
+      phone: data.phone,
+    });
+    return { ok: true as const, campaign };
+  });

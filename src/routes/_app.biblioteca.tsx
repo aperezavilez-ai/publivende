@@ -19,7 +19,7 @@ import { broadcastPostLink } from "@/services/whatsapp/mock";
 import { buildPostPageUrl } from "@/lib/whatsapp-post";
 import { postStatusLabel } from "@/lib/publish-status";
 import { isProductionModeClient, getSessionToken } from "@/lib/production/session";
-import { listCalendarPosts } from "@/lib/api/calendar.functions";
+import { listCalendarPosts, deletePostServer } from "@/lib/api/calendar.functions";
 
 export const Route = createFileRoute("/_app/biblioteca")({ component: Biblio });
 
@@ -88,10 +88,15 @@ function Biblio() {
     toast.success("Archivo eliminado");
   }
 
-  function eliminarPost(id: string) {
+  async function eliminarPost(id: string) {
+    setServerPosts((prev) => prev.filter((p) => p.id !== id));
     const db = loadDB();
     db.posts = db.posts.filter((p) => p.id !== id);
     saveDB(db);
+    const token = getSessionToken();
+    if (token && isProductionModeClient()) {
+      await deletePostServer({ data: { token, postId: id } }).catch(() => undefined);
+    }
     toast.success("Publicación eliminada");
   }
 
