@@ -10,6 +10,8 @@ export function postStatusLabel(post: Post): string {
   if (post.estado === "borrador") return "Borrador";
   if (post.estado === "error") return "Error al publicar";
   const apiCount = countApiPublishedRedes(post);
+  const pedidas = post.redes_destino?.length ?? 0;
+  if (apiCount > 0 && pedidas > apiCount) return `Parcial: ${apiCount} de ${pedidas} redes`;
   if (apiCount > 0) return `Publicado en ${apiCount} red${apiCount > 1 ? "es" : ""}`;
   return "Publicado";
 }

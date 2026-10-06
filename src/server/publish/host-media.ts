@@ -78,7 +78,7 @@ async function uploadToGafCoreStorage(
         "Content-Type": mime,
         "x-upsert": "true",
       },
-      body: buffer,
+      body: new Uint8Array(buffer),
     });
 
     if (res.ok) {

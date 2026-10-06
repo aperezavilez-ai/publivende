@@ -5,16 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PricingPlans } from "@/components/PricingPlans";
 import { PubliVendeLogo } from "@/components/PubliVendeLogo";
-import { Sparkles, Upload, Share2, MessageCircle, Star, Instagram, Facebook, Youtube, Music2, Zap, BarChart3, Bot } from "lucide-react";
+import { Sparkles, Upload, Share2, MessageCircle, Star, Instagram, Facebook, Youtube, Music2, Zap, BarChart3, Bot, ArrowRight, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "PubliVende — Planes y publicación multi-red" },
-      { name: "description", content: "Elige tu plan, crea tu cuenta y publica en Instagram, TikTok, Facebook y YouTube con IA." },
-      { property: "og:title", content: "PubliVende" },
-      { property: "og:description", content: "Planes para creadores y pymes LATAM. Publica en todas tus redes y vende por WhatsApp." },
-      { property: "og:image", content: "/logo-publivende.png" },
+      { title: "PubliVende — Publica en Instagram, TikTok, Facebook y YouTube y vende por WhatsApp" },
+      { name: "description", content: "Publica contenido en todas tus redes desde un solo panel, conecta tu WhatsApp y convierte seguidores en ventas. Hecho para creadores y pymes de LATAM." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://www.publivende.mx/" },
+      { property: "og:title", content: "PubliVende — De contenido a ventas en un solo panel" },
+      { property: "og:description", content: "Publica en Instagram, TikTok, Facebook y YouTube, y vende por WhatsApp con IA. Planes desde $0 MXN/mes." },
+      { property: "og:image", content: "https://www.publivende.mx/logo-publivende.png" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Landing,
@@ -42,114 +45,132 @@ function Landing() {
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <PubliVendeLogo to="/" size="sm" showText />
-          <Link to="/auth" search={{ mode: "login", plan: "free" }}>
-            <Button variant="outline" size="sm">Ya tengo cuenta — Iniciar sesión</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <a href="#precios" className="hidden md:inline-block text-sm text-muted-foreground hover:text-foreground px-3">
+              Planes
+            </a>
+            <a href="#como-funciona" className="hidden md:inline-block text-sm text-muted-foreground hover:text-foreground px-3">
+              Cómo funciona
+            </a>
+            <a href="#faq" className="hidden md:inline-block text-sm text-muted-foreground hover:text-foreground px-3">
+              FAQ
+            </a>
+            <Link to="/auth" search={{ mode: "login", plan: "free" }}>
+              <Button variant="outline" size="sm">Iniciar sesión</Button>
+            </Link>
+          </div>
         </div>
       </header>
 
-      {/* Planes primero */}
-      <section id="precios" className="relative py-16 md:py-20">
+      {/* HERO — propuesta de valor primero, precios después */}
+      <section className="relative py-16 md:py-24">
         <div className="absolute inset-0 bg-gradient-hero opacity-[0.07]" />
-        <div className="relative max-w-6xl mx-auto px-4">
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-semibold mb-4">
-              <Sparkles className="w-3 h-3" /> Paso 1 — Elige tu plan
-            </div>
-            <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight max-w-3xl mx-auto">
-              Publica en todas tus redes y vende por <span className="text-[#25D366]">WhatsApp</span>
-            </h1>
-            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Selecciona un paquete y crea tu cuenta. Al registrarte accedes al panel para conectar redes, importar posts y publicar con IA.
-            </p>
+        <div className="relative max-w-6xl mx-auto px-4 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-semibold mb-5">
+            <Sparkles className="w-3 h-3" /> Publicación multi-red + WhatsApp con IA
           </div>
-          <PricingPlans signupLinks />
-          <p className="text-center text-xs text-muted-foreground mt-6">
-            Todos los planes incluyen prueba sin tarjeta · Cancela cuando quieras
+          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight max-w-3xl mx-auto">
+            Publica en todas tus redes y vende por <span className="text-[#25D366]">WhatsApp</span>
+          </h1>
+          <p className="mt-5 text-lg text-muted-foreground max-w-2xl mx-auto">
+            Un solo panel para crear, programar y publicar en Instagram, TikTok, Facebook y YouTube — y un vendedor IA que atiende tus clientes por WhatsApp 24/7.
           </p>
-        </div>
-      </section>
-
-      {/* Valor rápido */}
-      <section className="py-12 border-y bg-muted/20">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <p className="text-sm text-muted-foreground mb-4">Después del registro</p>
-          <div className="flex flex-wrap justify-center gap-6 text-muted-foreground">
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link to="/auth" search={{ mode: "signup", plan: "free" }}>
+              <Button size="lg" className="bg-gradient-primary border-0 shadow-elegant w-full sm:w-auto">
+                Empezar gratis <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
+            <a href="#como-funciona">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                Ver cómo funciona
+              </Button>
+            </a>
+          </div>
+          <div className="mt-8 flex flex-wrap justify-center items-center gap-5 text-muted-foreground">
             <Instagram className="w-6 h-6" />
             <Music2 className="w-6 h-6" />
             <Facebook className="w-6 h-6" />
             <Youtube className="w-6 h-6" />
             <MessageCircle className="w-6 h-6 text-[#25D366]" />
+            <span className="text-xs w-full sm:w-auto mt-2 sm:mt-0">
+              Sin tarjeta · Listo en minutos · Cancela cuando quieras
+            </span>
           </div>
-          <p className="mt-4 text-sm">
-            Onboarding guiado → conectas tus redes → importas un link → publicas en el panel
-          </p>
         </div>
       </section>
 
-      <section id="como-funciona" className="py-20 bg-muted/30">
+      {/* CÓMO FUNCIONA */}
+      <section id="como-funciona" className="py-20 bg-muted/30 border-y">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold">En 3 pasos, contenido a ventas</h2>
+            <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
+              Onboarding guiado: conectas tus redes, importas un link y publicas desde el panel.
+            </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
-            {[
-              { i: Upload, t: "1. Importa o crea", d: "Pega el link de un post o sube media. La IA adapta el copy por red.", wa: false },
-              { i: Share2, t: "2. Publica en todas", d: "Instagram, TikTok, Facebook y YouTube desde un solo panel.", wa: false },
-              { i: MessageCircle, t: "3. Vende por WhatsApp", d: "CRM, automatizaciones y catálogo con respuestas IA.", wa: true },
-            ].map((s) => (
-              <Card key={s.t} className="p-6 hover:shadow-elegant transition-shadow">
-                <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center mb-4">
-                  <s.i className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-bold text-lg mb-2">
-                  {s.wa ? (
-                    <>
-                      3. Vende por <span className="text-[#25D366]">WhatsApp</span>
-                    </>
-                  ) : (
-                    s.t
-                  )}
-                </h3>
-                <p className="text-sm text-muted-foreground">{s.d}</p>
-              </Card>
-            ))}
+            <Card className="p-6 hover:shadow-elegant transition-shadow">
+              <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center mb-4">
+                <Upload className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-bold text-lg mb-2">1. Importa o crea</h3>
+              <p className="text-sm text-muted-foreground">Pega el link de un post o sube media. La IA adapta el copy por red.</p>
+            </Card>
+            <Card className="p-6 hover:shadow-elegant transition-shadow">
+              <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center mb-4">
+                <Share2 className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-bold text-lg mb-2">2. Publica en todas</h3>
+              <p className="text-sm text-muted-foreground">Instagram, TikTok, Facebook y YouTube desde un solo panel.</p>
+            </Card>
+            <Card className="p-6 hover:shadow-elegant transition-shadow">
+              <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center mb-4">
+                <MessageCircle className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-bold text-lg mb-2">3. Vende por <span className="text-[#25D366]">WhatsApp</span></h3>
+              <p className="text-sm text-muted-foreground">CRM, automatizaciones y catálogo con respuestas IA.</p>
+            </Card>
           </div>
         </div>
       </section>
 
+      {/* DIFERENCIADORES */}
       <section className="py-20">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold">Lo que nadie más hace</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
-            {[
-              { i: BarChart3, t: "Atribución contenido → venta", d: "Cada post genera un link/QR único de WhatsApp.", wa: true },
-              { i: Bot, t: "Vendedor IA con tu catálogo", d: "Responde, recomienda y manda link de pago 24/7.", wa: false },
-              { i: Zap, t: "Recetas por industria LATAM", d: "Ropa, belleza, comida… Listo en minutos.", wa: false },
-            ].map((d) => (
-              <div key={d.t} className="text-center">
-                <div className="w-14 h-14 mx-auto rounded-2xl bg-accent flex items-center justify-center mb-4">
-                  <d.i className="w-7 h-7 text-primary" />
-                </div>
-                <h3 className="font-bold mb-2">{d.t}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {d.wa ? (
-                    <>
-                      Cada post genera un link/QR único de <span className="text-[#25D366] font-medium">WhatsApp</span>.
-                    </>
-                  ) : (
-                    d.d
-                  )}
-                </p>
+            <div className="text-center">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-accent flex items-center justify-center mb-4">
+                <BarChart3 className="w-7 h-7 text-primary" />
               </div>
-            ))}
+              <h3 className="font-bold mb-2">Atribución contenido → venta</h3>
+              <p className="text-sm text-muted-foreground">
+                Cada post genera un link/QR único de <span className="text-[#25D366] font-medium">WhatsApp</span>, para saber qué contenido vende.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-accent flex items-center justify-center mb-4">
+                <Bot className="w-7 h-7 text-primary" />
+              </div>
+              <h3 className="font-bold mb-2">Vendedor IA con tu catálogo</h3>
+              <p className="text-sm text-muted-foreground">Responde, recomienda y manda link de pago 24/7.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-accent flex items-center justify-center mb-4">
+                <Zap className="w-7 h-7 text-primary" />
+              </div>
+              <h3 className="font-bold mb-2">Recetas por industria LATAM</h3>
+              <p className="text-sm text-muted-foreground">Ropa, belleza, comida… Listo en minutos.</p>
+            </div>
           </div>
         </div>
       </section>
 
-      <section id="testimonios" className="py-20 bg-muted/30">
+      {/* TESTIMONIOS */}
+      <section id="testimonios" className="py-20 bg-muted/30 border-y">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold">Negocios que ya venden con PubliVende</h2>
@@ -177,15 +198,59 @@ function Landing() {
         </div>
       </section>
 
-      <section className="py-16 border-t">
+      {/* PRECIOS — después de que entienden el valor */}
+      <section id="precios" className="relative py-20">
+        <div className="absolute inset-0 bg-gradient-hero opacity-[0.07]" />
+        <div className="relative max-w-6xl mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold">Planes que crecen contigo</h2>
+            <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
+              Empieza gratis, actualiza cuando necesites más redes, conversaciones y automatización.
+            </p>
+          </div>
+          <PricingPlans signupLinks />
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            Todos los planes incluyen prueba sin tarjeta · Cancela cuando quieras
+          </p>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="py-20 bg-muted/30 border-y">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold">Preguntas frecuentes</h2>
+          </div>
+          <div className="space-y-3">
+            {[
+              { q: "¿Necesito tarjeta para empezar?", a: "No. El plan Free no requiere tarjeta y puedes probar la plataforma completa antes de decidir un plan de pago." },
+              { q: "¿En qué redes puedo publicar?", a: "Instagram, TikTok, Facebook y YouTube desde un solo panel. El plan Free incluye 1 red; Pro y Business incluyen las 4." },
+              { q: "¿Cómo funciona el vendedor IA de WhatsApp?", a: "Conectas tu número de WhatsApp (Embedded Signup de Meta), subes tu catálogo y la IA responde a tus clientes, recomienda productos y envía links de pago automáticamente." },
+              { q: "¿Puedo cancelar cuando quiera?", a: "Sí, todos los planes son de suscripción mensual sin permanencia. Cancelas desde tu panel en segundos." },
+            ].map((f) => (
+              <details key={f.q} className="group bg-background rounded-lg border px-5 py-4">
+                <summary className="flex items-center justify-between cursor-pointer list-none font-medium text-sm">
+                  {f.q}
+                  <ArrowRight className="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-90" />
+                </summary>
+                <p className="mt-3 text-sm text-muted-foreground">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA FINAL */}
+      <section className="py-16">
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-2xl font-bold mb-2">¿Listo para empezar?</h2>
-          <p className="text-muted-foreground mb-6">Elige tu plan arriba y crea tu cuenta en menos de 2 minutos.</p>
-          <a href="#precios">
+          <CheckCircle2 className="w-10 h-10 text-success mx-auto mb-4" />
+          <h2 className="text-2xl md:text-3xl font-bold mb-2">¿Listo para empezar?</h2>
+          <p className="text-muted-foreground mb-6">Crea tu cuenta en menos de 2 minutos y publica tu primer post hoy.</p>
+          <Link to="/auth" search={{ mode: "signup", plan: "free" }}>
             <Button size="lg" className="bg-gradient-primary border-0 shadow-elegant">
-              Ver planes
+              Empezar gratis <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
-          </a>
+          </Link>
         </div>
       </section>
 

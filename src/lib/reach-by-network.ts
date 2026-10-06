@@ -80,14 +80,22 @@ export function estimarAlcancePorRed(
   calidadScore = 65,
 ): AlcancePorRed[] {
   const factorCalidad = 0.7 + (calidadScore / 100) * 0.6;
-  const esLocal = alcance.tipo === "local";
-  const poblacionBase = esLocal
-    ? poblacionEnZona(alcance.ciudad ?? "", alcance.estado ?? "", alcance.radio_km ?? 25)
-    : (POBLACION_PAIS[alcance.pais_codigo ?? "MX"] ?? 130_000_000);
+  const nivel = alcance.nivel ?? (alcance.tipo === "global" ? "global" : "municipios");
+  const esLocal = nivel === "municipios" || nivel === "estado";
+  const poblacionPais = POBLACION_PAIS[alcance.pais_codigo ?? "MX"] ?? 130_000_000;
+  const poblacionBase =
+    nivel === "global" || nivel === "nacional"
+      ? poblacionPais
+      : nivel === "estado"
+        ? Math.max(poblacionEnZona("", alcance.estado ?? "", 150) * 8, 800_000)
+        : poblacionEnZona(alcance.ciudad ?? alcance.municipios?.[0] ?? "", alcance.estado ?? "", alcance.radio_km ?? 25);
 
-  const radioFactor = esLocal
-    ? Math.max(0.6, Math.min(1.2, (alcance.radio_km ?? 25) / 50))
-    : 1;
+  const radioFactor =
+    nivel === "municipios"
+      ? Math.max(0.6, Math.min(1.2, (alcance.radio_km ?? 25) / 50))
+      : nivel === "estado"
+        ? 1.15
+        : 1;
 
   return ALL_REDES.map((red) => {
     const activos = poblacionBase * PENETRACION_RED[red];

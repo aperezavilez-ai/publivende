@@ -116,10 +116,14 @@ export interface SocialAccount {
 
 export interface PostAlcance {
   tipo: "global" | "local";
+  /** global = mundo, nacional = todo el país, estado = todos los municipios, municipios = lista. */
+  nivel?: "global" | "nacional" | "estado" | "municipios";
   pais?: string;
   pais_codigo?: string;
   estado?: string;
   ciudad?: string;
+  /** Municipios elegidos. En nivel estado es la lista completa del estado. */
+  municipios?: string[];
   radio_km?: number;
 }
 

@@ -66,7 +66,7 @@ import {
   formatAlcanceLabel,
   paisFromCodigoTelefono,
   ubicacionInicialMexico,
-  type AlcanceTipo,
+  type AlcanceNivel,
   type PublishAlcance,
 } from "@/lib/geo-targeting";
 import type { Red, PostAlcance } from "@/lib/mock/types";
@@ -126,7 +126,7 @@ function Publicar() {
   const [iaLoading, setIaLoading] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [adaptLoading, setAdaptLoading] = useState(false);
-  const [reachFuente, setReachFuente] = useState<ReachAIAnalysis["fuente"] | null>(null);
+  const [reachFuente, setReachFuente] = useState<ReachAIAnalysis["fuente"] | "ia_real" | null>(null);
   const [draftPostId, setDraftPostId] = useState<string | undefined>();
   const [whatsappSelected, setWhatsappSelected] = useState(true);
   const waContactCount = useDB((db) => db.whatsapp_contacts.filter((c) => c.user_id === user?.id).length);
@@ -170,10 +170,11 @@ function Publicar() {
 
   const paisInicial = paisFromCodigoTelefono(user?.codigo_pais ?? "+52");
   const mxInicial = ubicacionInicialMexico(user?.ciudad);
-  const [alcanceTipo, setAlcanceTipo] = useState<AlcanceTipo>("local");
+  const [alcanceNivel, setAlcanceNivel] = useState<AlcanceNivel>("municipios");
   const [paisSel, setPaisSel] = useState(paisInicial.nombre);
   const [estadoSel, setEstadoSel] = useState(mxInicial.estado);
   const [ciudadSel, setCiudadSel] = useState(mxInicial.ciudad);
+  const [municipiosSel, setMunicipiosSel] = useState<string[]>(mxInicial.ciudad ? [mxInicial.ciudad] : []);
   const [radioKm, setRadioKm] = useState(25);
 
   const paisGeo = findPaisByNombre(paisSel) ?? paisInicial;
@@ -185,16 +186,31 @@ function Publicar() {
   }, [paisGeo, estadoSel, ciudadSel]);
 
   const alcanceActual: PublishAlcance = useMemo(() => {
-    if (alcanceTipo === "global") return { tipo: "global" };
+    if (alcanceNivel === "global") return { tipo: "global", nivel: "global" };
+    if (alcanceNivel === "nacional") {
+      return { tipo: "local", nivel: "nacional", pais: paisSel, pais_codigo: paisGeo.codigo };
+    }
+    if (alcanceNivel === "estado") {
+      return {
+        tipo: "local",
+        nivel: "estado",
+        pais: paisSel,
+        pais_codigo: paisGeo.codigo,
+        estado: estadoSel,
+        municipios: ciudadesOpts,
+      };
+    }
     return {
       tipo: "local",
+      nivel: "municipios",
       pais: paisSel,
       pais_codigo: paisGeo.codigo,
       estado: estadoSel,
-      ciudad: ciudadSel,
+      ciudad: municipiosSel[0] || ciudadSel,
+      municipios: municipiosSel,
       radio_km: radioKm,
     };
-  }, [alcanceTipo, paisSel, paisGeo.codigo, estadoSel, ciudadSel, radioKm]);
+  }, [alcanceNivel, paisSel, paisGeo.codigo, estadoSel, ciudadSel, municipiosSel, radioKm, ciudadesOpts]);
 
   function buildPostAlcance(): PostAlcance {
     return { ...alcanceActual };
@@ -217,7 +233,8 @@ function Publicar() {
 
   function onEstadoChange(est: string) {
     setEstadoSel(est);
-    setCiudadSel(ciudadesDeEstado(paisGeo, est)[0] ?? "");
+    setCiudadSel("");
+    setMunicipiosSel([]);
   }
 
   function toggleRed(r: Red) {
@@ -582,10 +599,14 @@ function Publicar() {
     } else if (!primaryCopy) {
       return toast.error("Agrega un copy o adapta con IA");
     }
-    if (alcanceTipo === "local") {
-      if (!paisSel || !estadoSel || !ciudadSel) {
-        return toast.error("Completa país, estado y ciudad para alcance local");
-      }
+    if (alcanceNivel === "nacional" && !paisSel) {
+      return toast.error("Elige el país para alcance nacional");
+    }
+    if (alcanceNivel === "estado" && (!paisSel || !estadoSel)) {
+      return toast.error("Elige país y estado. Con un clic cubres todos sus municipios");
+    }
+    if (alcanceNivel === "municipios" && (!paisSel || !estadoSel || municipiosSel.length === 0)) {
+      return toast.error("Elige estado y al menos un municipio, o usa «Todos los municipios»");
     }
 
     if (redes.length > 0 && publishMode !== "ai_campaign" && !user?.is_admin) {
@@ -600,11 +621,20 @@ function Publicar() {
 
     const alcance = buildPostAlcance();
     const meta = buildPublishMeta();
+    let realPublishResult: {
+      ok: boolean;
+      errors?: string[];
+      externalIds?: Record<string, string>;
+      surfaces?: { ok: boolean }[];
+      waSent?: number;
+      error?: string;
+      post?: { id: string };
+    } | null = null;
 
     if (abMode) {
       if (!copyB) return toast.error("Agrega el copy de la variante B");
       const finalMediaB = mediaB || media;
-      const a = await publishPost({ user_id: user.id, tipo: "imagen", media_url: media, copy: primaryCopy, redes, copy_por_red: isLinkMode ? copyPorRed : undefined, source_url: sourceMeta?.url, alcance });
+      const a = await publishPost({ user_id: user.id, tipo: "imagen", media_url: media, copy: primaryCopy, redes, copy_por_red: isMultiCopyMode ? copyPorRed : undefined, source_url: sourceMeta?.url, alcance });
       const b = await publishPost({ user_id: user.id, tipo: "imagen", media_url: finalMediaB, copy: copyB, redes, alcance });
       const cur = loadDB();
       cur.ab_experiments = cur.ab_experiments ?? [];
@@ -661,7 +691,7 @@ function Publicar() {
     let surfacesOk = 0;
     let waSentCount = 0;
     if (isProductionModeClient() && sessionToken) {
-      const real = await publishPostReal({
+      realPublishResult = await publishPostReal({
         data: {
           token: sessionToken,
           post: {
@@ -682,18 +712,18 @@ function Publicar() {
           notifyWhatsApp: programar ? false : whatsappSelected,
         },
       });
-      if (real.ok) {
-        if (real.errors?.length) realPublishErrors = real.errors;
-        if (real.externalIds) apiExternalIds = real.externalIds;
-        if (real.surfaces) surfacesOk = real.surfaces.filter((s) => s.ok).length;
-        if (real.waSent) {
-          waSentCount = real.waSent;
-          toast.success(`WhatsApp: ${real.waSent} contacto${real.waSent > 1 ? "s" : ""} notificados`);
+      if (realPublishResult.ok) {
+        if (realPublishResult.errors?.length) realPublishErrors = realPublishResult.errors;
+        if (realPublishResult.externalIds) apiExternalIds = realPublishResult.externalIds;
+        if (realPublishResult.surfaces) surfacesOk = realPublishResult.surfaces.filter((s) => s.ok).length;
+        if (realPublishResult.waSent) {
+          waSentCount = realPublishResult.waSent;
+          toast.success(`WhatsApp: ${realPublishResult.waSent} contacto${realPublishResult.waSent > 1 ? "s" : ""} notificados`);
         }
       } else {
-        if (real.errors?.length) realPublishErrors = real.errors;
+        if (realPublishResult.errors?.length) realPublishErrors = realPublishResult.errors;
         if (!programar) {
-          toast.error(real.error ?? "No se pudo publicar en tus redes", {
+          toast.error(realPublishResult.error ?? "No se pudo publicar en tus redes", {
             description: "Tu publicación quedó guardada en la Biblioteca.",
           });
           navigate({ to: "/biblioteca" });
@@ -712,7 +742,7 @@ function Publicar() {
       }
     }
 
-    const effectivePostId = real?.post?.id || published.id;
+    const effectivePostId = realPublishResult?.post?.id || published.id;
     if (Object.keys(apiExternalIds).length || realPublishErrors.length) {
       const db = loadDB();
       const row = db.posts.find((p) => p.id === published.id || p.id === effectivePostId);
@@ -796,6 +826,18 @@ function Publicar() {
           )}
         </div>
       </div>
+
+      {postsEsteMes === 0 && (
+        <Card className="p-4 border-primary/30 bg-primary/5">
+          <p className="text-sm font-semibold mb-2">Primera publicación en 4 pasos</p>
+          <ol className="grid sm:grid-cols-4 gap-2 text-xs text-muted-foreground">
+            <li className="rounded-md border bg-background p-2"><b className="text-foreground">1. Redes.</b> Conecta Facebook o Instagram en <Link to="/configuracion" className="underline">Configuración</Link>.</li>
+            <li className="rounded-md border bg-background p-2"><b className="text-foreground">2. Alcance.</b> Nacional, todo un estado, o municipios sueltos.</li>
+            <li className="rounded-md border bg-background p-2"><b className="text-foreground">3. Contenido.</b> Foto + texto, o campaña con IA.</li>
+            <li className="rounded-md border bg-background p-2"><b className="text-foreground">4. Publicar.</b> En Biblioteca verás si salió en cada red.</li>
+          </ol>
+        </Card>
+      )}
 
       {/* Hero Card de Campaña con IA */}
       {publishMode === "ai_campaign" && (
@@ -1472,24 +1514,22 @@ function Publicar() {
               Define si tu post se muestra a todo el mundo o solo cerca de tu negocio (útil para promos locales y delivery).
             </p>
 
-            <div className="flex bg-muted/60 rounded-lg p-1 mb-4">
-              <button
-                type="button"
-                onClick={() => setAlcanceTipo("global")}
-                className={`flex-1 flex items-center justify-center gap-1.5 text-sm py-2 rounded-md transition ${alcanceTipo === "global" ? "bg-background shadow font-medium text-blue-700" : "text-muted-foreground"}`}
-              >
-                <Globe className="w-4 h-4" /> Global
+            <div className="grid grid-cols-2 sm:grid-cols-4 bg-muted/60 rounded-lg p-1 mb-4 gap-1">
+              <button type="button" onClick={() => setAlcanceNivel("nacional")} className={`flex items-center justify-center gap-1 text-xs sm:text-sm py-2 rounded-md transition ${alcanceNivel === "nacional" ? "bg-background shadow font-medium text-blue-700" : "text-muted-foreground"}`}>
+                <Globe className="w-4 h-4" /> Nacional
               </button>
-              <button
-                type="button"
-                onClick={() => setAlcanceTipo("local")}
-                className={`flex-1 flex items-center justify-center gap-1.5 text-sm py-2 rounded-md transition ${alcanceTipo === "local" ? "bg-background shadow font-medium text-blue-700" : "text-muted-foreground"}`}
-              >
-                <MapPin className="w-4 h-4" /> Local
+              <button type="button" onClick={() => setAlcanceNivel("estado")} className={`flex items-center justify-center gap-1 text-xs sm:text-sm py-2 rounded-md transition ${alcanceNivel === "estado" ? "bg-background shadow font-medium text-blue-700" : "text-muted-foreground"}`}>
+                <MapPin className="w-4 h-4" /> Estado
+              </button>
+              <button type="button" onClick={() => setAlcanceNivel("municipios")} className={`flex items-center justify-center gap-1 text-xs sm:text-sm py-2 rounded-md transition ${alcanceNivel === "municipios" ? "bg-background shadow font-medium text-blue-700" : "text-muted-foreground"}`}>
+                <MapPin className="w-4 h-4" /> Municipios
+              </button>
+              <button type="button" onClick={() => setAlcanceNivel("global")} className={`flex items-center justify-center gap-1 text-xs sm:text-sm py-2 rounded-md transition ${alcanceNivel === "global" ? "bg-background shadow font-medium text-blue-700" : "text-muted-foreground"}`}>
+                <Globe className="w-4 h-4" /> Global
               </button>
             </div>
 
-            {alcanceTipo === "global" ? (
+            {alcanceNivel === "global" ? (
               <div className="rounded-lg border border-blue-100 bg-blue-50/50 dark:bg-blue-950/20 p-4 text-center">
                 <Globe className="w-8 h-8 mx-auto text-blue-500 mb-2" />
                 <p className="text-sm font-medium">Alcance mundial</p>
@@ -1497,7 +1537,7 @@ function Publicar() {
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <Label className="text-xs">País</Label>
                     <Select value={paisSel} onValueChange={onPaisChange}>
@@ -1509,34 +1549,66 @@ function Publicar() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label className="text-xs">Estado / región</Label>
-                    <Select value={estadoSel} onValueChange={onEstadoChange}>
-                      <SelectTrigger className="h-9"><SelectValue placeholder="Estado" /></SelectTrigger>
-                      <SelectContent>
-                        {estadosOpts.map((e) => (
-                          <SelectItem key={e} value={e}>{e}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  {alcanceNivel !== "nacional" && (
+                    <div>
+                      <Label className="text-xs">Estado / región</Label>
+                      <Select value={estadoSel} onValueChange={onEstadoChange}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Elige estado" /></SelectTrigger>
+                        <SelectContent>
+                          {estadosOpts.map((e) => (
+                            <SelectItem key={e} value={e}>{e}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+                {alcanceNivel === "nacional" && (
+                  <p className="text-xs text-muted-foreground">Nacional cubre todo {paisSel}, sin elegir estado ni municipio.</p>
+                )}
+                {alcanceNivel === "estado" && (
+                  <div className="rounded-lg border p-3 space-y-2">
+                    <p className="text-xs text-muted-foreground">Un clic selecciona los {ciudadesOpts.length} municipios de {estadoSel || "este estado"}.</p>
+                    <Button type="button" size="sm" variant="secondary" disabled={!estadoSel} onClick={() => setMunicipiosSel(ciudadesOpts)}>
+                      Todos los municipios de {estadoSel || "el estado"}
+                    </Button>
                   </div>
-                  <div>
-                    <Label className="text-xs">
-                      Ciudad / municipio
-                      {ciudadesOpts.length > 0 && (
-                        <span className="text-muted-foreground font-normal"> ({ciudadesOpts.length})</span>
-                      )}
-                    </Label>
+                )}
+                {alcanceNivel === "municipios" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-xs">Municipios ({municipiosSel.length} de {ciudadesOpts.length})</Label>
+                      <Button type="button" size="sm" variant="outline" className="h-7 text-xs" disabled={!estadoSel} onClick={() => setMunicipiosSel(municipiosSel.length === ciudadesOpts.length ? [] : [...ciudadesOpts])}>
+                        {municipiosSel.length === ciudadesOpts.length ? "Quitar todos" : "Todos los municipios"}
+                      </Button>
+                    </div>
                     <MunicipioCombobox
                       value={ciudadSel}
-                      onChange={setCiudadSel}
+                      onChange={(m) => {
+                        setCiudadSel(m);
+                        setMunicipiosSel((prev) => prev.includes(m) ? prev : [...prev, m]);
+                      }}
                       options={ciudadesOpts}
-                      placeholder="Buscar municipio…"
+                      placeholder="Buscar y agregar municipio…"
                       disabled={!estadoSel}
                     />
+                    <div className="max-h-36 overflow-auto rounded-md border p-2 space-y-1">
+                      {ciudadesOpts.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">Elige un estado para ver sus municipios.</p>
+                      ) : ciudadesOpts.map((m) => (
+                        <label key={m} className="flex items-center gap-2 text-xs cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={municipiosSel.includes(m)}
+                            onChange={() => setMunicipiosSel((prev) => prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m])}
+                          />
+                          <span className="truncate">{m}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
-
+                )}
+                {alcanceNivel === "municipios" && (
                 <div className="pt-1">
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-xs">Radio de alcance</Label>
@@ -1567,11 +1639,12 @@ function Publicar() {
                     <div className="text-xs">
                       <span className="font-medium text-blue-800 dark:text-blue-200">Zona estimada: </span>
                       <span className="text-muted-foreground">
-                        {ciudadSel || "Tu ciudad"}, {estadoSel} — personas dentro de {radioKm} km
+                        {municipiosSel.slice(0, 3).join(", ") || "Tus municipios"}, {estadoSel} — personas dentro de {radioKm} km
                       </span>
                     </div>
                   </div>
                 </div>
+                )}
               </div>
             )}
 
@@ -1745,7 +1818,7 @@ function Publicar() {
 
                   <p className="text-[10px] text-muted-foreground leading-relaxed">
                     La IA detectó el nicho del {publishMode === "link" ? "link" : "contenido"}, ajustó el alcance por afinidad de cada red
-                    ({alcanceTipo === "local" ? `${radioKm} km en ${ciudadSel}` : "alcance global"}) y mercados donde se compartirá.
+                    formatAlcanceLabel(alcanceActual) y mercados donde se compartirá.
                     Con APIs de Meta/TikTok/Google se reemplaza por audiencia real.
                   </p>
                 </>
@@ -1753,7 +1826,7 @@ function Publicar() {
             </div>
 
             <Badge variant="outline" className="mt-3 text-[10px] gap-1 border-blue-200 text-blue-700">
-              {alcanceTipo === "global" ? <Globe className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
+              {alcanceNivel === "global" || alcanceNivel === "nacional" ? <Globe className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
               {formatAlcanceLabel(alcanceActual)}
             </Badge>
           </Card>
@@ -1771,8 +1844,8 @@ function Publicar() {
                 {(() => { const I = ICONS[r]; return <I className="w-4 h-4" />; })()}
                 <span className="text-xs font-semibold">{RED_LABELS[r]}</span>
                 <Badge variant="outline" className="text-[9px] h-5 gap-0.5 border-blue-200 text-blue-700 bg-blue-50/80">
-                  {alcanceTipo === "global" ? <Globe className="w-2.5 h-2.5" /> : <MapPin className="w-2.5 h-2.5" />}
-                  {alcanceTipo === "global" ? "Global" : `${radioKm} km`}
+                  {alcanceNivel === "global" || alcanceNivel === "nacional" ? <Globe className="w-2.5 h-2.5" /> : <MapPin className="w-2.5 h-2.5" />}
+                  {alcanceNivel === "global" ? "Global" : alcanceNivel === "nacional" ? "Nacional" : alcanceNivel === "estado" ? "Estado" : `${radioKm} km`}
                 </Badge>
                 {publishMode === "link" && copyPorRed[r] && (
                   <Badge variant="secondary" className="ml-auto text-[10px]">Adaptado IA</Badge>

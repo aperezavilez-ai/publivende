@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 .workspace
 .lovable
+.editcore
 tsconfig.tsbuildinfo
 dist
 dist-ssr

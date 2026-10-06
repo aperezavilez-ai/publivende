@@ -1,0 +1,31 @@
+User-agent: *
+Allow: /
+
+# Áreas privadas / app / API
+Disallow: /auth
+Disallow: /onboarding
+Disallow: /dashboard
+Disallow: /publicar
+Disallow: /calendario
+Disallow: /bandeja
+Disallow: /analiticas
+Disallow: /anuncios
+Disallow: /automatizaciones
+Disallow: /biblioteca
+Disallow: /whatsapp
+Disallow: /productos
+Disallow: /recetas
+Disallow: /red
+Disallow: /diagnostico
+Disallow: /inteligencia
+Disallow: /experimentos
+Disallow: /piloto
+Disallow: /plataforma
+Disallow: /coach
+Disallow: /distribuir
+Disallow: /api/
+Disallow: /connect/
+Disallow: /p/
+Disallow: /tienda/
+
+Sitemap: https://www.publivende.mx/sitemap.xml

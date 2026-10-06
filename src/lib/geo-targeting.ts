@@ -3,13 +3,16 @@
 import { MEXICO_ESTADOS_CIUDADES, buscarMunicipioEnMexico } from "./geo-mexico";
 
 export type AlcanceTipo = "global" | "local";
+export type AlcanceNivel = "global" | "nacional" | "estado" | "municipios";
 
 export interface PublishAlcance {
   tipo: AlcanceTipo;
+  nivel?: AlcanceNivel;
   pais?: string;
   pais_codigo?: string;
   estado?: string;
   ciudad?: string;
+  municipios?: string[];
   radio_km?: number;
 }
 
@@ -95,10 +98,21 @@ export function ubicacionInicialMexico(ciudadPerfil?: string): { estado: string;
 
 /** Texto legible del alcance para preview y posts. */
 export function formatAlcanceLabel(alcance: PublishAlcance): string {
-  if (alcance.tipo === "global") return "Alcance global";
-  const parts = [alcance.ciudad, alcance.estado, alcance.pais].filter(Boolean);
-  const lugar = parts.join(", ") || "ubicación local";
-  return `${lugar} · ${alcance.radio_km ?? 25} km`;
+  const nivel = alcance.nivel ?? (alcance.tipo === "global" ? "global" : "municipios");
+  if (nivel === "global") return "Alcance global";
+  if (nivel === "nacional") return `${alcance.pais || "México"} · nacional`;
+  if (nivel === "estado") {
+    const n = alcance.municipios?.length;
+    return `${alcance.estado || "Estado"}, ${alcance.pais || ""} · todos los municipios${n ? ` (${n})` : ""}`.replace(" ,", ",");
+  }
+  const munis = alcance.municipios?.filter(Boolean) ?? [];
+  const lista = munis.length
+    ? munis.length <= 2
+      ? munis.join(", ")
+      : `${munis.slice(0, 2).join(", ")} +${munis.length - 2}`
+    : alcance.ciudad;
+  const parts = [lista, alcance.estado, alcance.pais].filter(Boolean);
+  return `${parts.join(", ")} · ${alcance.radio_km ?? 25} km`;
 }
 
 /** País por defecto según código telefónico del perfil. */

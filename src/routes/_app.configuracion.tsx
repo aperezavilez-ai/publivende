@@ -13,7 +13,7 @@ import { connectSocialNetwork } from "@/services/social/connectSocial";
 import { fetchOAuthProvidersStatus, oauthProviderLabel } from "@/services/social/oauth";
 import { checkMetaPublishHealth } from "@/lib/api/meta-health.functions";
 import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
-import { loadDB, saveDB } from "@/lib/mock/db";
+import { loadDB, saveDB, uid } from "@/lib/mock/db";
 import { PLAN_LIMITS } from "@/lib/mock/types";
 import { planLabel, PLAN_OFFERS } from "@/lib/plans";
 import { toast } from "sonner";
@@ -355,9 +355,12 @@ function Conf() {
                     </div>
                   )}
                   {!isConectada && (
-                    <div className="text-[10px] text-muted-foreground">
-                      {isAdmin ? oauthProviderLabel(a.red) : "Pulsa Conectar para vincular tu cuenta"}
+                    <div className="text-[11px] text-amber-700">
+                      Desconectada. Sin esto la publicación no sale en {a.red}. {isAdmin ? oauthProviderLabel(a.red) : "Pulsa Conectar."}
                     </div>
+                  )}
+                  {isConectada && !metricsSync.find((s) => s.red === a.red)?.reconectar && (
+                    <div className="text-[11px] text-green-700">Lista para publicar</div>
                   )}
                 </div>
                 {isConectada ? (
