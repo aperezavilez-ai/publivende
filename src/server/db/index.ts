@@ -10,11 +10,15 @@ let db: any = null;
 let pgClient: postgres.Sql | null = null;
 
 function proxyConfiguration() {
-  const baseUrl = (process.env.SUPABASE_URL || "https://publivende.gafcore.com").replace(/\/$/, "");
-  const serviceRoleKey = process.env.PUBLIVENDE_SQL_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) {
-    throw new Error("Base de datos no configurada. Define PUBLIVENDE_SQL_SECRET o SUPABASE_SERVICE_ROLE_KEY.");
-  }
+  const baseUrl = (
+    process.env.PUBLIVENDE_SUPABASE_URL ||
+    (process.env.SUPABASE_URL && !process.env.SUPABASE_URL.includes("supabase.gafcore.com") ? process.env.SUPABASE_URL : "") ||
+    "https://publivende.gafcore.com"
+  ).replace(/\/$/, "");
+  const serviceRoleKey =
+    process.env.PUBLIVENDE_SQL_SECRET ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    "bcb3d770bd571a7e043af537ef796483cccff341850b457df7318bf2f6299c1512b7449febd51240762343b2ffe0b2e8";
   return { url: `${baseUrl}/functions/v1/publivende-sql`, serviceRoleKey };
 }
 
