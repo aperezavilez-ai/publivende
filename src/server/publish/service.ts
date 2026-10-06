@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { resolveAppBaseUrl } from "@/lib/app-url";
 import { getDb, schema } from "@/server/db";
 import { findUserById } from "@/server/auth/users";
@@ -103,14 +103,28 @@ export async function publishForUser(input: PublishForUserInput): Promise<Publis
   };
 
   let saved;
-  if (input.post.draft_id || input.post.id) {
-    const id = input.post.draft_id ?? input.post.id!;
+  const targetId = input.post.draft_id || input.post.id;
+  if (targetId) {
     const rows = await db
       .update(schema.posts)
       .set(postValues)
-      .where(eq(schema.posts.id, id))
+      .where(and(eq(schema.posts.id, targetId), eq(schema.posts.userId, input.userId)))
       .returning();
     saved = rows[0];
+
+    if (!saved) {
+      try {
+        const inserted = await db
+          .insert(schema.posts)
+          .values({ id: targetId, ...postValues })
+          .returning();
+        saved = inserted[0];
+      } catch (insertErr) {
+        console.warn("[publishForUser] Insert with targetId failed, trying fallback:", insertErr);
+        const fallback = await db.insert(schema.posts).values(postValues).returning();
+        saved = fallback[0];
+      }
+    }
   } else {
     const rows = await db.insert(schema.posts).values(postValues).returning();
     saved = rows[0];
@@ -144,10 +158,20 @@ export async function publishForUser(input: PublishForUserInput): Promise<Publis
     }
 
     const anyOk = surfaces.some((s) => s.ok);
-    if (!anyOk) {
-      await db.update(schema.posts).set({ estado: "error" }).where(eq(schema.posts.id, saved.id));
-      saved = { ...saved, estado: "error" as const };
-    }
+    await db
+      .update(schema.posts)
+      .set({
+        estado: anyOk ? "publicado" : "error",
+        externalIds,
+        publishSurfaces: surfaces,
+      })
+      .where(eq(schema.posts.id, saved.id));
+    saved = {
+      ...saved,
+      estado: anyOk ? ("publicado" as const) : ("error" as const),
+      externalIds,
+      publishSurfaces: surfaces,
+    };
   }
 
   const publishedCount = Object.keys(externalIds).length;

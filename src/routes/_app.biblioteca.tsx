@@ -56,7 +56,9 @@ function Biblio() {
   const waContactCount = useDB((db) => db.whatsapp_contacts.filter((c) => c.user_id === user?.id).length);
   const [q, setQ] = useState("");
   const [tab, setTab] = useState("publicaciones");
-  const posts = isProductionModeClient() ? serverPosts : localPosts;
+  const posts = isProductionModeClient()
+    ? (serverPosts.length > 0 ? serverPosts : localPosts)
+    : localPosts;
 
   useEffect(() => {
     const token = getSessionToken();

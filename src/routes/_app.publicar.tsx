@@ -693,7 +693,9 @@ function Publicar() {
       } else {
         if (real.errors?.length) realPublishErrors = real.errors;
         if (!programar) {
-          toast.error(real.error ?? "No se pudo publicar en tus redes");
+          toast.error(real.error ?? "No se pudo publicar en tus redes", {
+            description: "Tu publicación quedó guardada en la Biblioteca.",
+          });
           navigate({ to: "/biblioteca" });
           return;
         }
@@ -710,10 +712,12 @@ function Publicar() {
       }
     }
 
+    const effectivePostId = real?.post?.id || published.id;
     if (Object.keys(apiExternalIds).length || realPublishErrors.length) {
       const db = loadDB();
-      const row = db.posts.find((p) => p.id === published.id);
+      const row = db.posts.find((p) => p.id === published.id || p.id === effectivePostId);
       if (row) {
+        row.id = effectivePostId;
         row.external_ids = apiExternalIds;
         saveDB(db);
       }
@@ -742,7 +746,7 @@ function Publicar() {
       search:
         programar || !isProductionModeClient()
           ? undefined
-          : { post: published.id },
+          : { post: effectivePostId },
     });
   }
 
