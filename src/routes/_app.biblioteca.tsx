@@ -20,6 +20,7 @@ import { buildPostPageUrl } from "@/lib/whatsapp-post";
 import { postStatusLabel } from "@/lib/publish-status";
 import { isProductionModeClient, getSessionToken } from "@/lib/production/session";
 import { listCalendarPosts, deletePostServer } from "@/lib/api/calendar.functions";
+import { publishExistingPost } from "@/lib/api/publish.functions";
 
 export const Route = createFileRoute("/_app/biblioteca")({ component: Biblio });
 
@@ -102,6 +103,63 @@ function Biblio() {
     toast.success("Publicación eliminada");
   }
 
+  const [publishingFbId, setPublishingFbId] = useState<string | null>(null);
+
+  async function handlePublishToFacebook(post: Post) {
+    const token = getSessionToken();
+    if (!token || !isProductionModeClient()) {
+      return toast.error("Inicia sesión para publicar en tus redes");
+    }
+    setPublishingFbId(post.id);
+    try {
+      const res = await publishExistingPost({
+        data: {
+          token,
+          post: {
+            id: post.id,
+            tipo: post.tipo,
+            media_url: post.media_url,
+            copy: post.copy,
+            copy_por_red: post.copy_por_red,
+            source_url: post.source_url,
+            redes: ["facebook"],
+            tracking_slug: post.tracking_slug,
+            nicho_label: post.nicho_label,
+          },
+          red: "facebook",
+        },
+      });
+
+      if (res.ok && res.externalId) {
+        toast.success("¡Publicado en tu página de Facebook con éxito! 🎉", {
+          action: {
+            label: "Ver en Facebook",
+            onClick: () => window.open(`https://facebook.com/${res.externalId}`, "_blank", "noopener"),
+          },
+        });
+        const updatedExternalIds = { ...(post.external_ids || {}), facebook: res.externalId };
+        setServerPosts((prev) =>
+          prev.map((p) => (p.id === post.id ? { ...p, estado: "publicado", external_ids: updatedExternalIds } : p)),
+        );
+        const db = loadDB();
+        const pIdx = db.posts.findIndex((p) => p.id === post.id);
+        if (pIdx >= 0) {
+          db.posts[pIdx].estado = "publicado";
+          db.posts[pIdx].external_ids = updatedExternalIds;
+          saveDB(db);
+        }
+      } else {
+        toast.error(res.error ?? "No se pudo publicar en Facebook", {
+          description: "Verifica que tu página esté conectada en Configuración.",
+        });
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al conectar con Facebook");
+    } finally {
+      setPublishingFbId(null);
+    }
+  }
+
   const filteredPosts = useMemo(() => {
     const term = q.toLowerCase();
     if (!term) return posts;
@@ -166,6 +224,8 @@ function Biblio() {
                 key={post.id}
                 post={post}
                 waContactCount={waContactCount}
+                isPublishingFb={publishingFbId === post.id}
+                onPublishFacebook={handlePublishToFacebook}
                 onDelete={() => eliminarPost(post.id)}
                 onBroadcast={async () => {
                   if (!user) return;
@@ -219,11 +279,15 @@ function Biblio() {
 function PublicationCard({
   post,
   waContactCount,
+  isPublishingFb,
+  onPublishFacebook,
   onDelete,
   onBroadcast,
 }: {
   post: Post;
   waContactCount: number;
+  isPublishingFb?: boolean;
+  onPublishFacebook?: (post: Post) => void;
   onDelete: () => void;
   onBroadcast: () => void;
 }) {
@@ -333,6 +397,29 @@ function PublicationCard({
 
           {(post.estado === "publicado" || post.estado === "programado") && (
             <div className="flex flex-wrap gap-2 pt-1">
+              {/* Enlace directo si ya está publicado en Facebook */}
+              {post.external_ids?.facebook && (
+                <Button asChild size="sm" variant="outline" className="h-8 gap-1 text-xs border-blue-200 text-blue-700 hover:bg-blue-50">
+                  <a href={`https://facebook.com/${post.external_ids.facebook}`} target="_blank" rel="noopener noreferrer">
+                    <Facebook className="w-3.5 h-3.5 text-blue-600" />
+                    Ver en Facebook ↗
+                  </a>
+                </Button>
+              )}
+
+              {/* Botón para publicar en Facebook si aún no tiene external_ids.facebook */}
+              {post.redes_destino.includes("facebook") && !post.external_ids?.facebook && (
+                <Button
+                  size="sm"
+                  className="h-8 gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                  disabled={isPublishingFb}
+                  onClick={() => onPublishFacebook?.(post)}
+                >
+                  <Facebook className="w-3.5 h-3.5" />
+                  {isPublishingFb ? "Publicando en Facebook…" : "Publicar en Facebook ahora"}
+                </Button>
+              )}
+
               {post.estado === "publicado" && isProductionModeClient() && (
                 <Button asChild size="sm" variant="default" className="h-8 gap-1 text-xs">
                   <Link to="/distribuir" search={{ post: post.id }}>

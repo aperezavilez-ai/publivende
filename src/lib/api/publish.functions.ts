@@ -93,3 +93,63 @@ export const publishPostReal = createServerFn({ method: "POST" })
       useLocal: false,
     };
   });
+
+export const publishExistingPost = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      token: z.string(),
+      post: z.object({
+        id: z.string().optional(),
+        tipo: z.enum(["imagen", "video", "texto"]),
+        media_url: z.string().optional().default(""),
+        copy: z.string(),
+        copy_por_red: z.record(z.string()).optional(),
+        source_url: z.string().optional(),
+        redes: z.array(redSchema),
+        tracking_slug: z.string().optional(),
+        nicho_label: z.string().optional(),
+      }),
+      red: redSchema.optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    if (!isProductionMode()) {
+      return { ok: false as const, error: "Requiere modo producción" };
+    }
+
+    const session = await verifySessionToken(data.token);
+    if (!session) return { ok: false as const, error: "Sesión inválida" };
+
+    const targetRed = data.red ?? (data.post.redes[0] || "facebook");
+    const result = await publishForUser({
+      userId: session.userId,
+      post: {
+        id: data.post.id,
+        tipo: data.post.tipo,
+        media_url: data.post.media_url,
+        copy: data.post.copy,
+        copy_por_red: data.post.copy_por_red,
+        source_url: data.post.source_url,
+        redes: [targetRed],
+        tracking_slug: data.post.tracking_slug,
+        nicho_label: data.post.nicho_label,
+      },
+      notifyWhatsApp: false,
+    });
+
+    if (!result.ok) {
+      return {
+        ok: false as const,
+        error: result.error ?? `Error al publicar en ${targetRed}`,
+        externalIds: result.externalIds,
+        errors: result.errors,
+      };
+    }
+
+    return {
+      ok: true as const,
+      post: result.post!,
+      externalId: result.externalIds?.[targetRed],
+      externalIds: result.externalIds,
+    };
+  });
