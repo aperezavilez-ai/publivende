@@ -273,7 +273,7 @@ function PlataformaPage() {
                 </div>
                 {p.api_keys?.length > 0 && (
                   <div className="text-xs text-muted-foreground">
-                    Keys: {p.api_keys.map((k) => k.keyPrefix + "…").join(", ")}
+                    Keys: {p.api_keys.map((k: { keyPrefix: string }) => k.keyPrefix + "…").join(", ")}
                   </div>
                 )}
               </div>

@@ -113,7 +113,7 @@ export const scheduleLinkPost = createServerFn({ method: "POST" })
         .select({ red: schema.oauthAccounts.red })
         .from(schema.oauthAccounts)
         .where(and(eq(schema.oauthAccounts.userId, session.userId), eq(schema.oauthAccounts.estadoConexion, "conectada")));
-      const connectedSet = new Set(connected.map((x) => x.red));
+      const connectedSet = new Set(connected.map((x: { red: Red }) => x.red));
       const missing = data.redes.filter((r) => !connectedSet.has(r));
       if (missing.length) {
         return {

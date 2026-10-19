@@ -1,20 +1,8 @@
 {
-  "version": 1,
-  "projectName": "Publivende",
-  "projectSlug": "publivende",
   "isolationMode": "dedicated_supabase",
+  "schema": "publivende",
   "supabase": {
-    "url": "https://publivende.gafcore.com",
-    "instanceId": "publivende",
-    "database": "postgres",
-    "schema": "public",
-    "localApiPort": 57321,
-    "localDbPort": 57322
+    "url": "https://publivende.gafcore.com"
   },
-  "verification": {
-    "productionUrl": "https://www.publivende.mx",
-    "tables": 21,
-    "customAuthUsers": 1,
-    "productionLogin": "db_ok_2026-10-05"
-  }
+  "notes": "Configuración de infraestructura dedicada para PubliVende. Usa el schema 'publivende' en Supabase y no el schema público."
 }

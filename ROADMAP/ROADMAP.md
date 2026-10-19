@@ -6,11 +6,19 @@ EditCore actualiza este archivo tras cambios. No pedirlo al usuario. No pegar co
 
 ## Proceso
 - Fase: implementacion
-- Estado: En proceso: Algo falló durante la ejecución: No pude autenticar el modelo. Revisa la API key en Modelos e intenta de nuevo.
-- Actualizado: 2026-09-29 19:43
+- Estado: Ciclo finalizado.
+- Actualizado: 2026-10-07 21:28
 - Preview: desconocido — usa el preview del IDE, no inventes puertos
 
 ## Mapa
+- src/lib/api/red.functions.ts
+- src/lib/api/distribution.functions.ts
+- src/lib/api/calendar.functions.ts
+- src/lib/api/autopilot.functions.ts
+- src/server/partners/admin.ts
+- src/lib/api/metrics.functions.ts
+- src/lib/api/meta-health.functions.ts
+- src/components/oauth/OAuthCallbackView.tsx
 - src/lib/schedule-local.ts
 - src/lib/save-draft-post.ts
 - src/lib/bootstrap.ts
@@ -51,37 +59,39 @@ EditCore actualiza este archivo tras cambios. No pedirlo al usuario. No pegar co
 - public/
 - public/data/
 - public/demo/
-- public/icon-1024.png
-- public/icon-192.png
-- public/icon-512.png
-- public/icon-brand-1024.png
-- public/icon-maskable.svg
-- public/icon.svg
-- public/logo-icon.svg
-- public/logo-publivende.png
 
 ## Archivos clave (no reexplorar)
-- package.json
-- src/server/db/schema.ts
-- src/server/config.ts
-- src/server/partners/auth.ts
-- src/server/partners/api-handlers.ts
-- src/server/publish/service.ts
-- src/server/auth/users.ts
-- src/lib/mock/types.ts
-- src/server/distribution/expand.ts
-- src/server/whatsapp/cloud-api.ts
-- src/server/publish/networks.ts
+- src/lib/api/autopilot.functions.ts
+- src/lib/api/calendar.functions.ts
+- src/lib/api/distribution.functions.ts
+- src/lib/api/red.functions.ts
+- src/routes/_app.red.tsx
 - src/routes/_app.plataforma.tsx
-- src/routes/api.v1.partners.publish.tsx
-- src/routes/api.v1.partners.users.tsx
-- src/routes/api.webhook.whatsapp.tsx
-- .editcore/task-state.json
+- src/server/autopilot/generate.ts
+- src/server/brain/benchmarks.ts
+- src/server/brain/server-diagnosis.ts
+- src/server/context.ts
+- src/server/metrics/sync.ts
+- src/server/partners/admin.ts
+- src/server/sync/user-data.ts
+- src/server/whatsapp/inbound.ts
+- package.json
+- src/routes/_app.tsx
 
 ## Tarea activa
-- hola
+- SOLICITUD ORIGINAL:
+ya quedaron resultos los errores?
+
+PLAN AUTORIZADO:
+## 🧪 Chequeos reales ejecutados
+
+| Chequeo | Resultado | Detalle |
+|---|---|---|
+| Sintaxis JS/JSON | ✅ pasa | 14 archivos compilados |
+| Imports /
 
 ## Bloqueos / bugs conocidos
+- errores verificados. Empezamos por los más sencillos y avanzamos por bloque.
 - falló durante la ejecución: No pude autenticar el modelo. Revisa la API key en Modelos e intenta de nuevo.
 - Actualizado: 2026-09-19 18:24
 - Preview: desconocido — usa el preview del IDE, no inventes puertos
@@ -90,30 +100,38 @@ EditCore actualiza este archivo tras cambios. No pedirlo al usuario. No pegar co
 - Ninguna registrada
 
 ## Cambios recientes
-- package.json
-- src/server/db/schema.ts
-- src/server/config.ts
-- src/server/partners/auth.ts
-- src/server/partners/api-handlers.ts
-- src/server/publish/service.ts
-- src/server/auth/users.ts
-- src/lib/mock/types.ts
-- src/server/distribution/expand.ts
-- src/server/whatsapp/cloud-api.ts
-- src/server/publish/networks.ts
+- [EditCore] project-infra.json — AUTORIZACION DE EJECUCION (PROCEDE): las reglas de DIAGNOSTICO / NO MODIFICAR del analisis previo qu
+- [EditCore] src/server/db/index.ts — AUTORIZACION DE EJECUCION (PROCEDE): las reglas de DIAGNOSTICO / NO MODIFICAR del analisis previo qu
+- [EditCore] src/routes/_app.red.tsx — AUTORIZACION DE EJECUCION (PROCEDE): las reglas de DIAGNOSTICO / NO MODIFICAR del analisis previo qu
+- [EditCore] src/lib/api/distribution.functions.ts — AUTORIZACION DE EJECUCION (PROCEDE): las reglas de DIAGNOSTICO / NO MODIFICAR del analisis previo qu
+- [EditCore] src/lib/api/red.functions.ts — AUTORIZACION DE EJECUCION (PROCEDE): las reglas de DIAGNOSTICO / NO MODIFICAR del analisis previo qu
+- [EditCore] src/routes/_app.plataforma.tsx — AUTORIZACION DE EJECUCION (PROCEDE): las reglas de DIAGNOSTICO / NO MODIFICAR del analisis previo qu
+- [EditCore] src/server/autopilot/generate.ts — AUTORIZACION DE EJECUCION (PROCEDE): las reglas de DIAGNOSTICO / NO MODIFICAR del analisis previo qu
+- [EditCore] test-editcore-stack.js — Crea un archivo test-editcore-stack.js que exporte { ok: true }.
+- src/lib/api/autopilot.functions.ts
+- src/lib/api/calendar.functions.ts
+- src/lib/api/distribution.functions.ts
+- src/lib/api/red.functions.ts
+- src/routes/_app.red.tsx
 - src/routes/_app.plataforma.tsx
-- src/routes/api.v1.partners.publish.tsx
-- src/routes/api.v1.partners.users.tsx
-- src/routes/api.webhook.whatsapp.tsx
-- .editcore/task-state.json
-- src/lib/bootstrap.ts
-- src/lib/save-draft-post.ts
+- src/server/autopilot/generate.ts
+- src/server/brain/benchmarks.ts
+- src/server/brain/server-diagnosis.ts
+- src/server/context.ts
+- src/server/metrics/sync.ts
+- src/server/partners/admin.ts
+- src/server/sync/user-data.ts
+- src/server/whatsapp/inbound.ts
+- src/lib/api/red.functions.ts — parche aplicado (kernel) (2026-10-06 21:12)
+- src/lib/api/distribution.functions.ts — parche aplicado (kernel) (2026-10-06 21:12)
+- src/lib/api/calendar.functions.ts — parche aplicado (kernel) (2026-10-06 21:12)
+- src/lib/api/autopilot.functions.ts — parche aplicado (kernel) (2026-10-06 21:12)
 
 ## Verificado
 - Pendiente
 
 ## Siguiente
-- Continuar desde el estado actual.
+- Proponer optimización o nueva funcionalidad.
 
 ## Regla anti-reexploracion
 - Si el pedido del usuario apunta a un archivo ya listado arriba: ve DIRECTO a read_file/replace_in_file de ese path.

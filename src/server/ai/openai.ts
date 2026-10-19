@@ -580,3 +580,112 @@ Tono: ${input.tono || "persuasivo y llamativo"}`,
       : ["#Promo", "#OfertaEspecial", "#PubliVende", "#NegociosLocales"],
   };
 }
+
+export async function analyzeMarketOpenAI(input: {
+  businessContext: string;
+  nicheBrief: string;
+  prompt: string;
+  empresa?: string;
+  giro?: string;
+  ubicacion?: string;
+}): Promise<{
+  resumen: string;
+  global: string;
+  local: string;
+  empresa: string;
+  competencia: string;
+  oportunidades: string;
+  recomendaciones: string[];
+}> {
+  const ai = getClient();
+  const res = await ai.chat.completions.create({
+    model: getMeaiModel(),
+    response_format: { type: "json_object" },
+    temperature: 0.6,
+    messages: [
+      {
+        role: "system",
+        content: `Eres un consultor senior de análisis e inteligencia de mercado para negocios en México y Latinoamérica.
+Tu tarea es realizar un análisis de mercado estructurado, realista y de alto valor estratégico basado en el contexto del negocio, el nicheBrief de la industria y la solicitud puntual del usuario.
+
+Debes analizar detalladamente:
+- Mercado global: tendencias macroeconómicas, de consumo y evolución del sector internacionalmente.
+- Mercado local: dinámicas de demanda, poder adquisitivo, hábitos de compra y entorno específico en la zona o ciudad relevante.
+- La empresa: diagnóstico de posicionamiento actual, fortalezas clave y propuesta de valor diferenciadora.
+- Competencia: mapeo del giro de competencia, tipos de competidores directos e indirectos y brechas que dejan en el mercado.
+- Oportunidades: nichos desatendidos, tendencias emergentes, canales poco explotados y ventajas competitivas inmediatas.
+- Recomendaciones: lista de acciones estratégicas y tácticas concretas, viables y priorizadas.
+
+Reglas obligatorias:
+- Responde en español neutro mexicano / LATAM.
+- Sé específico y fundamentado, evitando generalidades vacías.
+- Responde OBLIGATORIAMENTE un único objeto JSON válido con esta forma exacta:
+{
+  "resumen": "Resumen ejecutivo del análisis y diagnóstico principal",
+  "global": "Análisis del mercado global y tendencias del sector",
+  "local": "Análisis del mercado local y entorno geográfico",
+  "empresa": "Diagnóstico de la empresa y propuesta de valor",
+  "competencia": "Análisis del giro de competencia y competidores",
+  "oportunidades": "Oportunidades de mercado detectadas",
+  "recomendaciones": [
+    "Recomendación 1",
+    "Recomendación 2",
+    "Recomendación 3"
+  ]
+}`,
+      },
+      {
+        role: "user",
+        content: `CONTEXTO DEL NEGOCIO:
+${input.businessContext || "No especificado"}
+
+REFERENCIAS DEL NICHO (nicheBrief):
+${input.nicheBrief || "No especificado"}
+
+DATOS ESPECÍFICOS DE LA CONSULTA:
+- Empresa: ${input.empresa || "Usar la del contexto del negocio"}
+- Giro / Industria: ${input.giro || "Usar la del contexto del negocio"}
+- Ubicación: ${input.ubicacion || "Usar la del contexto del negocio"}
+
+SOLICITUD O ENFOQUE DEL USUARIO:
+${input.prompt}`,
+      },
+    ],
+  });
+
+  const rawText = res.choices[0]?.message?.content ?? "{}";
+  let clean = rawText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  clean = clean.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+  let parsed: any = {};
+  if (start !== -1 && end > start) {
+    try {
+      parsed = JSON.parse(clean.slice(start, end + 1));
+    } catch {
+      parsed = {};
+    }
+  }
+
+  const recomendaciones = Array.isArray(parsed.recomendaciones)
+    ? parsed.recomendaciones.map((r: unknown) => String(r).trim()).filter(Boolean)
+    : [];
+
+  return {
+    resumen: String(parsed.resumen || "").trim(),
+    global: String(parsed.global || "").trim(),
+    local: String(parsed.local || "").trim(),
+    empresa: String(parsed.empresa || "").trim(),
+    competencia: String(parsed.competencia || "").trim(),
+    oportunidades: String(parsed.oportunidades || "").trim(),
+    recomendaciones:
+      recomendaciones.length > 0
+        ? recomendaciones
+        : [
+            "Fortalecer la propuesta de valor diferenciada frente a competidores locales.",
+            "Optimizar los canales digitales de captación y seguimiento de clientes.",
+            "Aprovechar las temporadas comerciales clave del nicho para lanzar promociones estratégicas.",
+          ],
+  };
+}
+

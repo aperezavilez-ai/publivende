@@ -57,7 +57,7 @@ async function connectedSet(userId: string): Promise<Set<Red>> {
         eq(schema.oauthAccounts.estadoConexion, "conectada"),
       ),
     );
-  return new Set(rows.map((r) => r.red));
+  return new Set(rows.map((r: { red: Red }) => r.red));
 }
 
 export const getAutopilotServer = createServerFn({ method: "POST" })

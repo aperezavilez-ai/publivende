@@ -6,7 +6,7 @@ import { getDb, schema } from "@/server/db";
 import { verifySessionToken } from "@/server/auth/crypto";
 import { findUserById } from "@/server/auth/users";
 import { getBusinessContextServer } from "@/server/context";
-import { generateBrainPlanOpenAI } from "@/server/ai/openai";
+import { analyzeMarketOpenAI, generateBrainPlanOpenAI } from "@/server/ai/openai";
 import { nicheBrief } from "@/lib/brain/niches";
 import {
   buildFallbackPlan,
@@ -165,3 +165,59 @@ export const generateBrainPlanServer = createServerFn({ method: "POST" })
       .returning();
     return { ok: true as const, report: rowToReport(row) };
   });
+
+export interface MarketAnalysisResult {
+  resumen: string;
+  global: string;
+  local: string;
+  empresa: string;
+  competencia: string;
+  oportunidades: string;
+  recomendaciones: string[];
+}
+
+export const analyzeMarketServer = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      token: z.string(),
+      prompt: z.string().trim().min(1, "El objetivo o consulta del análisis es requerido"),
+      empresa: z.string().trim().optional(),
+      giro: z.string().trim().optional(),
+      ubicacion: z.string().trim().optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    if (!isProductionMode())
+      return { ok: false as const, error: "Modo demo", useLocal: true as const };
+    const session = await verifySessionToken(data.token);
+    if (!session) return { ok: false as const, error: "Sesión inválida" };
+
+    const user = await findUserById(session.userId);
+    if (!user) return { ok: false as const, error: "Usuario no encontrado" };
+
+    if (!isRealAIEnabled()) {
+      return { ok: false as const, error: "Servicio de IA no configurado (MEAI_API_KEY requerida)" };
+    }
+
+    try {
+      const businessContext = await getBusinessContextServer(user.id);
+      const niche = nicheBrief(data.giro || user.industria);
+      const analysis: MarketAnalysisResult = await analyzeMarketOpenAI({
+        businessContext,
+        nicheBrief: niche,
+        prompt: data.prompt,
+        empresa: data.empresa || user.nombreNegocio,
+        giro: data.giro || user.industria || undefined,
+        ubicacion: data.ubicacion || user.ciudad || undefined,
+      });
+
+      return { ok: true as const, analysis };
+    } catch (err) {
+      console.error("[analyzeMarketServer] Error:", err);
+      return {
+        ok: false as const,
+        error: err instanceof Error ? err.message : "Error al procesar el análisis de mercado con IA",
+      };
+    }
+  });
+

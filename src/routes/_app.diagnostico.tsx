@@ -5,13 +5,19 @@ import {
   AlertTriangle,
   ArrowRight,
   Brain,
+  Building2,
   CalendarDays,
   CheckCircle2,
   Clock,
+  Compass,
   Flame,
+  Globe,
   Lightbulb,
+  MapPin,
+  RefreshCw,
   Sparkles,
   Target,
+  TrendingUp,
   Users,
   Wallet,
 } from "lucide-react";
@@ -21,12 +27,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/mock/auth";
 import { useDB } from "@/lib/mock/useDB";
 import { setPublishDraft } from "@/lib/draft";
 import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
-import { generateBrainPlanServer } from "@/lib/api/brain.functions";
+import {
+  analyzeMarketServer,
+  generateBrainPlanServer,
+  type MarketAnalysisResult,
+} from "@/lib/api/brain.functions";
 import {
   AREA_LABELS,
   formatMoney,
@@ -266,6 +278,7 @@ function Diagnostico() {
           <TabsTrigger value="ganchos">Ganchos de tu nicho</TabsTrigger>
           <TabsTrigger value="temporadas">Horarios y temporadas</TabsTrigger>
           <TabsTrigger value="nicho">Tu nicho</TabsTrigger>
+          <TabsTrigger value="mercado">Análisis de mercado</TabsTrigger>
         </TabsList>
 
         <TabsContent value="problemas" className="space-y-3 mt-4">
@@ -322,6 +335,10 @@ function Diagnostico() {
 
         <TabsContent value="nicho" className="space-y-4 mt-4">
           <ComparativoView diagnosis={diagnosis} />
+        </TabsContent>
+
+        <TabsContent value="mercado" className="space-y-4 mt-4">
+          <AnalisisMercadoView user={user} diagnosis={diagnosis} />
         </TabsContent>
       </Tabs>
     </div>
@@ -803,3 +820,248 @@ function TemporadasView({
     </>
   );
 }
+
+function AnalisisMercadoView({
+  user,
+  diagnosis,
+}: {
+  user: { nombre_negocio?: string; industria?: string; ciudad?: string };
+  diagnosis: Diagnosis;
+}) {
+  const [prompt, setPrompt] = useState("");
+  const [empresa, setEmpresa] = useState(user.nombre_negocio || "");
+  const [giro, setGiro] = useState(user.industria || "");
+  const [ubicacion, setUbicacion] = useState(user.ciudad || "");
+  const [loading, setLoading] = useState(false);
+  const [analysis, setAnalysis] = useState<MarketAnalysisResult | null>(null);
+
+  async function handleAnalyze(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!prompt.trim()) {
+      toast.error("Por favor ingresa qué deseas analizar sobre tu mercado");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = getSessionToken();
+      if (isProductionModeClient() && token) {
+        const res = await analyzeMarketServer({
+          data: {
+            token,
+            prompt: prompt.trim(),
+            empresa: empresa.trim() || undefined,
+            giro: giro.trim() || undefined,
+            ubicacion: ubicacion.trim() || undefined,
+          },
+        });
+
+        if (res.ok && res.analysis) {
+          setAnalysis(res.analysis);
+          toast.success("Análisis de mercado generado con éxito");
+          return;
+        }
+
+        if (!("useLocal" in res)) {
+          toast.error(res.error || "No se pudo generar el análisis");
+          return;
+        }
+      }
+
+      // Modo demostración / fallback local
+      const nombreNeg = empresa.trim() || user.nombre_negocio || "Tu Negocio";
+      const indNeg = giro.trim() || user.industria || diagnosis.nicho_label || "Comercio Local";
+      const ubiNeg = ubicacion.trim() || user.ciudad || "tu zona";
+
+      const fallbackAnalysis: MarketAnalysisResult = {
+        resumen: `Diagnóstico estratégico para ${nombreNeg} en el sector de ${indNeg} (${ubiNeg}). Existe un mercado activo con alta sensibilidad a la inmediatez y confianza digital, donde la cercanía y la rapidez de respuesta son la ventaja más rentable.`,
+        global: `A nivel global, la industria de ${indNeg} avanza aceleradamente hacia la compra conversacional, el social commerce y la personalización. Las marcas líderes crecen optimizando canales directos (WhatsApp y mensajes directos) combinados con videos cortos de alto impacto visual.`,
+        local: `En el mercado local de ${ubiNeg}, los consumidores investigan activamente en redes sociales antes de consultar precios. La decisión final se inclina hacia negocios con atención inmediata, reseñas comprobables y políticas claras de entrega o garantía.`,
+        empresa: `${nombreNeg} posee alta adaptabilidad y capacidad de forjar relaciones duraderas. Su gran oportunidad es sistematizar el catálogo digital y reducir tiempos de respuesta para capturar prospectos antes que la competencia.`,
+        competencia: `Los competidores en el giro de ${indNeg} en la región presentan debilidades comunes: demoran en responder mensajes por WhatsApp (más de 2 horas), tienen publicaciones esporádicas y carecen de llamados a la acción claros con precios o enlaces directos.`,
+        oportunidades: `1. Implementación de respuestas automáticas y catálogo actualizado en WhatsApp. 2. Campañas geolocalizadas con ofertas de bienvenida exclusivas para ${ubiNeg}. 3. Contenido en video mostrando resultados reales y testimonios de clientes satisfechos.`,
+        recomendaciones: [
+          `Responder consultas de prospectos en menos de 10 minutos para triplicar la probabilidad de cierre.`,
+          `Publicar al menos 3 a 4 veces por semana utilizando ganchos enfocados en resolver objeciones locales.`,
+          `Crear un mensaje de bienvenida automatizado con catálogo para quienes escriban por primera vez.`,
+          `Implementar un protocolo de seguimiento a las 24 horas para prospectos interesados que no hayan finalizado compra.`,
+        ],
+      };
+
+      setAnalysis(fallbackAnalysis);
+      toast.success("Análisis de mercado generado (modo demo)");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al procesar el análisis");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" /> Análisis de Mercado
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Evalúa tu entorno competitivo, oportunidades locales y tendencias globales con la IA de PubliVende.
+            </p>
+          </div>
+          {analysis && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setAnalysis(null)}
+              className="gap-1.5 self-start sm:self-auto"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Nuevo análisis
+            </Button>
+          )}
+        </div>
+
+        <form onSubmit={handleAnalyze} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="mercado-prompt" className="text-xs font-medium">
+              ¿Qué deseas analizar o consultar? <span className="text-red-500">*</span>
+            </Label>
+            <Textarea
+              id="mercado-prompt"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Ej. Quiero analizar la competencia en mi zona, qué promociones están funcionando mejor en mi giro y cómo destacar para vender más a domicilio."
+              rows={3}
+              required
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="mercado-empresa" className="text-xs font-medium text-muted-foreground">
+                Empresa (opcional)
+              </Label>
+              <Input
+                id="mercado-empresa"
+                value={empresa}
+                onChange={(e) => setEmpresa(e.target.value)}
+                placeholder={user.nombre_negocio || "Nombre del negocio"}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="mercado-giro" className="text-xs font-medium text-muted-foreground">
+                Giro / Industria (opcional)
+              </Label>
+              <Input
+                id="mercado-giro"
+                value={giro}
+                onChange={(e) => setGiro(e.target.value)}
+                placeholder={user.industria || diagnosis.nicho_label || "Ej. Ropa y calzado"}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="mercado-ubicacion" className="text-xs font-medium text-muted-foreground">
+                Ubicación (opcional)
+              </Label>
+              <Input
+                id="mercado-ubicacion"
+                value={ubicacion}
+                onChange={(e) => setUbicacion(e.target.value)}
+                placeholder={user.ciudad || "Ej. Monterrey, N.L."}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <Button
+              type="submit"
+              disabled={loading || !prompt.trim()}
+              className="gap-2 bg-gradient-primary border-0"
+            >
+              <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
+              {loading ? "Analizando mercado…" : "Analizar mercado"}
+            </Button>
+          </div>
+        </form>
+      </Card>
+
+      {analysis && (
+        <div className="space-y-4">
+          <Card className="p-5 bg-gradient-primary text-white border-0">
+            <div className="flex items-center justify-between text-xs uppercase opacity-85 mb-1.5">
+              <span className="font-semibold flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" /> Resumen Ejecutivo
+              </span>
+              <span>Análisis de Mercado IA</span>
+            </div>
+            <p className="text-base font-medium leading-relaxed">{analysis.resumen}</p>
+          </Card>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card className="p-5 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                <Globe className="w-4 h-4" /> Mercado Global
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                {analysis.global}
+              </p>
+            </Card>
+
+            <Card className="p-5 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                <MapPin className="w-4 h-4" /> Mercado Local
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                {analysis.local}
+              </p>
+            </Card>
+
+            <Card className="p-5 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                <Building2 className="w-4 h-4" /> La Empresa
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                {analysis.empresa}
+              </p>
+            </Card>
+
+            <Card className="p-5 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                <Target className="w-4 h-4" /> Competencia en el Giro
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                {analysis.competencia}
+              </p>
+            </Card>
+          </div>
+
+          <Card className="p-5 space-y-2 border-amber-200/60 bg-amber-50/30 dark:bg-amber-950/10">
+            <div className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
+              <Lightbulb className="w-4 h-4" /> Oportunidades Detectadas
+            </div>
+            <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">
+              {analysis.oportunidades}
+            </p>
+          </Card>
+
+          <Card className="p-5 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-green-700 dark:text-green-400">
+              <CheckCircle2 className="w-4 h-4" /> Recomendaciones Accionables
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {analysis.recomendaciones.map((rec, idx) => (
+                <div key={idx} className="rounded-lg border p-3 text-sm flex gap-2.5 items-start bg-card">
+                  <Badge variant="outline" className="shrink-0 mt-0.5 font-bold">
+                    #{idx + 1}
+                  </Badge>
+                  <span className="text-foreground/90">{rec}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+

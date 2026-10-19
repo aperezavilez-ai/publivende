@@ -151,11 +151,12 @@ export function OAuthCallbackView({
       }
 
       if ("hub" in result) {
+        const cuentas = Array.isArray(result.cuentas) ? result.cuentas : [];
         setReturnTo(result.returnTo);
         setStatus("ok");
         setMessage(
-          result.cuentas.length
-            ? `Cuentas oficiales conectadas: ${result.cuentas.join(", ")}. Asígnales nichos y actívalas.`
+          cuentas.length
+            ? `Cuentas oficiales conectadas: ${cuentas.join(", ")}. Asígnales nichos y actívalas.`
             : "No se encontraron cuentas en este perfil.",
         );
         setTimeout(() => navigate({ to: result.returnTo as "/" }), 2200);

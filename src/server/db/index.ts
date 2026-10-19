@@ -6,7 +6,7 @@ import { isProductionMode } from "../config";
 
 type ProxyResponse = { rows?: unknown[][]; error?: string };
 
-let db: any = null;
+let db: PostgresJsDatabase<typeof schema> | PgRemoteDatabase<typeof schema> | null = null;
 let pgClient: postgres.Sql | null = null;
 
 function proxyConfiguration() {

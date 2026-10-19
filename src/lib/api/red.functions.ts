@@ -25,6 +25,7 @@ import {
   reviewBoost,
   type DbBoost,
 } from "@/server/red/boost";
+import type { DbPost, DbUser } from "@/server/db/schema";
 import { BOOST_MIN_SCORE, redAcceptsMedia } from "@/lib/red/limits";
 
 async function requireUser(token: string) {
@@ -56,7 +57,7 @@ function boostToClient(b: DbBoost) {
     ia_fuente: b.iaFuente,
     copy_red: b.copyRed,
     canales: b.canales,
-    resultados: (b.resultados ?? []).map((r) => ({
+    resultados: (b.resultados ?? []).map((r: { red: string; channel_name?: string; ok: boolean; error?: string | null; external_id?: string | null }) => ({
       red: r.red,
       channel_name: r.channel_name ?? "",
       ok: r.ok,
@@ -143,13 +144,13 @@ export const redAdminOverview = createServerFn({ method: "POST" })
         .orderBy(desc(schema.boostRequests.createdAt))
         .limit(150);
 
-      const postIds = [...new Set(boosts.map((b) => b.postId))];
-      const userIds = [...new Set(boosts.map((b) => b.userId))];
+      const postIds = [...new Set(boosts.map((b: DbBoost) => b.postId))] as string[];
+      const userIds = [...new Set(boosts.map((b: DbBoost) => b.userId))] as string[];
       const posts = postIds.length
-        ? await db.select().from(schema.posts).where(inArray(schema.posts.id, postIds))
+        ? await db.select().from(schema.posts).where(inArray(schema.posts.id, postIds as readonly string[]))
         : [];
       const users = userIds.length
-        ? await db
+        ? (await db
             .select({
               id: schema.users.id,
               nombre: schema.users.nombre,
@@ -158,12 +159,12 @@ export const redAdminOverview = createServerFn({ method: "POST" })
               plan: schema.users.plan,
             })
             .from(schema.users)
-            .where(inArray(schema.users.id, userIds))
+            .where(inArray(schema.users.id, userIds as string[]))) as { id: string; nombre: string; nombreNegocio: string; email: string; plan: string }[]
         : [];
 
-      const queue = boosts.map((b) => {
-        const post = posts.find((p) => p.id === b.postId);
-        const user = users.find((u) => u.id === b.userId);
+      const queue = boosts.map((b: DbBoost) => {
+        const post = posts.find((p: DbPost) => p.id === b.postId);
+        const user = users.find((u: DbUser) => u.id === b.userId);
         return {
           ...boostToClient(b),
           post: post

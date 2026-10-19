@@ -19,7 +19,7 @@ async function realMetricsFor(userId: string) {
   const data: Partial<DB> = {
     post_metrics: [],
     whatsapp_contacts: contacts.map(
-      (c) => ({ id: c.id, post_origen_id: c.postOrigenId ?? undefined }) as WaContact,
+      (c: typeof contacts[number]) => ({ id: c.id, post_origen_id: c.postOrigenId ?? undefined }) as WaContact,
     ),
   };
   await mergeRealMetrics(userId, data);

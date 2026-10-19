@@ -115,7 +115,7 @@ async function connectedRedes(userId: string): Promise<Red[]> {
         eq(schema.oauthAccounts.estadoConexion, "conectada"),
       ),
     );
-  return [...new Set(rows.map((r) => r.red))];
+  return [...new Set(rows.map((r: { red: string }) => r.red))];
 }
 
 async function latestPlanSemana(userId: string) {
@@ -337,5 +337,5 @@ export async function findUsersDueForAutopilot(limit: number): Promise<string[]>
     )
     .orderBy(sql`${schema.autopilotSettings.ultimaGeneracion} NULLS FIRST`)
     .limit(limit);
-  return rows.map((r) => r.userId);
+  return rows.map((r: { userId: string }) => r.userId);
 }

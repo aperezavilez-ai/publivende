@@ -21,7 +21,7 @@ export const checkMetaPublishHealth = createServerFn({ method: "POST" })
       .select()
       .from(schema.oauthAccounts)
       .where(eq(schema.oauthAccounts.userId, session.userId));
-    const fb = rows.find((r) => r.red === "facebook");
+    const fb = rows.find((r: typeof rows[number]) => r.red === "facebook");
 
     if (!fb?.accessToken) {
       return {

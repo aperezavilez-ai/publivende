@@ -36,11 +36,20 @@ export const getPostDistribution = createServerFn({ method: "POST" })
     return {
       ok: true as const,
       post: dbPostToClient(post),
-      distributions: distributions.map((d) => ({
+      distributions: distributions.map((d: {
+        id: string;
+        channelType: string;
+        channelName: string;
+        channelId: string;
+        externalId: string | null;
+        status: string;
+        error: string | null;
+        createdAt: Date;
+      }) => ({
         id: d.id,
         channel_type: d.channelType,
         channel_name: d.channelName,
-        channel_id: d.channelId,
+        channel_id: d.channelId ?? "",
         external_id: d.externalId,
         status: d.status,
         error: d.error,
@@ -67,7 +76,7 @@ export const redistributePost = createServerFn({ method: "POST" })
       .select()
       .from(schema.postDistributions)
       .where(eq(schema.postDistributions.postId, data.postId));
-    for (const d of previous.filter((p) => !p.channelType.startsWith("red_publivende:"))) {
+    for (const d of previous.filter((p: { channelType: string }) => !p.channelType.startsWith("red_publivende:"))) {
       await db.delete(schema.postDistributions).where(eq(schema.postDistributions.id, d.id));
     }
 

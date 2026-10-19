@@ -4,7 +4,7 @@ import type { Red } from "@/lib/mock/types";
 import { getWhatsAppFullStatus } from "@/server/whatsapp/accounts";
 import { generatePartnerApiKey } from "./keys";
 
-export async function listPartners() {
+export async function listPartners(): Promise<typeof schema.partners.$inferSelect[]> {
   const db = getDb();
   return db.select().from(schema.partners).orderBy(desc(schema.partners.createdAt));
 }

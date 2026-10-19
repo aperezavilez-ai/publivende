@@ -83,8 +83,8 @@ function RedPage() {
   if (loading) return <div className="p-8 text-center text-muted-foreground">Cargando red…</div>;
   if (!data) return <div className="p-8 text-center text-muted-foreground">No se pudo cargar la red.</div>;
 
-  const activas = data.channels.filter((c) => c.activo && c.estado_conexion === "conectada");
-  const queue = data.queue.filter((q) =>
+  const activas = data.channels.filter((c: Channel) => c.activo && c.estado_conexion === "conectada");
+  const queue = data.queue.filter((q: QueueItem) =>
     filtro === "todos" ? true : filtro === "pendiente" ? q.estado === "pendiente" || q.estado === "error" : q.estado === filtro,
   );
 
@@ -155,7 +155,7 @@ function RedPage() {
           <p className="text-sm text-muted-foreground">No hay solicitudes en esta vista.</p>
         ) : (
           <div className="space-y-4">
-            {queue.map((q) => (
+            {queue.map((q: QueueItem) => (
               <BoostRow key={q.id} item={q} channels={activas} minScore={data.min_score} onChange={load} />
             ))}
           </div>
@@ -354,14 +354,16 @@ function BoostRow({
           : await redRejectBoost({ data: { token, id: item.id, motivo } });
     setBusy(false);
     if (!res.ok) return toast.error(res.error);
-    if (action === "aprobar" && "boost" in res) {
-      const ok = res.boost.resultados.filter((r) => r.ok).length;
+    if (action === "aprobar" && res.ok && "boost" in res) {
+      const boost = res.boost as { resultados: Array<{ ok: boolean; channel_name: string; error?: string | null }>; copy_red?: string; canales?: string[] };
+      const ok = boost.resultados.filter((r) => r.ok).length;
       if (ok) toast.success(`Publicado en ${ok} cuenta(s) oficial(es)`);
-      else toast.error(res.boost.resultados.map((r) => `${r.channel_name}: ${r.error}`).join(" · ") || "No se publicó");
+      else toast.error(boost.resultados.map((r) => `${r.channel_name}: ${r.error}`).join(" · ") || "No se publicó");
     }
-    if (action === "revisar" && "boost" in res) {
-      setCopy(res.boost.copy_red ?? "");
-      setSeleccion(res.boost.canales);
+    if (action === "revisar" && res.ok && "boost" in res) {
+      const boost = res.boost as { copy_red?: string; canales?: string[] };
+      setCopy(boost.copy_red ?? "");
+      setSeleccion(boost.canales ?? []);
     }
     await onChange();
   }
@@ -456,7 +458,7 @@ function BoostRow({
 
       {item.resultados.length > 0 && (
         <div className="space-y-1">
-          {item.resultados.map((r, i) => (
+          {item.resultados.map((r: { ok: boolean; channel_name: string; error?: string | null }, i: number) => (
             <div key={i} className={`text-xs flex gap-1.5 ${r.ok ? "text-green-700" : "text-red-600"}`}>
               {r.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
               {r.channel_name}
