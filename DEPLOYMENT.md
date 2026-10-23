@@ -42,11 +42,12 @@
    NEXT_PUBLIC_BASE_URL=https://publivende.vercel.app
    ```
 
-4. **Configuración de Build:**
-   - **Framework Preset:** Vite
+4. **Configuración de Build en Vercel Dashboard:**
+   - **Framework Preset:** **Other** (o dejar sin override). *¡IMPORTANTE: NO seleccionar Vite, ya que Vite busca `dist`, mientras que Nitro genera automáticamente `.vercel/output` con SSR!*
    - **Build Command:** `npm run build`
-   - **Output Directory:** `.output/public`
+   - **Output Directory:** *(Dejar vacío / desactivar override, Vercel detecta `.vercel/output` automáticamente)*
    - **Install Command:** `npm install`
+   - **Node.js Version en Settings:** 22.x (o 20.x)
 
 5. **Desplegar:**
    - Click en "Deploy"

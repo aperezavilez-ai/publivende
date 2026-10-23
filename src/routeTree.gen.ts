@@ -11,10 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
-import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AutopilotRouteImport } from './routes/autopilot'
-import { Route as CampanasRouteImport } from './routes/campanas'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as TerminosRouteImport } from './routes/terminos'
@@ -64,24 +61,9 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AnalyticsRoute = AnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AutopilotRoute = AutopilotRouteImport.update({
-  id: '/autopilot',
-  path: '/autopilot',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CampanasRoute = CampanasRouteImport.update({
-  id: '/campanas',
-  path: '/campanas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -283,10 +265,7 @@ const ApiV1PartnersUsersExternalIdConnectionsRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
-  '/autopilot': typeof AutopilotRoute
-  '/campanas': typeof CampanasRoute
   '/onboarding': typeof OnboardingRoute
   '/privacidad': typeof PrivacidadRoute
   '/terminos': typeof TerminosRoute
@@ -329,10 +308,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
-  '/autopilot': typeof AutopilotRoute
-  '/campanas': typeof CampanasRoute
   '/onboarding': typeof OnboardingRoute
   '/privacidad': typeof PrivacidadRoute
   '/terminos': typeof TerminosRoute
@@ -377,10 +353,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
-  '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
-  '/autopilot': typeof AutopilotRoute
-  '/campanas': typeof CampanasRoute
   '/onboarding': typeof OnboardingRoute
   '/privacidad': typeof PrivacidadRoute
   '/terminos': typeof TerminosRoute
@@ -425,10 +398,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/analytics'
     | '/auth'
-    | '/autopilot'
-    | '/campanas'
     | '/onboarding'
     | '/privacidad'
     | '/terminos'
@@ -471,10 +441,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/analytics'
     | '/auth'
-    | '/autopilot'
-    | '/campanas'
     | '/onboarding'
     | '/privacidad'
     | '/terminos'
@@ -518,10 +485,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
-    | '/analytics'
     | '/auth'
-    | '/autopilot'
-    | '/campanas'
     | '/onboarding'
     | '/privacidad'
     | '/terminos'
@@ -566,10 +530,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
-  AnalyticsRoute: typeof AnalyticsRoute
   AuthRoute: typeof AuthRoute
-  AutopilotRoute: typeof AutopilotRoute
-  CampanasRoute: typeof CampanasRoute
   OnboardingRoute: typeof OnboardingRoute
   PrivacidadRoute: typeof PrivacidadRoute
   TerminosRoute: typeof TerminosRoute
@@ -606,32 +567,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/analytics': {
-      id: '/analytics'
-      path: '/analytics'
-      fullPath: '/analytics'
-      preLoaderRoute: typeof AnalyticsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/auth': {
       id: '/auth'
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/autopilot': {
-      id: '/autopilot'
-      path: '/autopilot'
-      fullPath: '/autopilot'
-      preLoaderRoute: typeof AutopilotRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/campanas': {
-      id: '/campanas'
-      path: '/campanas'
-      fullPath: '/campanas'
-      preLoaderRoute: typeof CampanasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -973,10 +913,7 @@ const ApiV1PartnersUsersRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
-  AnalyticsRoute: AnalyticsRoute,
   AuthRoute: AuthRoute,
-  AutopilotRoute: AutopilotRoute,
-  CampanasRoute: CampanasRoute,
   OnboardingRoute: OnboardingRoute,
   PrivacidadRoute: PrivacidadRoute,
   TerminosRoute: TerminosRoute,
