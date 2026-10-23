@@ -1,19 +1,7 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".output/public",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "framework": null,
-  "functions": {
-    ".output/server/**/*.[jt]s": {
-      "memory": 3008,
-      "maxDuration": 30
-    }
-  },
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/.output/server/index.mjs"
-    }
+  "crons": [
+    { "path": "/api/cron/sync-metrics", "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/publish-scheduled", "schedule": "* * * * *" },
+    { "path": "/api/cron/autopilot", "schedule": "0 * * * *" }
   ]
 }
