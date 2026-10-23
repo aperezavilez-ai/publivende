@@ -1,61 +1,98 @@
-import { db } from '@/db';
-import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 
-export async function createUser({
-  email,
-  nombre,
-  password,
-}: {
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+export interface User {
+  id: string;
   email: string;
-  nombre: string;
-  password: string;
-}) {
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  const [user] = await db
-    .insert(users)
-    .values({
-      email,
-      nombre,
-      password: hashedPassword,
-    })
-    .returning();
-
-  // Don't return password
-  const { password: _, ...userWithoutPassword } = user;
-  return userWithoutPassword;
+  name: string;
+  role: string;
 }
 
-export async function authenticateUser(email: string, password: string) {
-  const user = await db.query.users.findFirst({
-    where: eq(users.email, email),
-  });
+export async function authenticateUser(email: string, password: string): Promise<User | null> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
 
-  if (!user) {
+    if (error || !data) {
+      console.error('Usuario no encontrado:', error);
+      return null;
+    }
+
+    const isValidPassword = await bcrypt.compare(password, data.password);
+
+    if (!isValidPassword) {
+      return null;
+    }
+
+    return {
+      id: data.id,
+      email: data.email,
+      name: data.name,
+      role: data.role,
+    };
+  } catch (error) {
+    console.error('Error en authenticateUser:', error);
     return null;
   }
-
-  const isValid = await bcrypt.compare(password, user.password);
-
-  if (!isValid) {
-    return null;
-  }
-
-  const { password: _, ...userWithoutPassword } = user;
-  return userWithoutPassword;
 }
 
-export async function getUserById(userId: string) {
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-  });
+export async function getUserById(userId: string): Promise<User | null> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, name, role')
+      .eq('id', userId)
+      .single();
 
-  if (!user) {
+    if (error || !data) {
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error en getUserById:', error);
     return null;
   }
+}
 
-  const { password: _, ...userWithoutPassword } = user;
-  return userWithoutPassword;
+export async function createUser(email: string, password: string, name: string, role: string = 'user'): Promise<User | null> {
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const { data, error } = await supabase
+      .from('users')
+      .insert([
+        {
+          email,
+          password: hashedPassword,
+          name,
+          role,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error('Error al crear usuario:', error);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      email: data.email,
+      name: data.name,
+      role: data.role,
+    };
+  } catch (error) {
+    console.error('Error en createUser:', error);
+    return null;
+  }
 }
