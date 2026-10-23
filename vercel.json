@@ -5,15 +5,15 @@
   "installCommand": "npm install",
   "framework": null,
   "functions": {
-    "api/**/*.[jt]s": {
+    ".output/server/**/*.[jt]s": {
       "memory": 3008,
       "maxDuration": 30
     }
   },
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/api/index"
+      "src": "/(.*)",
+      "dest": "/.output/server/index.mjs"
     }
   ]
 }
