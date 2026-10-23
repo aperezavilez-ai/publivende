@@ -1,355 +1,191 @@
-# 🚀 Guía de Deployment - Publivende
+# Guía de Despliegue de Publivende en Vercel
 
-## Pre-requisitos de Deployment
+## ✅ Cambios Realizados
 
-✅ **Completado:**
-- ✅ Arquitectura de base de datos (PostgreSQL + Drizzle ORM)
-- ✅ Sistema de autenticación con JWT
-- ✅ Integración con Claude AI (Anthropic)
-- ✅ Dashboard principal con métricas
-- ✅ Sistema Autopilot de generación de contenido
-- ✅ Analytics con visualizaciones
-- ✅ Calendario de contenido
-- ✅ Gestión de campañas
-- ✅ Catálogo de productos
-- ✅ WhatsApp Business integration
-- ✅ APIs REST completas
-- ✅ UI responsive con Tailwind CSS
+### 1. Resolución de Conflictos de Rutas
+- ✅ Eliminados archivos duplicados de rutas planas (`calendario.tsx`, `dashboard.tsx`, `productos.tsx`, `whatsapp.tsx`)
+- ✅ Mantenida la estructura con prefijo `_app.` que representa las rutas reales
+- ✅ Build completado exitosamente sin conflictos
 
-## Opciones de Deployment
+### 2. Configuración de Supabase Oficial
+- ✅ URL: `https://ckimjzfajaihaeqfgtoj.supabase.co`
+- ✅ Anon Key configurada
+- ✅ Service Role Key configurada
+- ✅ Publishable Key configurada
 
-### 🎯 Opción 1: Vercel (Frontend) + Neon (Database) - RECOMENDADO
+### 3. Dependencias Instaladas
+- ✅ `@tanstack/router-devtools` — herramienta de desarrollo para TanStack Router
+- ✅ Build completado exitosamente
 
-**Ventajas:**
-- Deploy automático desde GitHub
-- Serverless backend
-- PostgreSQL gratis con Neon
-- SSL automático
-- CDN global
+## 📋 Pasos para Desplegar en Vercel
 
-**Pasos:**
+### Opción 1: Desplegar desde la UI de Vercel
 
-1. **Crear base de datos en Neon**
-   ```bash
-   # Ve a https://neon.tech
-   # Crea un nuevo proyecto
-   # Copia la connection string
+1. **Ir a Vercel Dashboard:**
+   - Visita https://vercel.com/dashboard
+   - Inicia sesión con tu cuenta
+
+2. **Conectar Repositorio:**
+   - Click en "Add New" → "Project"
+   - Selecciona el repositorio `aperezavilez-ai/publivende`
+   - Click en "Import"
+
+3. **Configurar Variables de Entorno:**
+   En la sección "Environment Variables", agrega las siguientes variables:
+
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://ckimjzfajaihaeqfgtoj.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNraW1qemZhamFpaGFlcWZndG9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTQ1MDgsImV4cCI6MjA5Njg3MDUwOH0.T2pHE7RJatdMfqwhBK9Qv9oIpVyzzLps73MX-IjmzhI
+   SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNraW1qemZhamFpaGFlcWZndG9qIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTI5NDUwOCwiZXhwIjoyMDk2ODcwNTA4fQ.aKN4LeFNB1fRsNEQxmKTP7pU00Zqh7DzUAW0YsaddIo
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_qyiH6MPK9qH3gE27AyQqxA_QcmSPDGH
+   JWT_SECRET=publivende-jwt-secret-key-2024-production-change-this
+   NEXT_PUBLIC_BASE_URL=https://publivende.vercel.app
    ```
 
-2. **Deploy en Vercel**
-   ```bash
-   npm install -g vercel
-   vercel login
-   vercel
-   ```
+4. **Configuración de Build:**
+   - **Framework Preset:** Vite
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `.output/public`
+   - **Install Command:** `npm install`
 
-3. **Configurar variables de entorno en Vercel**
-   ```bash
-   # Dashboard de Vercel > Settings > Environment Variables
-   DATABASE_URL=postgresql://...
-   ANTHROPIC_API_KEY=sk-...
-   JWT_SECRET=tu-secret-seguro
-   ```
+5. **Desplegar:**
+   - Click en "Deploy"
+   - Espera a que termine el build (2-3 minutos)
 
-4. **Ejecutar migraciones**
-   ```bash
-   npm run db:migrate
-   ```
+### Opción 2: Desplegar desde la CLI
 
-**Costo estimado:** $0 - $20/mes
-
----
-
-### 🐳 Opción 2: Railway
-
-**Ventajas:**
-- PostgreSQL incluido
-- Deploy desde GitHub
-- Fácil configuración
-- $5 gratis al mes
-
-**Pasos:**
-
-1. **Conectar Railway con GitHub**
-   ```bash
-   # Ve a https://railway.app
-   # Conecta tu repositorio
-   ```
-
-2. **Crear servicio PostgreSQL**
-   - En Railway dashboard, agrega PostgreSQL
-   - Copia las variables de conexión
-
-3. **Configurar variables de entorno**
-   ```
-   DATABASE_URL=${{Postgres.DATABASE_URL}}
-   ANTHROPIC_API_KEY=sk-...
-   JWT_SECRET=tu-secret
-   ```
-
-4. **Deploy automático**
-   - Railway detectará tu app automáticamente
-   - Build y deploy ocurren en cada push
-
-**Costo estimado:** $5-$20/mes
-
----
-
-### 🌊 Opción 3: DigitalOcean App Platform
-
-**Ventajas:**
-- Control total
-- PostgreSQL managed
-- Precio predecible
-- Buen performance
-
-**Pasos:**
-
-1. **Crear cuenta en DigitalOcean**
-
-2. **Crear App desde GitHub**
-   ```
-   - Selecciona tu repositorio
-   - Detecta Vite automáticamente
-   - Configura build command: npm run build
-   ```
-
-3. **Agregar PostgreSQL Database**
-   ```
-   - Dev Database: $7/mo
-   - Copia connection string
-   ```
-
-4. **Configurar variables de entorno**
-
-**Costo estimado:** $12-$25/mes
-
----
-
-### 🐳 Opción 4: Docker + VPS (Máximo Control)
-
-**Ventajas:**
-- Control completo
-- Mejor precio a escala
-- Portabilidad
-
-**Dockerfile incluido:**
-```dockerfile
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM node:20-alpine
-WORKDIR /app
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY package.json ./
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
-**Deploy:**
 ```bash
-# Build imagen
-docker build -t publivende .
+# Instalar Vercel CLI si no lo tienes
+npm i -g vercel
 
-# Run con variables de entorno
-docker run -p 3000:3000 \
-  -e DATABASE_URL=postgresql://... \
-  -e ANTHROPIC_API_KEY=sk-... \
-  publivende
+# Autenticarse
+vercel login
+
+# Ir al directorio del proyecto
+cd "D:\PROGRAMAS IA\PUBLIVENDE"
+
+# Desplegar
+vercel
+
+# O desplegar a producción directamente
+vercel --prod
 ```
 
-**Costo estimado:** $5-$15/mes (VPS)
+## 🔧 Configuración Post-Despliegue
 
----
+### 1. Configurar Dominio
+- En Vercel Dashboard → Settings → Domains
+- Agregar dominio personalizado: `publivende.mx`
+- Configurar DNS con los registros de Vercel
 
-## 🔐 Configuración de APIs de Redes Sociales
+### 2. Actualizar Callbacks de OAuth
+Una vez desplegado, actualiza las URLs de callback en:
 
-### Facebook & Instagram
-1. Ve a https://developers.facebook.com
-2. Crea una app
-3. Activa Facebook Login e Instagram Basic Display
-4. Obtén:
-   - `FACEBOOK_APP_ID`
-   - `FACEBOOK_APP_SECRET`
-5. Configura OAuth Redirect: `https://tudominio.com/api/auth/facebook/callback`
+#### Meta (Facebook/Instagram)
+- Facebook Developers Console
+- Agregar URL: `https://publivende.vercel.app/oauth/callback`
 
-### Twitter/X
-1. Aplica en https://developer.twitter.com
-2. Crea un proyecto
-3. Obtén:
-   - `TWITTER_API_KEY`
-   - `TWITTER_API_SECRET`
-   - `TWITTER_BEARER_TOKEN`
+#### Google (YouTube)
+- Google Cloud Console
+- Agregar URL: `https://publivende.vercel.app/oauth/google/callback`
 
-### LinkedIn
-1. Crea app en https://www.linkedin.com/developers
-2. Solicita acceso a Marketing API
-3. Obtén:
-   - `LINKEDIN_CLIENT_ID`
-   - `LINKEDIN_CLIENT_SECRET`
+#### TikTok
+- TikTok Developer Portal
+- Agregar URL: `https://publivende.vercel.app/oauth/tiktok/callback`
 
-### TikTok
-1. Registra en https://developers.tiktok.com
-2. Crea una app
-3. Obtén:
-   - `TIKTOK_CLIENT_KEY`
-   - `TIKTOK_CLIENT_SECRET`
+### 3. Configurar Webhooks
 
-### WhatsApp Business
-1. Ve a https://business.facebook.com
-2. Crea cuenta Business
-3. Configura WhatsApp API
-4. Obtén:
-   - `WHATSAPP_PHONE_NUMBER_ID`
-   - `WHATSAPP_BUSINESS_ACCOUNT_ID`
-   - `WHATSAPP_ACCESS_TOKEN`
+#### Stripe
+- Stripe Dashboard → Developers → Webhooks
+- Agregar endpoint: `https://publivende.vercel.app/api/webhook/stripe`
+- Copiar signing secret y agregarlo a variables de entorno
 
----
+#### WhatsApp Business
+- Meta Developer Console → WhatsApp → Configuration
+- Webhook URL: `https://publivende.vercel.app/api/webhook/whatsapp`
+- Verify Token: (el que definiste en `WHATSAPP_WEBHOOK_VERIFY_TOKEN`)
 
-## 📊 Monitoreo Post-Deployment
+## 🧪 Verificación del Despliegue
 
-### Health Checks
+### 1. Verificar que el sitio carga
 ```bash
-# Endpoint health
-curl https://tudominio.com/api/health
-
-# Database connection
-curl https://tudominio.com/api/health/db
+curl https://publivende.vercel.app
 ```
+
+### 2. Verificar autenticación
+```bash
+curl https://publivende.vercel.app/api/auth/me
+```
+
+### 3. Verificar conexión a Supabase
+- Ir a https://publivende.vercel.app/dashboard
+- Debe redirigir a login si no hay sesión
+
+## 📊 Monitoreo
+
+### Vercel Analytics
+- Ve a tu proyecto en Vercel
+- Navega a "Analytics" para ver métricas de tráfico
 
 ### Logs
 ```bash
-# Vercel
-vercel logs
+# Ver logs en tiempo real
+vercel logs publivende --follow
 
-# Railway
-railway logs
-
-# Docker
-docker logs publivende -f
+# Ver últimos logs
+vercel logs publivende
 ```
 
-### Métricas Clave
-- ✅ Response time < 500ms
-- ✅ Uptime > 99.9%
-- ✅ Error rate < 1%
-- ✅ Database connections < 80%
+### Error Tracking
+- Configura Sentry para rastrear errores en producción
+- Agrega `SENTRY_DSN` a variables de entorno
+
+## 🚨 Troubleshooting
+
+### Error: "Function Runtimes must have a valid version"
+**Solución:** Asegúrate de que `vercel.json` tiene la configuración correcta de funciones.
+
+### Error: "Conflicting configuration paths"
+**Solución:** Ya resuelto - eliminamos las rutas duplicadas.
+
+### Error: "Cannot find module '@tanstack/router-devtools'"
+**Solución:** Ya resuelto - instalamos la dependencia.
+
+### Error: Build Failed
+1. Verifica que todas las variables de entorno estén configuradas
+2. Revisa los logs de build en Vercel Dashboard
+3. Ejecuta `npm run build` localmente para reproducir el error
+
+## 📝 Notas Importantes
+
+1. **JWT_SECRET:** Cambia el valor por defecto en producción por uno aleatorio y seguro
+2. **Base URL:** Actualiza `NEXT_PUBLIC_BASE_URL` con tu dominio final
+3. **CORS:** Verifica que las políticas de CORS permitan tu dominio en Supabase
+4. **Rate Limiting:** Considera implementar rate limiting para proteger tus APIs
+
+## ✅ Checklist Final
+
+- [ ] Despliegue exitoso en Vercel
+- [ ] Variables de entorno configuradas
+- [ ] Dominio personalizado configurado (opcional)
+- [ ] Callbacks OAuth actualizados
+- [ ] Webhooks configurados
+- [ ] Sitio accesible y funcional
+- [ ] Autenticación funciona correctamente
+- [ ] Conexión a Supabase verificada
+- [ ] Analytics configurado
+- [ ] Monitoreo de errores activado
+
+## 🔗 Links Útiles
+
+- **Dashboard de Vercel:** https://vercel.com/dashboard
+- **Supabase Dashboard:** https://ckimjzfajaihaeqfgtoj.supabase.co
+- **Repositorio GitHub:** https://github.com/aperezavilez-ai/publivende
+- **Documentación Vercel:** https://vercel.com/docs
+- **Documentación TanStack Start:** https://tanstack.com/start/latest
 
 ---
 
-## 🔄 CI/CD Pipeline
-
-**GitHub Actions incluido** (`.github/workflows/deploy.yml`):
-
-```yaml
-name: Deploy
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 20
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Run tests
-        run: npm test
-      
-      - name: Build
-        run: npm run build
-      
-      - name: Deploy to Vercel
-        run: vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
-```
-
----
-
-## 🎯 Next Steps Post-Deploy
-
-1. **Configurar dominio custom**
-   - Comprar dominio (ejemplo: publivende.com)
-   - Apuntar DNS a tu plataforma
-   - Configurar SSL
-
-2. **Setup monitoring**
-   - Agregar Sentry para error tracking
-   - Configurar Uptime Robot
-   - Setup Google Analytics
-
-3. **Backup automático**
-   - Backups diarios de PostgreSQL
-   - Backup de configuración
-   - Disaster recovery plan
-
-4. **Optimizaciones**
-   - CDN para imágenes (Cloudinary)
-   - Redis cache (opcional)
-   - Load balancing si creces
-
----
-
-## 💡 Tips de Producción
-
-- ✅ Nunca commitees `.env` (ya está en `.gitignore`)
-- ✅ Usa variables de entorno para todos los secretos
-- ✅ Activa HTTPS/SSL siempre
-- ✅ Implementa rate limiting en APIs
-- ✅ Monitorea logs regularmente
-- ✅ Haz backups antes de cambios grandes
-- ✅ Usa migraciones para cambios de DB
-
----
-
-## 🆘 Troubleshooting
-
-### Error: Cannot connect to database
-```bash
-# Verifica connection string
-echo $DATABASE_URL
-
-# Prueba conexión manual
-psql $DATABASE_URL
-```
-
-### Error: ANTHROPIC_API_KEY not found
-```bash
-# Verifica que la key esté configurada
-echo $ANTHROPIC_API_KEY
-
-# Regenera la key en console.anthropic.com si es necesario
-```
-
-### Build fails
-```bash
-# Limpia node_modules y reinstala
-rm -rf node_modules package-lock.json
-npm install
-
-# Limpia cache de build
-rm -rf dist .vite
-npm run build
-```
-
----
-
-## 📞 Soporte
-
-Si tienes problemas con el deployment:
-1. Revisa logs de la plataforma
-2. Verifica todas las variables de entorno
-3. Consulta la documentación de tu plataforma
-4. Abre un issue en GitHub
-
-**¡Tu app está lista para producción! 🚀**
+**Última actualización:** 23 de octubre de 2026
+**Build exitoso:** ✅ Sin errores
+**Estado:** Listo para producción
