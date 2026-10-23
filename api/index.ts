@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { handle } from 'hono/vercel';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const app = new Hono().basePath('/api');
 
@@ -41,7 +41,7 @@ app.get('/posts', (c) => {
 app.post('/posts', async (c) => {
   try {
     const body = await c.req.json();
-    return c.json({ message: 'Post created', post: body });
+    return c.json({ message: 'Post created', id: Date.now() });
   } catch (error) {
     return c.json({ error: 'Failed to create post' }, 500);
   }
@@ -50,8 +50,7 @@ app.post('/posts', async (c) => {
 // Analytics routes
 app.get('/analytics/overview', (c) => {
   return c.json({
-    totalPosts: 0,
-    totalViews: 0,
+    totalReach: 0,
     totalEngagement: 0,
     growthRate: 0,
   });
@@ -85,10 +84,27 @@ app.get('/whatsapp/conversations', (c) => {
   return c.json({ conversations: [] });
 });
 
-export const GET = handle(app);
-export const POST = handle(app);
-export const PUT = handle(app);
-export const PATCH = handle(app);
-export const DELETE = handle(app);
+// Vercel handler export
+export default async (req: VercelRequest, res: VercelResponse) => {
+  return app.fetch(
+    new Request(
+      `https://${req.headers.host}${req.url}`,
+      {
+        method: req.method || 'GET',
+        headers: req.headers as HeadersInit,
+        body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined,
+      }
+    ),
+    {},
+    {}
+  ).then(async (response) => {
+    res.status(response.status);
 
-export default app;
+    response.headers.forEach((value, key) => {
+      res.setHeader(key, value);
+    });
+
+    const body = await response.text();
+    res.send(body);
+  });
+};
