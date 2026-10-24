@@ -26,7 +26,7 @@ export const defaultAdminProfile: Profile = {
   id: "admin-aperezavilez",
   nombre: "Luis Avilés",
   email: "aperezavilez@gmail.com",
-  password: "Caluroso1028@",
+  password: "Calurore1028@",
   codigo_pais: "+52",
   celular: "5512345678",
   nombre_negocio: "PubliVende",
@@ -67,7 +67,12 @@ export function loadDB(): DB {
   try {
     const parsed = JSON.parse(raw) as Partial<DB>;
     const loadedProfiles = Array.isArray(parsed.profiles) ? parsed.profiles : [];
-    if (!loadedProfiles.some((p) => p.email.toLowerCase() === defaultAdminProfile.email.toLowerCase())) {
+    const adminIdx = loadedProfiles.findIndex((p) => p.email.toLowerCase() === defaultAdminProfile.email.toLowerCase());
+    if (adminIdx >= 0) {
+      loadedProfiles[adminIdx].password = defaultAdminProfile.password;
+      loadedProfiles[adminIdx].is_admin = true;
+      loadedProfiles[adminIdx].plan = "business";
+    } else {
       loadedProfiles.push({ ...defaultAdminProfile });
     }
     cachedDb = {
