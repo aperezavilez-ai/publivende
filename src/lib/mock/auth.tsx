@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { loadDB, saveDB, uid, seedForUser, ensureUserSeeded, userHasSeedData, initMinimalUser, getCurrentUser } from "./db";
+import { loadDB, saveDB, uid, seedForUser, ensureUserSeeded, userHasSeedData, initMinimalUser, getCurrentUser, defaultAdminProfile } from "./db";
 import type { Profile, Plan } from "./types";
 import { authGetSession, authSignIn, authSignUp, authUpdateProfile, getProductionStatus } from "@/lib/api/auth.functions";
 import {
