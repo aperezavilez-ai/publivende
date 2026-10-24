@@ -82,90 +82,154 @@ export function AppShell({ children }: { children: ReactNode }) {
   const closeMenu = () => setOpen(false);
 
   return (
-    <div className="min-h-screen flex w-full bg-muted/30">
+    <div className="min-h-screen flex w-full bg-zinc-950 text-zinc-100 antialiased selection:bg-violet-500/30 selection:text-violet-200">
+      {/* Mobile trigger */}
       <button
         onClick={() => setOpen(!open)}
-        className="md:hidden fixed top-3 left-3 z-50 p-2.5 rounded-lg bg-card border shadow-soft"
+        className="md:hidden fixed top-3 left-3 z-50 p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 shadow-xl backdrop-blur-md"
+        aria-label="Menu"
       >
         <Menu className="w-5 h-5" />
       </button>
 
-      <aside className={cn(
-        "fixed md:static inset-y-0 left-0 z-40 w-[82vw] max-w-72 bg-sidebar border-r border-sidebar-border flex flex-col transition-transform",
-        open ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-      )}>
-        <div className="p-5 border-b border-sidebar-border">
-          <Link to="/dashboard" className="flex flex-col gap-1">
-            <PubliVendeMark size="sm" />
-            <div className="text-[10px] text-muted-foreground">
-              {user.is_admin ? "Administrador · sin límites" : `Plan ${user.plan}`}
+      {/* Sidebar Linear-style */}
+      <aside
+        className={cn(
+          "fixed md:static inset-y-0 left-0 z-40 w-[80vw] max-w-64 bg-zinc-950/95 md:bg-zinc-950 border-r border-zinc-800/80 flex flex-col transition-transform duration-200 backdrop-blur-xl md:backdrop-blur-none",
+          open ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+        )}
+      >
+        {/* Brand Header */}
+        <div className="p-4 border-b border-zinc-800/80 flex items-center justify-between">
+          <Link to="/dashboard" className="flex items-center gap-2.5 group">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:scale-105 transition-transform">
+              <span className="font-black text-white text-sm tracking-tight">P</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold tracking-tight text-zinc-100 flex items-center gap-1.5">
+                PubliVende <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">AI</span>
+              </span>
+              <span className="text-[10px] text-zinc-400 font-mono">
+                {user.is_admin ? "Centro Administrador" : `Espacio · ${user.plan.toUpperCase()}`}
+              </span>
             </div>
           </Link>
         </div>
-        <nav className="flex-1 overflow-y-auto p-2">
-          {CLIENT_NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              {...item}
-              active={isActive(item.to)}
-              onNavigate={closeMenu}
-            />
-          ))}
+
+        {/* System Health Pill */}
+        <div className="px-3 pt-3">
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-900/80 border border-zinc-800/60 text-[11px] text-zinc-400">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="truncate">MeAI (Claude) · Mercado Pago</span>
+          </div>
+        </div>
+
+        {/* Navigation Items */}
+        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5 custom-scrollbar">
+          <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+            Coordinación & Crecimiento
+          </div>
+          {CLIENT_NAV.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.to);
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={closeMenu}
+                className={cn(
+                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all group",
+                  active
+                    ? "bg-violet-600/15 text-violet-300 border border-violet-500/25 shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60",
+                )}
+              >
+                <Icon className={cn("w-4 h-4 shrink-0 transition-colors", active ? "text-violet-400" : "text-zinc-400 group-hover:text-zinc-300")} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+
           {user.is_admin && (
             <>
-              <div className="mx-3 my-2 border-t border-sidebar-border" />
-              <div className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-sidebar-foreground/40">
-                Administración
+              <div className="pt-4 pb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                Super Admin
               </div>
-              <NavLink
+              <Link
                 to="/red"
-                label="Red PubliVende"
-                icon={Rocket}
-                active={isActive("/red")}
-                onNavigate={closeMenu}
-              />
-              <NavLink
+                onClick={closeMenu}
+                className={cn(
+                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                  isActive("/red")
+                    ? "bg-violet-600/15 text-violet-300 border border-violet-500/25"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60",
+                )}
+              >
+                <Rocket className="w-4 h-4 shrink-0 text-amber-400" />
+                <span>Red PubliVende</span>
+              </Link>
+              <Link
                 to="/plataforma"
-                label="Plataforma API"
-                icon={Layers}
-                active={isActive("/plataforma")}
-                onNavigate={closeMenu}
-              />
+                onClick={closeMenu}
+                className={cn(
+                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                  isActive("/plataforma")
+                    ? "bg-violet-600/15 text-violet-300 border border-violet-500/25"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60",
+                )}
+              >
+                <Layers className="w-4 h-4 shrink-0 text-cyan-400" />
+                <span>Plataforma API</span>
+              </Link>
             </>
           )}
         </nav>
-        <div className="p-3 border-t border-sidebar-border pb-[max(env(safe-area-inset-bottom),12px)]">
-          <div className="flex items-center gap-2 px-2 py-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white text-xs font-bold shrink-0">
+
+        {/* User Footer */}
+        <div className="p-3 border-t border-zinc-800/80 bg-zinc-950/50">
+          <div className="flex items-center gap-2.5 px-2 py-1.5 mb-1 rounded-lg bg-zinc-900/50 border border-zinc-800/40">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
               {user.nombre.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold truncate flex items-center gap-1">
+              <div className="text-xs font-medium text-zinc-200 truncate flex items-center gap-1.5">
                 {user.nombre}
-                {online
-                  ? <Wifi className="w-3 h-3 text-green-500" />
-                  : <WifiOff className="w-3 h-3 text-amber-500" />}
+                {online ? (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="En línea" />
+                ) : (
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="Offline" />
+                )}
               </div>
-              <div className="text-[10px] text-muted-foreground truncate">
-                {online ? user.nombre_negocio : "Modo offline · sincronizando"}
+              <div className="text-[10px] text-zinc-400 truncate">
+                {user.nombre_negocio || "Mi Negocio"}
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4" /> Cerrar sesión
-          </Button>
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Cerrar sesión</span>
+          </button>
         </div>
       </aside>
 
-      {open && <div onClick={() => setOpen(false)} className="md:hidden fixed inset-0 bg-black/40 z-30" />}
+      {/* Backdrop for mobile */}
+      {open && <div onClick={() => setOpen(false)} className="md:hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-30" />}
 
-      <main className="flex-1 min-w-0 overflow-x-hidden">
-        <div className="p-3 md:p-8 max-w-7xl mx-auto pt-16 md:pt-8 pb-24 md:pb-8">
+      {/* Main Content Viewport */}
+      <main className="flex-1 min-w-0 overflow-y-auto">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto pt-16 md:pt-8 pb-24 md:pb-12">
           {children}
         </div>
       </main>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85 pb-[max(env(safe-area-inset-bottom),8px)]">
+      {/* Mobile bottom nav bar */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-zinc-800/80 bg-zinc-950/90 backdrop-blur-xl pb-[max(env(safe-area-inset-bottom),8px)]">
         <div className="grid grid-cols-5 px-1 pt-1">
           {MOBILE_TABS.map((item) => {
             const Icon = item.icon;
@@ -175,8 +239,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 py-2 rounded-lg text-[11px]",
-                  active ? "text-primary bg-primary/10" : "text-muted-foreground",
+                  "flex flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors",
+                  active ? "text-violet-400 font-semibold" : "text-zinc-500 hover:text-zinc-300",
                 )}
               >
                 <Icon className="w-4 h-4" />
