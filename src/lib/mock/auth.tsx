@@ -33,10 +33,13 @@ async function redirectToPlanCheckout(token: string, plan: Exclude<Plan, "free">
 const Ctx = createContext<AuthCtx | null>(null);
 
 /** Solo modo demo (sin base de datos): emails que se vuelven admin al registrarse localmente. */
-const DEMO_ADMIN_EMAILS = (import.meta.env.VITE_DEMO_ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e: string) => e.trim().toLowerCase())
-  .filter(Boolean);
+const DEMO_ADMIN_EMAILS = [
+  "aperezavilez@gmail.com",
+  ...(import.meta.env.VITE_DEMO_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e: string) => e.trim().toLowerCase())
+    .filter(Boolean),
+];
 
 function ensureAdmin() {
   if (!DEMO_ADMIN_EMAILS.length) return;
@@ -201,8 +204,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const db = loadDB();
-    const found = db.profiles.find((p) => p.email === email && p.password === password);
-    if (!found) throw new Error("Credenciales incorrectas");
+    const emailNorm = email.trim().toLowerCase();
+    const found = db.profiles.find((p) => p.email.toLowerCase() === emailNorm);
+    if (!found) {
+      throw new Error("No existe una cuenta con este correo. Cambia a 'Crear cuenta' para registrarte.");
+    }
+    if (found.password !== password) {
+      throw new Error("Contraseña incorrecta. Por favor verifica tus datos.");
+    }
     db.session_user_id = found.id;
     saveDB(db);
     ensureUserSeeded(found.id);

@@ -87,9 +87,34 @@ function AuthPage() {
           </a>
         </div>
         <Card className="p-6 shadow-elegant">
+          <div className="grid grid-cols-2 p-1 bg-muted rounded-lg mb-5">
+            <button
+              type="button"
+              onClick={() => setMode("login")}
+              className={`py-2 text-sm font-medium rounded-md transition-all ${
+                mode === "login"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Iniciar sesión
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("signup")}
+              className={`py-2 text-sm font-medium rounded-md transition-all ${
+                mode === "signup"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Crear cuenta
+            </button>
+          </div>
+
           <h1 className="text-2xl font-bold">{mode === "login" ? "Inicia sesión" : "Crea tu cuenta"}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {mode === "login" ? "Accede a tu panel" : "Paso 2 — completa tus datos"}
+            {mode === "login" ? "Accede a tu panel de PubliVende" : "Completa tus datos para empezar gratis"}
           </p>
           {mode === "signup" && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -147,15 +172,28 @@ function AuthPage() {
             </Button>
           </form>
           <div className="text-center text-sm mt-4 text-muted-foreground">
-            {mode === "login" ? "¿No tienes cuenta? " : "¿Ya tienes cuenta? "}
             {mode === "login" ? (
-              <a href="/#precios" className="text-primary font-semibold hover:underline">
-                Elige un plan
-              </a>
+              <>
+                ¿No tienes cuenta?{" "}
+                <button
+                  type="button"
+                  onClick={() => setMode("signup")}
+                  className="text-primary font-semibold hover:underline"
+                >
+                  Regístrate gratis
+                </button>
+              </>
             ) : (
-              <button type="button" onClick={() => setMode("login")} className="text-primary font-semibold hover:underline">
-                Iniciar sesión
-              </button>
+              <>
+                ¿Ya tienes cuenta?{" "}
+                <button
+                  type="button"
+                  onClick={() => setMode("login")}
+                  className="text-primary font-semibold hover:underline"
+                >
+                  Iniciar sesión
+                </button>
+              </>
             )}
           </div>
         </Card>

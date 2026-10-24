@@ -22,8 +22,23 @@ if (typeof window !== "undefined") {
   });
 }
 
+export const defaultAdminProfile: Profile = {
+  id: "admin-aperezavilez",
+  nombre: "Luis Avilés",
+  email: "aperezavilez@gmail.com",
+  password: "Caluroso1028@",
+  codigo_pais: "+52",
+  celular: "5512345678",
+  nombre_negocio: "PubliVende",
+  plan: "business",
+  is_admin: true,
+  whatsapp_configurado: true,
+  onboarding_completado: true,
+  fecha_registro: "2026-01-01T00:00:00.000Z",
+};
+
 const emptyDB: DB = {
-  profiles: [],
+  profiles: [defaultAdminProfile],
   social_accounts: [],
   posts: [],
   post_metrics: [],
@@ -41,23 +56,28 @@ const emptyDB: DB = {
 };
 
 export function loadDB(): DB {
-  if (typeof window === "undefined") return { ...emptyDB };
+  if (typeof window === "undefined") return { ...emptyDB, profiles: [...emptyDB.profiles] };
   const raw = localStorage.getItem(KEY);
   if (raw === cachedRaw && cachedDb) return cachedDb;
   cachedRaw = raw;
   if (!raw) {
-    cachedDb = { ...emptyDB };
+    cachedDb = { ...emptyDB, profiles: [...emptyDB.profiles] };
     return cachedDb;
   }
   try {
     const parsed = JSON.parse(raw) as Partial<DB>;
+    const loadedProfiles = Array.isArray(parsed.profiles) ? parsed.profiles : [];
+    if (!loadedProfiles.some((p) => p.email.toLowerCase() === defaultAdminProfile.email.toLowerCase())) {
+      loadedProfiles.push({ ...defaultAdminProfile });
+    }
     cachedDb = {
       ...emptyDB,
       ...parsed,
+      profiles: loadedProfiles,
       ab_experiments: Array.isArray(parsed.ab_experiments) ? parsed.ab_experiments : [],
     };
   } catch {
-    cachedDb = { ...emptyDB };
+    cachedDb = { ...emptyDB, profiles: [...emptyDB.profiles] };
   }
   return cachedDb;
 }
