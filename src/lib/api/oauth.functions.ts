@@ -118,6 +118,14 @@ export const buildOAuthStartUrl = createServerFn({ method: "POST" })
     return { ok: true as const, url: url.toString(), provider };
   });
 
+/** Lo que sí puede ver el navegador: la cuenta conectada, sin credenciales. */
+export type OAuthConnectPublicResult = Omit<OAuthConnectResult, "access_token" | "refresh_token">;
+
+function publicAccount(result: OAuthConnectResult): OAuthConnectPublicResult {
+  const { access_token: _at, refresh_token: _rt, ...pub } = result;
+  return pub;
+}
+
 export interface OAuthConnectResult {
   red: Red;
   nombre_cuenta: string;
@@ -500,7 +508,7 @@ export const completeOAuthCallback = createServerFn({ method: "POST" })
           returnTo: payload.returnTo,
           partnerReturnUrl: payload.partnerReturnUrl,
           externalUserId: payload.externalUserId,
-          account: meta.result,
+          account: publicAccount(meta.result),
         };
       }
 
@@ -516,7 +524,7 @@ export const completeOAuthCallback = createServerFn({ method: "POST" })
         returnTo: payload.returnTo,
         partnerReturnUrl: payload.partnerReturnUrl,
         externalUserId: payload.externalUserId,
-        account: result,
+        account: publicAccount(result),
       };
     } catch (err) {
       return { ok: false as const, error: err instanceof Error ? err.message : "Error OAuth" };
@@ -574,7 +582,7 @@ export const completeMetaPageSelection = createServerFn({ method: "POST" })
         returnTo: payload.returnTo,
         partnerReturnUrl: payload.partnerReturnUrl,
         externalUserId: payload.externalUserId,
-        account: meta.result,
+        account: publicAccount(meta.result),
       };
     } catch (err) {
       return { ok: false as const, error: err instanceof Error ? err.message : "Error OAuth" };

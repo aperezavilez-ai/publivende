@@ -5,17 +5,15 @@ import {
   completeOAuthCallback,
   type MetaPageOption,
 } from "@/lib/api/oauth.functions";
-import { saveOAuthTokenServer } from "@/lib/api/auth.functions";
 import { connectAccountOAuth } from "@/services/social/mock";
 import { useAuth } from "@/lib/mock/auth";
-import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
 import { Card } from "@/components/ui/card";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PubliVendeMark } from "@/components/PubliVendeLogo";
 import type { OAuthProvider } from "@/lib/oauth/providers";
 import type { Red } from "@/lib/mock/types";
-import type { OAuthConnectResult } from "@/lib/api/oauth.functions";
+import type { OAuthConnectPublicResult } from "@/lib/api/oauth.functions";
 import { rankMetaPages } from "@/lib/oauth/meta-page-match";
 
 interface OAuthSearch {
@@ -27,33 +25,17 @@ interface OAuthSearch {
   error_message?: string;
 }
 
-async function saveConnectedAccount(userId: string, account: OAuthConnectResult) {
+async function saveConnectedAccount(userId: string, account: OAuthConnectPublicResult) {
+  // El servidor ya persistió la cuenta (cifrada) en completeOAuthCallback.
+  // En el navegador solo vive la metadata visible, jamás el token.
   connectAccountOAuth(userId, account.red, {
     nombre_cuenta: account.nombre_cuenta,
-    access_token: account.access_token,
+    access_token: "oauth_authenticated",
     external_account_id: account.external_account_id,
     token_expires_at: account.token_expires_at,
     avatar: account.avatar,
     oauth_provider: account.provider,
   });
-
-  const token = getSessionToken();
-  if (isProductionModeClient() && token) {
-    await saveOAuthTokenServer({
-      data: {
-        token,
-        red: account.red,
-        account: {
-          nombre_cuenta: account.nombre_cuenta,
-          access_token: account.access_token,
-          external_account_id: account.external_account_id,
-          token_expires_at: account.token_expires_at,
-          avatar: account.avatar,
-          oauth_provider: account.provider,
-        },
-      },
-    });
-  }
 }
 
 export function OAuthCallbackView({
@@ -77,7 +59,7 @@ export function OAuthCallbackView({
   const ran = useRef(false);
 
   function finishSuccess(
-    account: OAuthConnectResult,
+    account: OAuthConnectPublicResult,
     nextReturnTo: string,
     partnerUrl?: string,
     extUserId?: string,

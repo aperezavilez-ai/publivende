@@ -106,33 +106,3 @@ export const authUpdateProfile = createServerFn({ method: "POST" })
     return { ok: true as const, user: dbUserToProfile(user) };
   });
 
-export const saveOAuthTokenServer = createServerFn({ method: "POST" })
-  .inputValidator(
-    z.object({
-      token: z.string(),
-      red: z.enum(["facebook", "instagram", "tiktok", "youtube"]),
-      account: z.object({
-        nombre_cuenta: z.string(),
-        access_token: z.string(),
-        external_account_id: z.string().optional(),
-        token_expires_at: z.string().optional(),
-        avatar: z.string().optional(),
-        oauth_provider: z.enum(["meta", "google", "tiktok"]).optional(),
-      }),
-    }),
-  )
-  .handler(async ({ data }) => {
-    if (!isProductionMode()) return { ok: false as const, error: "Modo demo" };
-    const session = await verifySessionToken(data.token);
-    if (!session) return { ok: false as const, error: "Sesión inválida" };
-    await upsertOAuthAccount(session.userId, {
-      red: data.red,
-      nombre_cuenta: data.account.nombre_cuenta,
-      access_token: data.account.access_token,
-      external_account_id: data.account.external_account_id,
-      token_expires_at: data.account.token_expires_at,
-      avatar: data.account.avatar,
-      oauth_provider: data.account.oauth_provider,
-    });
-    return { ok: true as const };
-  });

@@ -18,7 +18,10 @@ function proxyConfiguration() {
   const serviceRoleKey =
     process.env.PUBLIVENDE_SQL_SECRET ||
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    "bcb3d770bd571a7e043af537ef796483cccff341850b457df7318bf2f6299c1512b7449febd51240762343b2ffe0b2e8";
+    "";
+  if (!serviceRoleKey) {
+    throw new Error("Falta PUBLIVENDE_SQL_SECRET (o SUPABASE_SERVICE_ROLE_KEY) para el proxy SQL.");
+  }
   return { url: `${baseUrl}/functions/v1/publivende-sql`, serviceRoleKey };
 }
 
@@ -43,13 +46,13 @@ export function getDb() {
     throw new Error("Base de datos no configurada. Define DATABASE_URL y SESSION_SECRET.");
   }
   if (!db) {
-    const isVercel = !!process.env.VERCEL;
     const databaseUrl = process.env.DATABASE_URL;
-    if (databaseUrl && !isVercel) {
+    if (databaseUrl) {
       pgClient = postgres(databaseUrl, {
         max: 10,
         idle_timeout: 20,
         connect_timeout: 10,
+        ssl: databaseUrl.includes("supabase.co") ? "require" : undefined,
       });
       db = drizzlePostgres(pgClient, { schema });
     } else {

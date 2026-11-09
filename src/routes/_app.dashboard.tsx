@@ -64,8 +64,8 @@ function DashboardView() {
     }>;
   } | null>(null);
 
-  const posts = useDB((db) => db.posts.filter((p) => p.user_id === user?.id));
-  const contacts = useDB((db) => db.whatsapp_contacts.filter((c) => c.user_id === user?.id));
+  const posts = useDB((db) => (db.posts || []).filter((p) => p.user_id === user?.id));
+  const contacts = useDB((db) => (db.whatsapp_contacts || []).filter((c) => c.user_id === user?.id));
 
   // Simulación guiada o ejecución en vivo del enlace
   const handleAnalyzeBusiness = async (e: React.FormEvent) => {
@@ -184,18 +184,18 @@ function DashboardView() {
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Top Welcome Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-zinc-800/80">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-zinc-200/80">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-              Hola, {user?.nombre?.split(" ")[0]} <span className="text-xl">👋</span>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 flex items-center gap-2">
+              Hola, {user?.nombre ? user.nombre.split(" ")[0] : "Emprendedor"} <span className="text-xl">👋</span>
             </h1>
-            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[11px] px-2 py-0.5 font-medium">
+            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] px-2 py-0.5 font-medium">
               Centro de Mando Activo
             </Badge>
           </div>
-          <p className="text-xs text-zinc-400">
-            {user?.nombre_negocio || "PubliVende"} · Coordinación autónoma con <span className="text-zinc-300 font-medium">MeAI Cloud</span> y cobros en <span className="text-sky-400 font-medium">Mercado Pago</span>.
+          <p className="text-xs text-zinc-500">
+            {user?.nombre_negocio || "PubliVende"} · Coordinación autónoma con <span className="text-zinc-700 font-medium">MeAI Cloud</span> y cobros en <span className="text-sky-600 font-medium">Mercado Pago</span>.
           </p>
         </div>
 
@@ -204,13 +204,13 @@ function DashboardView() {
             onClick={exportPDF}
             variant="outline"
             size="sm"
-            className="border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:bg-zinc-800 hover:text-white text-xs gap-1.5 h-8"
+            className="border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 text-xs gap-1.5 h-8 shadow-xs"
           >
             <FileDown className="w-3.5 h-3.5" />
             <span>Exportar PDF</span>
           </Button>
           <Link to="/calendario">
-            <Button size="sm" className="bg-violet-600 hover:bg-violet-500 text-white text-xs gap-1.5 h-8 shadow-lg shadow-violet-600/20">
+            <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white text-xs gap-1.5 h-8 shadow-sm">
               <Calendar className="w-3.5 h-3.5" />
               <span>Ver Calendario</span>
             </Button>
@@ -218,42 +218,42 @@ function DashboardView() {
         </div>
       </div>
 
-      {/* Main Command Center Hero (Perplexity / Linear style) */}
-      <Card className="relative overflow-hidden bg-gradient-to-b from-zinc-900/90 via-zinc-900/50 to-zinc-950 border-zinc-800/90 p-6 md:p-8 shadow-2xl">
+      {/* Main Command Center Hero (Clean Light Style) */}
+      <Card className="relative overflow-hidden bg-white border-zinc-200/90 p-6 md:p-8 shadow-xs">
         {/* Glow backdrop */}
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-32 bg-violet-600/20 blur-3xl pointer-events-none rounded-full" />
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-32 bg-violet-500/10 blur-3xl pointer-events-none rounded-full" />
 
         <div className="relative z-10 max-w-3xl mx-auto text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/25 text-violet-300 text-xs font-semibold tracking-wide uppercase">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-50 border border-violet-200 text-violet-700 text-xs font-semibold tracking-wide uppercase">
+            <Sparkles className="w-3.5 h-3.5 text-violet-600" />
             <span>IA Coordinadora Autónoma</span>
           </div>
 
-          <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-zinc-900 tracking-tight">
             ¿Qué negocio o producto impulsamos hoy?
           </h2>
 
-          <p className="text-xs md:text-sm text-zinc-400 max-w-xl mx-auto leading-relaxed">
+          <p className="text-xs md:text-sm text-zinc-500 max-w-xl mx-auto leading-relaxed">
             Introduce el enlace de tu tienda, web o perfil social. La IA investigará tu nicho, redactará copys de alto impacto y preparará a tu vendedor de WhatsApp.
           </p>
 
           {/* Interactive URL Input Command Bar */}
           <form onSubmit={handleAnalyzeBusiness} className="pt-2 space-y-4">
-            <div className="relative flex items-center shadow-xl rounded-xl bg-zinc-950/80 border border-zinc-700/80 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-500/20 transition-all p-1.5">
+            <div className="relative flex items-center shadow-xs rounded-xl bg-slate-50/80 border border-zinc-200 focus-within:bg-white focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-500/20 transition-all p-1.5">
               <div className="pl-3 pr-2 text-zinc-400">
-                <Globe className="w-5 h-5 text-violet-400" />
+                <Globe className="w-5 h-5 text-violet-600" />
               </div>
               <Input
                 type="text"
                 placeholder="Pega el enlace de tu tienda, web o Instagram (ej: mitienda.com, instagram.com/minegocio)..."
                 value={businessUrl}
                 onChange={(e) => setBusinessUrl(e.target.value)}
-                className="bg-transparent border-0 text-white placeholder:text-zinc-500 text-xs md:text-sm focus-visible:ring-0 shadow-none px-2 h-10"
+                className="bg-transparent border-0 text-zinc-900 placeholder:text-zinc-400 text-xs md:text-sm focus-visible:ring-0 shadow-none px-2 h-10"
               />
               <Button
                 type="submit"
                 disabled={isAnalyzing}
-                className="bg-violet-600 hover:bg-violet-500 text-white font-medium text-xs md:text-sm px-4 md:px-5 h-9 shrink-0 gap-1.5 shadow-md shadow-violet-600/30"
+                className="bg-violet-600 hover:bg-violet-700 text-white font-medium text-xs md:text-sm px-4 md:px-5 h-9 shrink-0 gap-1.5 shadow-sm"
               >
                 {isAnalyzing ? (
                   <>
@@ -280,10 +280,10 @@ function DashboardView() {
                     key={obj.id}
                     type="button"
                     onClick={() => setSelectedObjective(obj.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-violet-600/20 text-violet-300 border border-violet-500/40 shadow-sm"
-                        : "bg-zinc-900/60 text-zinc-400 border border-zinc-800/80 hover:text-zinc-200 hover:bg-zinc-800/60"
+                        ? "bg-violet-50 text-violet-700 border border-violet-200 font-semibold shadow-xs"
+                        : "bg-white text-zinc-600 border border-zinc-200 hover:text-zinc-900 hover:bg-zinc-50"
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5" />
@@ -295,7 +295,7 @@ function DashboardView() {
 
             {/* Active Analysis Step Feedback */}
             {isAnalyzing && (
-              <div className="flex items-center justify-center gap-2 text-xs text-violet-400 animate-pulse pt-2">
+              <div className="flex items-center justify-center gap-2 text-xs text-violet-600 animate-pulse pt-2 font-medium">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>{activeStep}</span>
               </div>
@@ -306,19 +306,19 @@ function DashboardView() {
 
       {/* Generated Strategy Preview Card (If available) */}
       {strategyResult && (
-        <Card className="bg-zinc-900/90 border-violet-500/40 p-6 space-y-4 shadow-xl relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-zinc-800">
+        <Card className="bg-white border-violet-200 p-6 space-y-4 shadow-sm relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-zinc-200">
             <div>
               <div className="flex items-center gap-2">
-                <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30 text-xs">
+                <Badge className="bg-violet-50 text-violet-700 border-violet-200 text-xs">
                   {strategyResult.niche}
                 </Badge>
-                <h3 className="text-base font-bold text-white">Estrategia Semanal Coordinada</h3>
+                <h3 className="text-base font-bold text-zinc-900">Estrategia Semanal Coordinada</h3>
               </div>
-              <p className="text-xs text-zinc-400 mt-1">{strategyResult.summary}</p>
+              <p className="text-xs text-zinc-500 mt-1">{strategyResult.summary}</p>
             </div>
             <Link to="/piloto">
-              <Button size="sm" variant="outline" className="border-zinc-700 bg-zinc-800/60 text-xs gap-1.5 h-8">
+              <Button size="sm" variant="outline" className="border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 text-xs gap-1.5 h-8">
                 <span>Abrir en Piloto Automático</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </Button>
@@ -327,35 +327,35 @@ function DashboardView() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             {strategyResult.posts.map((post, idx) => (
-              <div key={idx} className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-800/80 flex flex-col justify-between space-y-3">
+              <div key={idx} className="p-4 rounded-xl bg-slate-50/70 border border-zinc-200 flex flex-col justify-between space-y-3">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-zinc-300 flex items-center gap-1.5">
-                      {post.red === "instagram" && <Instagram className="w-3.5 h-3.5 text-pink-400" />}
-                      {post.red === "facebook" && <Facebook className="w-3.5 h-3.5 text-blue-400" />}
-                      {post.red === "tiktok" && <Share2 className="w-3.5 h-3.5 text-teal-400" />}
+                    <span className="font-semibold text-zinc-800 flex items-center gap-1.5">
+                      {post.red === "instagram" && <Instagram className="w-3.5 h-3.5 text-pink-500" />}
+                      {post.red === "facebook" && <Facebook className="w-3.5 h-3.5 text-blue-500" />}
+                      {post.red === "tiktok" && <Share2 className="w-3.5 h-3.5 text-teal-600" />}
                       {post.red.toUpperCase()}
                     </span>
-                    <span className="text-[10px] text-zinc-500">{post.day}</span>
+                    <span className="text-[10px] text-zinc-400">{post.day}</span>
                   </div>
 
-                  <div className="text-xs font-semibold text-violet-300 leading-snug">
+                  <div className="text-xs font-semibold text-violet-700 leading-snug">
                     "{post.hook}"
                   </div>
 
-                  <p className="text-xs text-zinc-400 line-clamp-3 leading-relaxed">
+                  <p className="text-xs text-zinc-600 line-clamp-3 leading-relaxed">
                     {post.copy}
                   </p>
 
-                  <div className="text-[11px] text-emerald-400/90 font-medium flex items-center gap-1">
+                  <div className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
                     <MessageCircle className="w-3 h-3" />
                     <span>{post.cta}</span>
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-zinc-800/60">
+                <div className="pt-2 border-t border-zinc-200/80">
                   {post.approved ? (
-                    <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-400 font-medium py-1">
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-600 font-medium py-1">
                       <CheckCircle2 className="w-4 h-4" />
                       <span>Programado</span>
                     </div>
@@ -363,7 +363,7 @@ function DashboardView() {
                     <Button
                       onClick={() => approvePost(idx)}
                       size="sm"
-                      className="w-full bg-violet-600 hover:bg-violet-500 text-white text-xs h-8 gap-1.5"
+                      className="w-full bg-violet-600 hover:bg-violet-700 text-white text-xs h-8 gap-1.5 shadow-xs"
                     >
                       <Check className="w-3.5 h-3.5" />
                       <span>Aprobar con 1 Clic</span>
@@ -381,88 +381,88 @@ function DashboardView() {
         {/* Canales Autorizados (2 columnas) */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-zinc-200 tracking-tight flex items-center gap-2">
-              <Share2 className="w-4 h-4 text-violet-400" />
+            <h3 className="text-sm font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+              <Share2 className="w-4 h-4 text-violet-600" />
               Canales & Canales de Distribución
             </h3>
-            <Link to="/configuracion" className="text-xs text-violet-400 hover:underline">
+            <Link to="/configuracion" className="text-xs text-violet-600 hover:underline font-medium">
               Gestionar accesos
             </Link>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Instagram */}
-            <Card className="bg-zinc-900/60 border-zinc-800/80 p-4 rounded-xl flex items-center justify-between hover:border-zinc-700 transition-colors">
+            <Card className="bg-white border-zinc-200/90 p-4 rounded-xl flex items-center justify-between hover:border-zinc-300 shadow-xs transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400">
+                <div className="w-9 h-9 rounded-lg bg-pink-50 border border-pink-200 flex items-center justify-center text-pink-500">
                   <Instagram className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-zinc-100 flex items-center gap-1.5">
+                  <div className="text-xs font-semibold text-zinc-900 flex items-center gap-1.5">
                     Instagram Business
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   </div>
-                  <div className="text-[11px] text-zinc-400">Reels & Feed autorizados</div>
+                  <div className="text-[11px] text-zinc-500">Reels & Feed autorizados</div>
                 </div>
               </div>
-              <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px]">
+              <Badge variant="outline" className="border-emerald-200 text-emerald-700 bg-emerald-50 text-[10px]">
                 Listo
               </Badge>
             </Card>
 
             {/* WhatsApp Business */}
-            <Card className="bg-zinc-900/60 border-zinc-800/80 p-4 rounded-xl flex items-center justify-between hover:border-zinc-700 transition-colors">
+            <Card className="bg-white border-zinc-200/90 p-4 rounded-xl flex items-center justify-between hover:border-zinc-300 shadow-xs transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
                   <MessageCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-zinc-100 flex items-center gap-1.5">
+                  <div className="text-xs font-semibold text-zinc-900 flex items-center gap-1.5">
                     WhatsApp Cloud API
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   </div>
-                  <div className="text-[11px] text-zinc-400">Vendedor IA activo (24/7)</div>
+                  <div className="text-[11px] text-zinc-500">Vendedor IA activo (24/7)</div>
                 </div>
               </div>
-              <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px]">
+              <Badge variant="outline" className="border-emerald-200 text-emerald-700 bg-emerald-50 text-[10px]">
                 Activo
               </Badge>
             </Card>
 
             {/* Facebook */}
-            <Card className="bg-zinc-900/60 border-zinc-800/80 p-4 rounded-xl flex items-center justify-between hover:border-zinc-700 transition-colors">
+            <Card className="bg-white border-zinc-200/90 p-4 rounded-xl flex items-center justify-between hover:border-zinc-300 shadow-xs transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
                   <Facebook className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-zinc-100 flex items-center gap-1.5">
+                  <div className="text-xs font-semibold text-zinc-900 flex items-center gap-1.5">
                     Facebook Fanpage
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   </div>
-                  <div className="text-[11px] text-zinc-400">Página conectada</div>
+                  <div className="text-[11px] text-zinc-500">Página conectada</div>
                 </div>
               </div>
-              <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px]">
+              <Badge variant="outline" className="border-emerald-200 text-emerald-700 bg-emerald-50 text-[10px]">
                 Listo
               </Badge>
             </Card>
 
             {/* Mercado Pago */}
-            <Card className="bg-zinc-900/60 border-zinc-800/80 p-4 rounded-xl flex items-center justify-between hover:border-zinc-700 transition-colors">
+            <Card className="bg-white border-zinc-200/90 p-4 rounded-xl flex items-center justify-between hover:border-zinc-300 shadow-xs transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                <div className="w-9 h-9 rounded-lg bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600">
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-zinc-100 flex items-center gap-1.5">
+                  <div className="text-xs font-semibold text-zinc-900 flex items-center gap-1.5">
                     Mercado Pago
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   </div>
-                  <div className="text-[11px] text-zinc-400">Links de cobro automáticos</div>
+                  <div className="text-[11px] text-zinc-500">Links de cobro automáticos</div>
                 </div>
               </div>
-              <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-[10px]">
+              <Badge variant="outline" className="border-emerald-200 text-emerald-700 bg-emerald-50 text-[10px]">
                 Conectado
               </Badge>
             </Card>
@@ -471,43 +471,43 @@ function DashboardView() {
 
         {/* Timeline de la IA Coordinadora (Activity Ledger) */}
         <div className="space-y-4">
-          <h3 className="text-sm font-bold text-zinc-200 tracking-tight flex items-center gap-2">
-            <Clock className="w-4 h-4 text-violet-400" />
+          <h3 className="text-sm font-bold text-zinc-900 tracking-tight flex items-center gap-2">
+            <Clock className="w-4 h-4 text-violet-600" />
             Acciones de la IA Coordinadora
           </h3>
 
-          <Card className="bg-zinc-900/60 border-zinc-800/80 p-4 rounded-xl space-y-3.5">
+          <Card className="bg-white border-zinc-200/90 p-4 rounded-xl space-y-3.5 shadow-xs">
             <div className="space-y-3">
               <div className="flex items-start gap-2.5">
-                <div className="w-2 h-2 rounded-full bg-violet-400 mt-1.5 shrink-0" />
+                <div className="w-2 h-2 rounded-full bg-violet-500 mt-1.5 shrink-0" />
                 <div className="text-xs">
-                  <div className="font-semibold text-zinc-200">Motor MeAI Cloud listo</div>
-                  <div className="text-zinc-400 text-[11px]">Claude Haiku 4.5 activo para copywriting y ventas.</div>
+                  <div className="font-semibold text-zinc-900">Motor MeAI Cloud listo</div>
+                  <div className="text-zinc-500 text-[11px]">Claude Haiku 4.5 activo para copywriting y ventas.</div>
                   <div className="text-[10px] text-zinc-400 font-mono mt-0.5">Hace 2 min</div>
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
+                <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
                 <div className="text-xs">
-                  <div className="font-semibold text-zinc-200">Vendedor WhatsApp disponible</div>
-                  <div className="text-zinc-400 text-[11px]">Respuestas inteligentes con contexto comercial activadas.</div>
+                  <div className="font-semibold text-zinc-900">Vendedor WhatsApp disponible</div>
+                  <div className="text-zinc-500 text-[11px]">Respuestas inteligentes con contexto comercial activadas.</div>
                   <div className="text-[10px] text-zinc-400 font-mono mt-0.5">En guardia 24/7</div>
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5">
-                <div className="w-2 h-2 rounded-full bg-sky-400 mt-1.5 shrink-0" />
+                <div className="w-2 h-2 rounded-full bg-sky-500 mt-1.5 shrink-0" />
                 <div className="text-xs">
-                  <div className="font-semibold text-zinc-200">Pasarela Mercado Pago</div>
-                  <div className="text-zinc-400 text-[11px]">Links de pago directos listos para adjuntar en DMs.</div>
+                  <div className="font-semibold text-zinc-900">Pasarela Mercado Pago</div>
+                  <div className="text-zinc-500 text-[11px]">Links de pago directos listos para adjuntar en DMs.</div>
                   <div className="text-[10px] text-zinc-400 font-mono mt-0.5">Operativo</div>
                 </div>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-zinc-800/60">
-              <Link to="/piloto" className="text-[11px] text-violet-400 hover:text-violet-300 font-medium flex items-center justify-between">
+            <div className="pt-2 border-t border-zinc-200/80">
+              <Link to="/piloto" className="text-[11px] text-violet-600 hover:text-violet-700 font-medium flex items-center justify-between">
                 <span>Configurar reglas de piloto automático</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </Link>

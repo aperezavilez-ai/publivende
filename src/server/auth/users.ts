@@ -3,6 +3,7 @@ import type { Profile, Plan } from "@/lib/mock/types";
 import { getDb, schema } from "../db";
 import type { DbUser } from "../db/schema";
 import { hashPassword, verifyPassword } from "./crypto";
+import { encryptSecret, decryptSecretLenient } from "../crypto/vault";
 
 export function dbUserToProfile(u: DbUser): Profile {
   return {
@@ -152,8 +153,8 @@ export async function upsertOAuthAccount(
     userId,
     red: data.red,
     nombreCuenta: data.nombre_cuenta,
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
+    accessToken: encryptSecret(data.access_token),
+    refreshToken: data.refresh_token ? encryptSecret(data.refresh_token) : undefined,
     tokenExpiresAt: data.token_expires_at ? new Date(data.token_expires_at) : undefined,
     externalAccountId: data.external_account_id,
     avatar: data.avatar,
@@ -180,7 +181,7 @@ export async function getOAuthToken(userId: string, red: import("@/lib/mock/type
   const acc = rows[0];
   if (!acc || acc.estadoConexion !== "conectada") return null;
   if (acc.tokenExpiresAt && acc.tokenExpiresAt < new Date()) return null;
-  return acc.accessToken;
+  return acc.accessToken ? decryptSecretLenient(acc.accessToken) : null;
 }
 
 export async function getOAuthAccount(userId: string, red: import("@/lib/mock/types").Red) {
@@ -190,5 +191,11 @@ export async function getOAuthAccount(userId: string, red: import("@/lib/mock/ty
     .from(schema.oauthAccounts)
     .where(and(eq(schema.oauthAccounts.userId, userId), eq(schema.oauthAccounts.red, red)))
     .limit(1);
-  return rows[0] ?? null;
+  const acc = rows[0];
+  if (!acc) return null;
+  return {
+    ...acc,
+    accessToken: acc.accessToken ? decryptSecretLenient(acc.accessToken) : acc.accessToken,
+    refreshToken: acc.refreshToken ? decryptSecretLenient(acc.refreshToken) : acc.refreshToken,
+  };
 }

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/server/db";
 import type { DbOAuthAccount } from "@/server/db/schema";
 import { getOAuthAccount } from "@/server/auth/users";
+import { encryptSecret } from "@/server/crypto/vault";
 import { getGoogleOAuthConfig, getTikTokOAuthConfig } from "@/lib/oauth/config.server";
 import type { Red } from "@/lib/mock/types";
 
@@ -98,7 +99,7 @@ export async function getFreshOAuthAccount(
       provider === "google"
         ? await refreshGoogle(acc.refreshToken)
         : await refreshTikTok(acc.refreshToken);
-    const patch = {
+    const plain = {
       accessToken: fresh.accessToken,
       refreshToken: fresh.refreshToken ?? acc.refreshToken,
       tokenExpiresAt: fresh.expiresAt ?? null,
@@ -106,9 +107,13 @@ export async function getFreshOAuthAccount(
     };
     await getDb()
       .update(schema.oauthAccounts)
-      .set(patch)
+      .set({
+        ...plain,
+        accessToken: encryptSecret(plain.accessToken),
+        refreshToken: plain.refreshToken ? encryptSecret(plain.refreshToken) : plain.refreshToken,
+      })
       .where(eq(schema.oauthAccounts.id, acc.id));
-    return { ...acc, ...patch };
+    return { ...acc, ...plain };
   } catch (err) {
     if (err instanceof RefreshRejected) await markExpired(acc.id, err.message);
     return null;

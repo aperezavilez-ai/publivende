@@ -26,7 +26,7 @@ export const defaultAdminProfile: Profile = {
   id: "admin-aperezavilez",
   nombre: "Luis Avilés",
   email: "aperezavilez@gmail.com",
-  password: "Calurore1028@",
+  password: "",
   codigo_pais: "+52",
   celular: "5512345678",
   nombre_negocio: "PubliVende",
@@ -66,20 +66,36 @@ export function loadDB(): DB {
   }
   try {
     const parsed = JSON.parse(raw) as Partial<DB>;
-    const loadedProfiles = Array.isArray(parsed.profiles) ? parsed.profiles : [];
-    const adminIdx = loadedProfiles.findIndex((p) => p.email.toLowerCase() === defaultAdminProfile.email.toLowerCase());
+    const loadedProfiles = (Array.isArray(parsed.profiles) ? parsed.profiles : []).map((p) => ({
+      ...p,
+      plan: p.plan || "free",
+      nombre: p.nombre || "Emprendedor",
+    }));
+    const adminIdx = loadedProfiles.findIndex((p) => p.email?.toLowerCase() === defaultAdminProfile.email.toLowerCase());
     if (adminIdx >= 0) {
-      loadedProfiles[adminIdx].password = defaultAdminProfile.password;
       loadedProfiles[adminIdx].is_admin = true;
       loadedProfiles[adminIdx].plan = "business";
     } else {
       loadedProfiles.push({ ...defaultAdminProfile });
     }
+    const safeArr = <T>(val: unknown): T[] => (Array.isArray(val) ? (val as T[]) : []);
     cachedDb = {
       ...emptyDB,
       ...parsed,
       profiles: loadedProfiles,
-      ab_experiments: Array.isArray(parsed.ab_experiments) ? parsed.ab_experiments : [],
+      social_accounts: safeArr(parsed.social_accounts),
+      posts: safeArr(parsed.posts),
+      post_metrics: safeArr(parsed.post_metrics),
+      whatsapp_contacts: safeArr(parsed.whatsapp_contacts),
+      whatsapp_messages: safeArr(parsed.whatsapp_messages),
+      automation_rules: safeArr(parsed.automation_rules),
+      media_assets: safeArr(parsed.media_assets),
+      inbox: safeArr(parsed.inbox),
+      productos: safeArr(parsed.productos),
+      ad_campaigns: safeArr(parsed.ad_campaigns),
+      ad_metrics: safeArr(parsed.ad_metrics),
+      marketplace_recetas: safeArr(parsed.marketplace_recetas),
+      ab_experiments: safeArr(parsed.ab_experiments),
     };
   } catch {
     cachedDb = { ...emptyDB, profiles: [...emptyDB.profiles] };

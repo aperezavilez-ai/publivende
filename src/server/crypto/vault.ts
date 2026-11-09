@@ -17,6 +17,20 @@ export function encryptSecret(plain: string): string {
   return `${iv.toString("base64url")}.${tag.toString("base64url")}.${enc.toString("base64url")}`;
 }
 
+/**
+ * Descifra un token si está en formato vault; si es texto plano legado
+ * (guardado antes del cifrado), lo devuelve tal cual para migrar en la
+ * siguiente escritura sin romper cuentas ya conectadas.
+ */
+export function decryptSecretLenient(stored: string): string {
+  if (!stored) return stored;
+  try {
+    return decryptSecret(stored);
+  } catch {
+    return stored;
+  }
+}
+
 /** Descifra un token almacenado. */
 export function decryptSecret(stored: string): string {
   const [ivB64, tagB64, dataB64] = stored.split(".");

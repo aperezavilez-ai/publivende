@@ -189,8 +189,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn: AuthCtx["signIn"] = async (email, password) => {
     const emailNorm = email.trim().toLowerCase();
-    const isAdminEmail = emailNorm === defaultAdminProfile.email.toLowerCase();
-    const isMatchingAdminPwd = password === "Calurore1028@" || password === "Caluroso1028@" || password === defaultAdminProfile.password;
 
     if (productionMode) {
       try {
@@ -206,31 +204,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           saveDB(db);
           setUser(res.user);
           return res.user;
-        } else if (!isAdminEmail || !isMatchingAdminPwd) {
+        } else {
           throw new Error(res.error || "Error al iniciar sesión");
         }
       } catch (err: any) {
-        if (!isAdminEmail || !isMatchingAdminPwd) {
-          throw err;
-        }
-        console.warn("Server auth error, falling back to admin session:", err);
+        throw err;
       }
     }
 
     const db = loadDB();
-    let found = db.profiles.find((p) => p.email.toLowerCase() === emailNorm);
-    if (!found && isAdminEmail) {
-      found = { ...defaultAdminProfile, password };
-      db.profiles.push(found);
-    }
+    const found = db.profiles.find((p) => p.email.toLowerCase() === emailNorm);
     if (!found) {
       throw new Error("No existe una cuenta con este correo. Cambia a 'Crear cuenta' para registrarte.");
     }
-    if (isAdminEmail && isMatchingAdminPwd) {
-      found.password = password;
-      found.is_admin = true;
-      found.plan = "business";
-    } else if (found.password && found.password !== password) {
+    if (found.password && found.password !== password) {
       throw new Error("Contraseña incorrecta. Por favor verifica tus datos.");
     }
     db.session_user_id = found.id;

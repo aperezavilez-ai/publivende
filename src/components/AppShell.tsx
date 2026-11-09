@@ -82,35 +82,35 @@ export function AppShell({ children }: { children: ReactNode }) {
   const closeMenu = () => setOpen(false);
 
   return (
-    <div className="min-h-screen flex w-full bg-zinc-950 text-zinc-100 antialiased selection:bg-violet-500/30 selection:text-violet-200">
+    <div className="min-h-screen flex w-full bg-slate-50/60 text-zinc-900 antialiased selection:bg-violet-500/20 selection:text-violet-900">
       {/* Mobile trigger */}
       <button
         onClick={() => setOpen(!open)}
-        className="md:hidden fixed top-3 left-3 z-50 p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 shadow-xl backdrop-blur-md"
+        className="md:hidden fixed top-3 left-3 z-50 p-2.5 rounded-xl bg-white border border-zinc-200 text-zinc-700 shadow-md backdrop-blur-md"
         aria-label="Menu"
       >
         <Menu className="w-5 h-5" />
       </button>
 
-      {/* Sidebar Linear-style */}
+      {/* Sidebar Light Theme */}
       <aside
         className={cn(
-          "fixed md:static inset-y-0 left-0 z-40 w-[80vw] max-w-64 bg-zinc-950/95 md:bg-zinc-950 border-r border-zinc-800/80 flex flex-col transition-transform duration-200 backdrop-blur-xl md:backdrop-blur-none",
+          "fixed md:static inset-y-0 left-0 z-40 w-[80vw] max-w-64 bg-white border-r border-zinc-200/90 flex flex-col transition-transform duration-200 shadow-xs",
           open ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         )}
       >
         {/* Brand Header */}
-        <div className="p-4 border-b border-zinc-800/80 flex items-center justify-between">
+        <div className="p-4 border-b border-zinc-200/80 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:scale-105 transition-transform">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-purple-500 flex items-center justify-center shadow-md shadow-violet-500/20 group-hover:scale-105 transition-transform">
               <span className="font-black text-white text-sm tracking-tight">P</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-bold tracking-tight text-zinc-100 flex items-center gap-1.5">
-                PubliVende <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">AI</span>
+              <span className="text-sm font-bold tracking-tight text-zinc-900 flex items-center gap-1.5">
+                PubliVende <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 border border-violet-200">AI</span>
               </span>
-              <span className="text-[10px] text-zinc-400 font-mono">
-                {user.is_admin ? "Centro Administrador" : `Espacio · ${user.plan.toUpperCase()}`}
+              <span className="text-[10px] text-zinc-500 font-mono">
+                {user.is_admin ? "Centro Administrador" : `Espacio · ${(user.plan || "free").toUpperCase()}`}
               </span>
             </div>
           </Link>
@@ -118,7 +118,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {/* System Health Pill */}
         <div className="px-3 pt-3">
-          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-900/80 border border-zinc-800/60 text-[11px] text-zinc-400">
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-100/80 border border-zinc-200/80 text-[11px] text-zinc-600">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -143,11 +143,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all group",
                   active
-                    ? "bg-violet-600/15 text-violet-300 border border-violet-500/25 shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60",
+                    ? "bg-violet-50 text-violet-700 border border-violet-200/80 font-semibold shadow-xs"
+                    : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100/70",
                 )}
               >
-                <Icon className={cn("w-4 h-4 shrink-0 transition-colors", active ? "text-violet-400" : "text-zinc-400 group-hover:text-zinc-300")} />
+                <Icon className={cn("w-4 h-4 shrink-0 transition-colors", active ? "text-violet-600" : "text-zinc-400 group-hover:text-zinc-600")} />
                 <span>{item.label}</span>
               </Link>
             );
@@ -164,11 +164,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
                   isActive("/red")
-                    ? "bg-violet-600/15 text-violet-300 border border-violet-500/25"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60",
+                    ? "bg-violet-50 text-violet-700 border border-violet-200/80 font-semibold"
+                    : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100/70",
                 )}
               >
-                <Rocket className="w-4 h-4 shrink-0 text-amber-400" />
+                <Rocket className="w-4 h-4 shrink-0 text-amber-500" />
                 <span>Red PubliVende</span>
               </Link>
               <Link
@@ -177,11 +177,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
                   isActive("/plataforma")
-                    ? "bg-violet-600/15 text-violet-300 border border-violet-500/25"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60",
+                    ? "bg-violet-50 text-violet-700 border border-violet-200/80 font-semibold"
+                    : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100/70",
                 )}
               >
-                <Layers className="w-4 h-4 shrink-0 text-cyan-400" />
+                <Layers className="w-4 h-4 shrink-0 text-cyan-600" />
                 <span>Plataforma API</span>
               </Link>
             </>
@@ -189,13 +189,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         {/* User Footer */}
-        <div className="p-3 border-t border-zinc-800/80 bg-zinc-950/50">
-          <div className="flex items-center gap-2.5 px-2 py-1.5 mb-1 rounded-lg bg-zinc-900/50 border border-zinc-800/40">
+        <div className="p-3 border-t border-zinc-200/80 bg-zinc-50/60">
+          <div className="flex items-center gap-2.5 px-2 py-1.5 mb-1 rounded-lg bg-white border border-zinc-200/80 shadow-xs">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
               {user.nombre.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-medium text-zinc-200 truncate flex items-center gap-1.5">
+              <div className="text-xs font-medium text-zinc-800 truncate flex items-center gap-1.5">
                 {user.nombre}
                 {online ? (
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="En línea" />
@@ -203,14 +203,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="Offline" />
                 )}
               </div>
-              <div className="text-[10px] text-zinc-400 truncate">
+              <div className="text-[10px] text-zinc-500 truncate">
                 {user.nombre_negocio || "Mi Negocio"}
               </div>
             </div>
           </div>
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Cerrar sesión</span>
@@ -219,17 +219,17 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Backdrop for mobile */}
-      {open && <div onClick={() => setOpen(false)} className="md:hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-30" />}
+      {open && <div onClick={() => setOpen(false)} className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-xs z-30" />}
 
       {/* Main Content Viewport */}
-      <main className="flex-1 min-w-0 overflow-y-auto">
+      <main className="flex-1 min-w-0 overflow-y-auto bg-white md:bg-slate-50/40">
         <div className="p-4 md:p-8 max-w-7xl mx-auto pt-16 md:pt-8 pb-24 md:pb-12">
           {children}
         </div>
       </main>
 
       {/* Mobile bottom nav bar */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-zinc-800/80 bg-zinc-950/90 backdrop-blur-xl pb-[max(env(safe-area-inset-bottom),8px)]">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur-xl pb-[max(env(safe-area-inset-bottom),8px)] shadow-lg">
         <div className="grid grid-cols-5 px-1 pt-1">
           {MOBILE_TABS.map((item) => {
             const Icon = item.icon;
@@ -240,7 +240,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 to={item.to}
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors",
-                  active ? "text-violet-400 font-semibold" : "text-zinc-500 hover:text-zinc-300",
+                  active ? "text-violet-600 font-semibold" : "text-zinc-500 hover:text-zinc-800",
                 )}
               >
                 <Icon className="w-4 h-4" />

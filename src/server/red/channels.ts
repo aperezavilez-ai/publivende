@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { encryptSecret, decryptSecretLenient } from "@/server/crypto/vault";
 
 import { getDb, schema } from "@/server/db";
 import type { hubChannels } from "@/server/db/schema";
@@ -31,8 +32,8 @@ export async function upsertHubChannel(input: HubChannelInput): Promise<DbHubCha
   const values = {
     nombre: input.nombre,
     avatar: input.avatar ?? null,
-    accessToken: input.accessToken,
-    refreshToken: input.refreshToken ?? existing[0]?.refreshToken ?? null,
+    accessToken: encryptSecret(input.accessToken),
+    refreshToken: input.refreshToken ? encryptSecret(input.refreshToken) : (existing[0]?.refreshToken ?? null),
     tokenExpiresAt: input.tokenExpiresAt ?? null,
     oauthProvider: input.oauthProvider,
     estadoConexion: "conectada",
@@ -57,7 +58,12 @@ export async function upsertHubChannel(input: HubChannelInput): Promise<DbHubCha
 }
 
 export async function listHubChannels(): Promise<DbHubChannel[]> {
-  return getDb().select().from(schema.hubChannels).orderBy(schema.hubChannels.createdAt);
+  const rows = await getDb().select().from(schema.hubChannels).orderBy(schema.hubChannels.createdAt);
+  return rows.map((r) => ({
+    ...r,
+    accessToken: r.accessToken ? decryptSecretLenient(r.accessToken) : r.accessToken,
+    refreshToken: r.refreshToken ? decryptSecretLenient(r.refreshToken) : r.refreshToken,
+  }));
 }
 
 export async function updateHubChannel(id: string, patch: { nichos?: string[]; activo?: boolean }) {
@@ -79,23 +85,25 @@ const REFRESH_MARGIN_MS = 5 * 60 * 1000;
 /** Token vigente de la cuenta oficial; renueva Google/TikTok si está por vencer. */
 export async function getFreshHubToken(channel: DbHubChannel): Promise<string | null> {
   if (channel.estadoConexion !== "conectada") return null;
+  const accessToken = channel.accessToken ? decryptSecretLenient(channel.accessToken) : channel.accessToken;
+  const refreshToken = channel.refreshToken ? decryptSecretLenient(channel.refreshToken) : channel.refreshToken;
   if (!channel.tokenExpiresAt || channel.tokenExpiresAt.getTime() - Date.now() > REFRESH_MARGIN_MS) {
-    return channel.accessToken;
+    return accessToken;
   }
-  if (!channel.refreshToken || channel.oauthProvider === "meta") {
+  if (!refreshToken || channel.oauthProvider === "meta") {
     await markHubExpired(channel.id, "El acceso expiró. Vuelve a conectar la cuenta.");
     return null;
   }
   try {
     const fresh =
       channel.oauthProvider === "google"
-        ? await refreshGoogle(channel.refreshToken)
-        : await refreshTikTok(channel.refreshToken);
+        ? await refreshGoogle(refreshToken)
+        : await refreshTikTok(refreshToken);
     await getDb()
       .update(schema.hubChannels)
       .set({
-        accessToken: fresh.accessToken,
-        refreshToken: fresh.refreshToken ?? channel.refreshToken,
+        accessToken: encryptSecret(fresh.accessToken),
+        refreshToken: encryptSecret(fresh.refreshToken ?? refreshToken),
         tokenExpiresAt: fresh.expiresAt ?? null,
         updatedAt: new Date(),
       })

@@ -1,8 +1,14 @@
 {
+  "version": 1,
+  "projectName": "PubliVende",
+  "projectSlug": "publivende",
   "isolationMode": "dedicated_supabase",
   "schema": "publivende",
   "supabase": {
-    "url": "https://publivende.gafcore.com"
+    "url": "https://ckimjzfajaihaeqfgtoj.supabase.co"
   },
-  "notes": "Configuración de infraestructura dedicada para PubliVende. Usa el schema 'publivende' en Supabase y no el schema público."
+  "legacyException": {
+    "additionalSupabaseUrl": "https://publivende.gafcore.com"
+  },
+  "notes": "Configuración de infraestructura oficial de Supabase para PubliVende."
 }

@@ -2,7 +2,11 @@ import { drizzle } from "drizzle-orm/neon-serverless";
 import { migrate } from "drizzle-orm/neon-serverless/migrator";
 import { Pool } from "@neondatabase/serverless";
 
-const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/publivende";
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error("Falta DATABASE_URL en el entorno.");
+  process.exit(1);
+}
 
 async function main() {
   const pool = new Pool({ connectionString });
