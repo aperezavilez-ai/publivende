@@ -43,5 +43,6 @@ for (const base of bases) {
   const ping = await q(url, "select 1");
   console.log("  select 1 →", ping);
   if (ping.status !== 200) continue;
-  console.log("  usuarios →", await q(url, "select email, is_admin, plan from users order by fecha_registro"));
+  console.log("  tables →", await q(url, "select table_name from information_schema.tables where table_schema='public'"));
+  console.log("  usuarios →", await q(url, "select id, email, is_admin, plan from users order by fecha_registro"));
 }

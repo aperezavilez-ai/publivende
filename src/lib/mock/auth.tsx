@@ -75,36 +75,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [productionMode, setProductionMode] = useState(false);
 
   useEffect(() => {
-    async function init() {
-      const status = await getProductionStatus();
-      setProductionMode(status.production);
-      setProductionModeFlag(status.production);
-
-      if (status.production) {
-        const token = getSessionToken();
-        if (token) {
-          const session = await authGetSession({ data: { token } });
-          if (session.ok) {
-            await hydrateLocalFromServer(token);
-            const db = loadDB();
-            const idx = db.profiles.findIndex((p) => p.id === session.user.id);
-            if (idx >= 0) db.profiles[idx] = session.user;
-            else db.profiles.push(session.user);
-            db.session_user_id = session.user.id;
-            saveDB(db);
-            setUser(session.user);
-            setLoading(false);
-            return;
-          }
-          clearSessionToken();
-        }
-      } else {
-        ensureAdmin();
-        const current = getCurrentUser();
-        if (current) ensureUserSeeded(current.id);
-        setUser(current);
+    let mounted = true;
+    const safetyTimer = setTimeout(() => {
+      if (mounted) {
+        console.warn("[AuthProvider] Safety timeout: forcing loading to false");
+        setLoading(false);
       }
-      setLoading(false);
+    }, 5000);
+
+    async function init() {
+      try {
+        let isProd = false;
+        try {
+          const status = await getProductionStatus();
+          isProd = !!status?.production;
+        } catch (e) {
+          console.warn("[AuthProvider] getProductionStatus failed, fallback", e);
+        }
+
+        if (!mounted) return;
+        setProductionMode(isProd);
+        setProductionModeFlag(isProd);
+
+        if (isProd) {
+          const token = getSessionToken();
+          if (token) {
+            try {
+              const session = await authGetSession({ data: { token } });
+              if (session && session.ok && session.user) {
+                if (!mounted) return;
+                setUser(session.user);
+                setLoading(false);
+
+                // Guardar en base local para sincronización
+                try {
+                  const db = loadDB();
+                  const idx = db.profiles.findIndex((p) => p.id === session.user.id);
+                  if (idx >= 0) db.profiles[idx] = session.user;
+                  else db.profiles.push(session.user);
+                  db.session_user_id = session.user.id;
+                  saveDB(db);
+                } catch {}
+
+                // Hidratar en segundo plano sin congelar la interfaz
+                hydrateLocalFromServer(token).catch((err) =>
+                  console.warn("[hydrateLocalFromServer] background error", err)
+                );
+                return;
+              }
+            } catch (err) {
+              console.warn("[authGetSession] error", err);
+            }
+            clearSessionToken();
+          }
+        } else {
+          ensureAdmin();
+          const current = getCurrentUser();
+          if (current) ensureUserSeeded(current.id);
+          if (mounted) setUser(current);
+        }
+      } catch (err) {
+        console.error("[AuthProvider] init error:", err);
+        const current = getCurrentUser();
+        if (mounted && current) setUser(current);
+      } finally {
+        if (mounted) setLoading(false);
+        clearTimeout(safetyTimer);
+      }
     }
 
     init();
@@ -113,6 +150,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener("publivende-db-change", sync);
     window.addEventListener("storage", sync);
     return () => {
+      mounted = false;
+      clearTimeout(safetyTimer);
       window.removeEventListener("publivende-db-change", sync);
       window.removeEventListener("storage", sync);
     };
@@ -195,7 +234,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await authSignIn({ data: { email, password } });
         if (res.ok) {
           setSessionToken(res.token);
-          await hydrateLocalFromServer(res.token);
           const db = loadDB();
           const idx = db.profiles.findIndex((p) => p.id === res.user.id);
           if (idx >= 0) db.profiles[idx] = res.user;
@@ -203,6 +241,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           db.session_user_id = res.user.id;
           saveDB(db);
           setUser(res.user);
+          hydrateLocalFromServer(res.token).catch((err) =>
+            console.warn("[hydrateLocalFromServer] background error", err)
+          );
           return res.user;
         } else {
           throw new Error(res.error || "Error al iniciar sesión");

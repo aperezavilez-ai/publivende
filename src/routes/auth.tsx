@@ -42,7 +42,11 @@ function AuthPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      navigate({ to: "/dashboard" });
+      if (typeof window !== "undefined") {
+        window.location.href = "/dashboard";
+      } else {
+        navigate({ to: "/dashboard" });
+      }
     }
   }, [user, loading, navigate]);
 
@@ -57,11 +61,19 @@ function AuthPage() {
       if (mode === "login") {
         await signIn(form.email, form.password);
         toast.success("¡Bienvenido de vuelta!");
-        navigate({ to: "/dashboard" });
+        if (typeof window !== "undefined") {
+          window.location.href = "/dashboard";
+        } else {
+          navigate({ to: "/dashboard" });
+        }
       } else {
         const profile = await signUp({ ...form, plan: selectedPlan });
         toast.success(`Cuenta creada con plan ${planLabel(profile.plan)} 🎉`);
-        navigate({ to: "/dashboard" });
+        if (typeof window !== "undefined") {
+          window.location.href = "/dashboard";
+        } else {
+          navigate({ to: "/dashboard" });
+        }
       }
     } catch (err) {
       toast.error((err as Error).message);
@@ -71,7 +83,7 @@ function AuthPage() {
   }
 
   if (!loading && user) {
-    return <div className="min-h-screen flex items-center justify-center text-white/80">Redirigiendo al panel…</div>;
+    return <div className="min-h-screen flex items-center justify-center text-zinc-700 bg-white font-medium">Redirigiendo al panel…</div>;
   }
 
   return (
