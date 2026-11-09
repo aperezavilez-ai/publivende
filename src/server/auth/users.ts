@@ -35,16 +35,100 @@ function withEffectivePlan(u: DbUser | undefined): DbUser | null {
   return u.isAdmin ? { ...u, plan: "business" } : u;
 }
 
+function getSupabaseRestConfig() {
+  const url = (
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    "https://ckimjzfajaihaeqfgtoj.supabase.co"
+  ).replace(/\/$/, "");
+
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNraW1qemZhamFpaGFlcWZndG9qIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTI5NDUwOCwiZXhwIjoyMDk2ODcwNTA4fQ.aKN4LeFNB1fRsNEQxmKTP7pU00Zqh7DzUAW0YsaddIo";
+
+  return { url, key };
+}
+
+function rowToDbUser(r: Record<string, any>): DbUser {
+  return {
+    id: r.id,
+    email: r.email,
+    passwordHash: r.password_hash ?? r.passwordHash ?? "",
+    nombre: r.nombre ?? "",
+    celular: r.celular ?? "",
+    codigoPais: r.codigo_pais ?? r.codigoPais ?? "+52",
+    nombreNegocio: r.nombre_negocio ?? r.nombreNegocio ?? "",
+    industria: r.industria ?? null,
+    descripcionNegocio: r.descripcion_negocio ?? r.descripcionNegocio ?? null,
+    publicoObjetivo: r.publico_objetivo ?? r.publicoObjetivo ?? null,
+    tonoMarca: r.tono_marca ?? r.tonoMarca ?? null,
+    ciudad: r.ciudad ?? null,
+    horarioAtencion: r.horario_atencion ?? r.horarioAtencion ?? null,
+    pagoProviderDefault: r.pago_provider_default ?? r.pagoProviderDefault ?? null,
+    plan: r.plan ?? "free",
+    stripeCustomerId: r.stripe_customer_id ?? r.stripeCustomerId ?? null,
+    stripeSubscriptionId: r.stripe_subscription_id ?? r.stripeSubscriptionId ?? null,
+    planStatus: r.plan_status ?? r.planStatus ?? null,
+    planRenewsAt: r.plan_renews_at ? new Date(r.plan_renews_at) : null,
+    isAdmin: !!(r.is_admin ?? r.isAdmin),
+    whatsappConfigurado: !!(r.whatsapp_configurado ?? r.whatsappConfigurado),
+    onboardingCompletado: !!(r.onboarding_completado ?? r.onboardingCompletado),
+    fechaRegistro: r.fecha_registro ? new Date(r.fecha_registro) : new Date(),
+    createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+    updatedAt: r.updated_at ? new Date(r.updated_at) : new Date(),
+  };
+}
+
+async function findUserViaRest(queryParam: string): Promise<DbUser | null> {
+  const { url, key } = getSupabaseRestConfig();
+  if (!url || !key) return null;
+  try {
+    const res = await fetch(`${url}/rest/v1/users?${queryParam}&select=*&limit=1`, {
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const rows = (await res.json()) as Record<string, any>[];
+    if (rows && rows.length > 0) return rowToDbUser(rows[0]);
+    return null;
+  } catch (err) {
+    console.warn("[findUserViaRest] failed, falling back to db", err);
+    return null;
+  }
+}
+
 export async function findUserByEmail(email: string): Promise<DbUser | null> {
-  const db = getDb();
-  const rows = await db.select().from(schema.users).where(eq(schema.users.email, email.toLowerCase())).limit(1);
-  return withEffectivePlan(rows[0]);
+  const norm = email.toLowerCase().trim();
+  const fromRest = await findUserViaRest(`email=eq.${encodeURIComponent(norm)}`);
+  if (fromRest) return withEffectivePlan(fromRest);
+
+  try {
+    const db = getDb();
+    const rows = await db.select().from(schema.users).where(eq(schema.users.email, norm)).limit(1);
+    return withEffectivePlan(rows[0]);
+  } catch (err) {
+    console.error("[findUserByEmail db error]", err);
+    return null;
+  }
 }
 
 export async function findUserById(id: string): Promise<DbUser | null> {
-  const db = getDb();
-  const rows = await db.select().from(schema.users).where(eq(schema.users.id, id)).limit(1);
-  return withEffectivePlan(rows[0]);
+  const fromRest = await findUserViaRest(`id=eq.${encodeURIComponent(id)}`);
+  if (fromRest) return withEffectivePlan(fromRest);
+
+  try {
+    const db = getDb();
+    const rows = await db.select().from(schema.users).where(eq(schema.users.id, id)).limit(1);
+    return withEffectivePlan(rows[0]);
+  } catch (err) {
+    console.error("[findUserById db error]", err);
+    return null;
+  }
 }
 
 export async function createUser(input: {
@@ -56,12 +140,44 @@ export async function createUser(input: {
   nombre_negocio: string;
   plan?: Plan;
 }): Promise<DbUser> {
-  const db = getDb();
   const passwordHash = await hashPassword(input.password);
+  const emailNorm = input.email.toLowerCase().trim();
+  const { url, key } = getSupabaseRestConfig();
+
+  if (url && key) {
+    try {
+      const res = await fetch(`${url}/rest/v1/users`, {
+        method: "POST",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify({
+          email: emailNorm,
+          password_hash: passwordHash,
+          nombre: input.nombre,
+          celular: input.celular,
+          codigo_pais: input.codigo_pais,
+          nombre_negocio: input.nombre_negocio,
+          plan: input.plan ?? "free",
+        }),
+      });
+      if (res.ok) {
+        const rows = (await res.json()) as Record<string, any>[];
+        if (rows && rows[0]) return rowToDbUser(rows[0]);
+      }
+    } catch (err) {
+      console.warn("[createUser via rest failed, trying db]", err);
+    }
+  }
+
+  const db = getDb();
   const rows = await db
     .insert(schema.users)
     .values({
-      email: input.email.toLowerCase(),
+      email: emailNorm,
       passwordHash,
       nombre: input.nombre,
       celular: input.celular,
@@ -81,6 +197,44 @@ export async function authenticateUser(email: string, password: string): Promise
 }
 
 export async function updateUserProfile(userId: string, patch: Partial<Profile>): Promise<DbUser | null> {
+  const { url, key } = getSupabaseRestConfig();
+  if (url && key) {
+    try {
+      const updateBody: Record<string, any> = { updated_at: new Date().toISOString() };
+      if (patch.nombre !== undefined) updateBody.nombre = patch.nombre;
+      if (patch.celular !== undefined) updateBody.celular = patch.celular;
+      if (patch.codigo_pais !== undefined) updateBody.codigo_pais = patch.codigo_pais;
+      if (patch.nombre_negocio !== undefined) updateBody.nombre_negocio = patch.nombre_negocio;
+      if (patch.industria !== undefined) updateBody.industria = patch.industria;
+      if (patch.descripcion_negocio !== undefined) updateBody.descripcion_negocio = patch.descripcion_negocio;
+      if (patch.publico_objetivo !== undefined) updateBody.publico_objetivo = patch.publico_objetivo;
+      if (patch.tono_marca !== undefined) updateBody.tono_marca = patch.tono_marca;
+      if (patch.ciudad !== undefined) updateBody.ciudad = patch.ciudad;
+      if (patch.horario_atencion !== undefined) updateBody.horario_atencion = patch.horario_atencion;
+      if (patch.pago_provider_default !== undefined) updateBody.pago_provider_default = patch.pago_provider_default;
+      if (patch.plan !== undefined) updateBody.plan = patch.plan;
+      if (patch.whatsapp_configurado !== undefined) updateBody.whatsapp_configurado = patch.whatsapp_configurado;
+      if (patch.onboarding_completado !== undefined) updateBody.onboarding_completado = patch.onboarding_completado;
+
+      const res = await fetch(`${url}/rest/v1/users?id=eq.${encodeURIComponent(userId)}`, {
+        method: "PATCH",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify(updateBody),
+      });
+      if (res.ok) {
+        const rows = (await res.json()) as Record<string, any>[];
+        if (rows && rows[0]) return rowToDbUser(rows[0]);
+      }
+    } catch (err) {
+      console.warn("[updateUserProfile via rest failed, trying db]", err);
+    }
+  }
+
   const db = getDb();
   const rows = await db
     .update(schema.users)

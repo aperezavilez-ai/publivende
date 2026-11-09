@@ -41,8 +41,11 @@ export function getDb() {
     throw new Error("Base de datos no configurada. Define DATABASE_URL y SESSION_SECRET.");
   }
   if (!db) {
+    const isVercel = !!process.env.VERCEL;
     const databaseUrl = process.env.DATABASE_URL;
-    if (databaseUrl) {
+    const isLocalUrl = !databaseUrl || databaseUrl.includes("127.0.0.1") || databaseUrl.includes("localhost");
+
+    if (databaseUrl && !isVercel && !isLocalUrl) {
       pgClient = postgres(databaseUrl, {
         max: 10,
         idle_timeout: 20,

@@ -45,4 +45,14 @@ for (const base of bases) {
   if (ping.status !== 200) continue;
   console.log("  tables →", await q(url, "select table_name from information_schema.tables where table_schema='public'"));
   console.log("  usuarios →", await q(url, "select id, email, is_admin, plan from users order by fecha_registro"));
+  console.log("  findUser query →", await q(
+    url,
+    'select "id", "email", "password_hash", "nombre", "celular", "codigo_pais", "nombre_negocio", "industria", "descripcion_negocio", "publico_objetivo", "tono_marca", "ciudad", "horario_atencion", "pago_provider_default", "plan", "stripe_customer_id", "stripe_subscription_id", "plan_status", "plan_renews_at", "is_admin", "whatsapp_configurado", "onboarding_completado", "fecha_registro", "created_at", "updated_at" from "users" where "users"."email" = $1 limit $2',
+    ["aperezavilez@gmail.com", 1]
+  ));
 }
+
+import { findUserByEmail } from "../src/server/auth/users";
+
+const found = await findUserByEmail("aperezavilez@gmail.com");
+console.log("\nfindUserByEmail result:", found ? { id: found.id, email: found.email, name: found.nombre, plan: found.plan } : null);
