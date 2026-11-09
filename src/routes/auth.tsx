@@ -75,18 +75,18 @@ function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-hero">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50/70">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-between mb-6">
-          <PubliVendeLogo to="/" size="lg" showText textClassName="text-white text-xl" />
+          <PubliVendeLogo to="/" size="lg" showText textClassName="text-zinc-900 text-xl font-bold" />
           <a href="/#precios">
-            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 gap-1">
+            <Button variant="ghost" size="sm" className="text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 gap-1">
               <ArrowLeft className="w-4 h-4" />
               Planes
             </Button>
           </a>
         </div>
-        <Card className="p-6 shadow-elegant">
+        <Card className="p-6 border border-zinc-200/90 shadow-md bg-white">
           <div className="grid grid-cols-2 p-1 bg-muted rounded-lg mb-5">
             <button
               type="button"
