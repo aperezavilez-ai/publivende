@@ -52,13 +52,13 @@ function parseDataUrl(dataUrl: string): { buffer: Buffer; mime: string } | null 
   return { buffer, mime };
 }
 
-async function uploadToGafCoreStorage(
+async function uploadToSupabaseStorage(
   userId: string,
   buffer: Buffer,
   mime: string,
   fileId: string,
 ): Promise<string | null> {
-  const supabaseUrl = process.env.SUPABASE_URL || "https://supabase.gafcore.com";
+  const supabaseUrl = process.env.SUPABASE_URL || "https://ckimjzfajaihaeqfgtoj.supabase.co";
   const serviceKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.SUPABASE_ANON_KEY;
@@ -85,7 +85,7 @@ async function uploadToGafCoreStorage(
       return `${supabaseUrl}/storage/v1/object/public/${STORAGE_BUCKET}/${filePath}`;
     }
   } catch (err) {
-    console.error("Error subiendo a GAFCORE Storage:", err);
+    console.error("Error subiendo a Supabase Storage:", err);
   }
   return null;
 }
@@ -93,8 +93,8 @@ async function uploadToGafCoreStorage(
 async function storeBuffer(userId: string, buffer: Buffer, mime: string, appUrl: string): Promise<string> {
   const id = randomBytes(16).toString("hex");
 
-  // Intentar almacenamiento público en GAFCORE Storage
-  const publicStorageUrl = await uploadToGafCoreStorage(userId, buffer, mime, id);
+  // Intentar almacenamiento público en Supabase Storage
+  const publicStorageUrl = await uploadToSupabaseStorage(userId, buffer, mime, id);
   if (publicStorageUrl) {
     return publicStorageUrl;
   }

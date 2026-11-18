@@ -12,8 +12,8 @@ let pgClient: postgres.Sql | null = null;
 function proxyConfiguration() {
   const baseUrl = (
     process.env.PUBLIVENDE_SUPABASE_URL ||
-    (process.env.SUPABASE_URL && !process.env.SUPABASE_URL.includes("supabase.gafcore.com") ? process.env.SUPABASE_URL : "") ||
-    "https://publivende.gafcore.com"
+    process.env.SUPABASE_URL ||
+    "https://ckimjzfajaihaeqfgtoj.supabase.co"
   ).replace(/\/$/, "");
   const serviceRoleKey =
     process.env.PUBLIVENDE_SQL_SECRET ||

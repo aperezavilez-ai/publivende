@@ -7,8 +7,5 @@
   "supabase": {
     "url": "https://ckimjzfajaihaeqfgtoj.supabase.co"
   },
-  "legacyException": {
-    "additionalSupabaseUrl": "https://publivende.gafcore.com"
-  },
   "notes": "Configuración de infraestructura oficial de Supabase para PubliVende."
 }

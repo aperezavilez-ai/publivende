@@ -27,8 +27,7 @@ Deno.serve(async (req) => {
 
   const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const knownSecret = "bcb3d770bd571a7e043af537ef796483cccff341850b457df7318bf2f6299c1512b7449febd51240762343b2ffe0b2e8";
-  const validSecrets = [SECRET, serviceKey, knownSecret].filter((s) => typeof s === "string" && s.length >= 20);
+  const validSecrets = [SECRET, serviceKey].filter((s) => typeof s === "string" && s.length >= 20);
   const isAuthorized = validSecrets.some((s) => safeEqual(token, s));
   if (!isAuthorized) return json({ error: "No autorizado" }, 401);
 

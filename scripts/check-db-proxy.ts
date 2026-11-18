@@ -17,7 +17,7 @@ function readEnv(file: string): Record<string, string> {
 
 const env = { ...readEnv(".env"), ...readEnv(".env.local"), ...process.env } as Record<string, string>;
 const key = env.PUBLIVENDE_SQL_SECRET || "bcb3d770bd571a7e043af537ef796483cccff341850b457df7318bf2f6299c1512b7449febd51240762343b2ffe0b2e8";
-const bases = process.argv.slice(2).length ? process.argv.slice(2) : [env.PUBLIVENDE_SUPABASE_URL || "https://publivende.gafcore.com"];
+const bases = process.argv.slice(2).length ? process.argv.slice(2) : [env.PUBLIVENDE_SUPABASE_URL || env.SUPABASE_URL || "https://ckimjzfajaihaeqfgtoj.supabase.co"];
 if (!key || !bases[0]) {
   console.error("Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY");
   process.exit(1);
