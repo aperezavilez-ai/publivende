@@ -77,7 +77,7 @@ function Coach() {
             </Card>
           ) : (
             <>
-              <Card className="p-5 bg-gradient-primary text-white border-0">
+              <Card className="p-5 bg-primary text-white border-0">
                 <div className="text-xs uppercase opacity-80 mb-1">Resumen semanal</div>
                 <p className="text-base font-medium">{plan.resumen}</p>
               </Card>

@@ -257,7 +257,7 @@ function Onboarding() {
               <Button onClick={() => {
                 if (negocio.descripcion.trim().length < 10) return toast.error("Describe tu negocio (mín. 10 caracteres) o usa «Ir al panel ahora»");
                 setStep(2);
-              }} className="bg-gradient-primary border-0">Continuar</Button>
+              }} className="bg-primary border-0">Continuar</Button>
             </div>
           </Card>
         )}
@@ -320,7 +320,7 @@ function Onboarding() {
                   <div><Label className="text-xs">Precio mínimo (MXN)</Label><Input type="number" value={precioRango.min} onChange={(e) => setPrecioRango({ ...precioRango, min: Number(e.target.value) })} /></div>
                   <div><Label className="text-xs">Precio máximo (MXN)</Label><Input type="number" value={precioRango.max} onChange={(e) => setPrecioRango({ ...precioRango, max: Number(e.target.value) })} /></div>
                 </div>
-                <Button onClick={generarCatalogoIA} disabled={aiLoading} className="w-full bg-gradient-primary border-0 gap-2">
+                <Button onClick={generarCatalogoIA} disabled={aiLoading} className="w-full bg-primary border-0 gap-2">
                   <Sparkles className="w-4 h-4" />{aiLoading ? "Generando catálogo…" : "Generar catálogo con IA"}
                 </Button>
               </div>
@@ -394,7 +394,7 @@ function Onboarding() {
                 const sinFoto = valid.filter((p) => !p.imagen);
                 if (sinFoto.length) return toast.error("Sube una foto o usa «IA sugiere foto» en cada ítem");
                 setStep(3);
-              }} className="bg-gradient-primary border-0 gap-1"><Package className="w-4 h-4" />Continuar</Button>
+              }} className="bg-primary border-0 gap-1"><Package className="w-4 h-4" />Continuar</Button>
             </div>
           </Card>
         )}
@@ -448,7 +448,7 @@ function Onboarding() {
                 <Button variant="outline" onClick={() => setStep(4)}>
                   Saltar por ahora
                 </Button>
-                <Button onClick={() => setStep(4)} className="bg-gradient-primary border-0">
+                <Button onClick={() => setStep(4)} className="bg-primary border-0">
                   {conectadas > 0 ? `Continuar (${conectadas} red${conectadas !== 1 ? "es" : ""})` : "Continuar al panel"}
                 </Button>
               </div>
@@ -467,7 +467,7 @@ function Onboarding() {
             </div>
             <div className="flex justify-between mt-6">
               <Button variant="ghost" onClick={() => setStep(3)}>Atrás</Button>
-              <Button onClick={() => setStep(5)} disabled={!wa.numero} className="bg-gradient-primary border-0">Continuar</Button>
+              <Button onClick={() => setStep(5)} disabled={!wa.numero} className="bg-primary border-0">Continuar</Button>
             </div>
           </Card>
         )}
@@ -496,7 +496,7 @@ function Onboarding() {
             </div>
             <div className="flex justify-between mt-6">
               <Button variant="ghost" onClick={() => setStep(4)}>Atrás</Button>
-              <Button onClick={finalizar} className="bg-gradient-primary border-0">Activar PubliVende 🎉</Button>
+              <Button onClick={finalizar} className="bg-primary border-0">Activar PubliVende 🎉</Button>
             </div>
           </Card>
         )}

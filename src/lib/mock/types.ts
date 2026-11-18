@@ -9,6 +9,12 @@ export interface ScheduleMeta {
   notify_whatsapp?: boolean;
   tono?: "casual" | "profesional" | "formal";
   schedule_error?: string;
+  /** Reintentos del programador (Real v1): veces que el post ya se reprogramó tras fallar. */
+  reintentos?: number;
+  /** ISO del último intento fallido. */
+  ultimo_intento?: string;
+  /** ISO de la próxima ejecución reprogramada. */
+  proximo_intento?: string;
   ia_snapshot?: {
     nicho_label?: string;
     alcance_personas_min?: number;

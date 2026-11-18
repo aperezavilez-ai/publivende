@@ -60,7 +60,14 @@ export const publishPostReal = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     if (!isProductionMode()) {
-      return { ok: false as const, error: "Modo demo — publicación local", useLocal: true };
+      // Real v1: fuera de producción la publicación real NO ocurre y se dice
+      // como error explícito. Antes devolvía useLocal:true y la ruta local
+      // podía presentar el post como publicado sin salir a ninguna red.
+      return {
+        ok: false as const,
+        error: "Modo demostración: la publicación no salió a redes reales. Activa el modo producción para publicar.",
+        useLocal: false as const,
+      };
     }
 
     const session = await verifySessionToken(data.token);

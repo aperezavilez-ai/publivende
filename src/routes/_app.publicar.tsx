@@ -800,7 +800,7 @@ function Publicar() {
           <div className="flex bg-card border rounded-lg p-1 text-sm">
             <button
               onClick={() => { setPublishMode("ai_campaign"); setIaOpen(false); }}
-              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 font-medium transition ${publishMode === "ai_campaign" ? "bg-gradient-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 font-medium transition ${publishMode === "ai_campaign" ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             >
               <Sparkles className="w-4 h-4 text-amber-300" /> Crear con IA
             </button>
@@ -841,7 +841,7 @@ function Publicar() {
 
       {/* Hero Card de Campaña con IA */}
       {publishMode === "ai_campaign" && (
-        <Card className="p-5 border-primary/40 bg-gradient-to-br from-primary/10 via-background to-accent/20 shadow-sm space-y-4">
+        <Card className="p-5 border-primary/40 bg-slate-50 shadow-sm space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
             <div>
               <Label className="font-bold text-base flex items-center gap-2 text-primary">
@@ -944,7 +944,7 @@ function Publicar() {
             <Button
               onClick={() => void generarCampanaConIA()}
               disabled={campaignLoading}
-              className="bg-gradient-primary border-0 text-white gap-2 w-full sm:w-auto h-10 px-5 shadow"
+              className="bg-primary border-0 text-white gap-2 w-full sm:w-auto h-10 px-5 shadow"
             >
               <Sparkles className="w-4 h-4" />
               {campaignLoading
@@ -971,7 +971,7 @@ function Publicar() {
       )}
 
       {publishMode === "link" && (
-        <Card className="p-5 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/20">
+        <Card className="p-5 border-primary/30 bg-slate-50">
           <Label className="font-semibold mb-2 flex items-center gap-2">
             <Link2 className="w-4 h-4 text-primary" /> Repurpose Express — pega tu publicación original
           </Label>
@@ -1050,7 +1050,7 @@ function Publicar() {
             <Button
               onClick={adaptarConIA}
               disabled={adaptLoading || (!sourceMeta && !sourceUrl.trim())}
-              className="bg-gradient-primary border-0 gap-2"
+              className="bg-primary border-0 gap-2"
             >
               <Wand2 className="w-4 h-4" />
               {adaptLoading ? "Adaptando con IA…" : `Adaptar con IA${redes.length ? ` (${redes.length} red${redes.length > 1 ? "es" : ""})` : ""}`}
@@ -1133,7 +1133,7 @@ function Publicar() {
                     size="sm"
                     onClick={() => void generarCampanaConIA()}
                     disabled={campaignLoading}
-                    className="bg-gradient-primary border-0 text-white gap-1.5"
+                    className="bg-primary border-0 text-white gap-1.5"
                   >
                     <Sparkles className="w-3.5 h-3.5" /> Generar con 1 clic
                   </Button>
@@ -1318,7 +1318,7 @@ function Publicar() {
                         <label className="flex items-center gap-2"><Switch checked={hashtags} onCheckedChange={setHashtags} />Hashtags</label>
                         <label className="flex items-center gap-2"><Switch checked={cta} onCheckedChange={setCta} />CTA</label>
                       </div>
-                      <Button onClick={generar} disabled={iaLoading} className="w-full bg-gradient-primary border-0">{iaLoading ? "Generando…" : "Generar 3 opciones"}</Button>
+                      <Button onClick={generar} disabled={iaLoading} className="w-full bg-primary border-0">{iaLoading ? "Generando…" : "Generar 3 opciones"}</Button>
                       <div className="space-y-2 max-h-64 overflow-y-auto">
                         {gens.map((g, i) => (
                           <button key={i} onClick={() => { setCopy(g); setIaOpen(false); toast.success("Caption aplicado"); }} className="w-full p-3 text-left text-sm rounded-lg border hover:border-primary hover:bg-accent">{g}</button>
@@ -1441,7 +1441,7 @@ function Publicar() {
           <Button
             onClick={publicar}
             size="lg"
-            className="w-full bg-gradient-primary border-0 shadow-elegant text-white h-12 text-base font-semibold"
+            className="w-full bg-primary border-0 shadow-sm text-white h-12 text-base font-semibold"
             disabled={!programar && redes.length === 0 && !whatsappSelected}
           >
             {abMode ? "Lanzar experimento A/B" : programar ? "Programar publicación" : (() => {
@@ -1471,7 +1471,7 @@ function Publicar() {
           )}
 
           {prediccion && (
-            <Card className="p-5 bg-gradient-to-br from-primary/10 via-pink-500/5 to-amber-500/10 border-primary/30">
+            <Card className="p-5 bg-slate-50 border-primary/30">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-primary" />
@@ -1505,7 +1505,7 @@ function Publicar() {
             </Card>
           )}
 
-          <Card className="p-5 border-blue-200/60 bg-gradient-to-br from-blue-50/80 to-sky-50/40 dark:from-blue-950/20 dark:to-sky-950/10">
+          <Card className="p-5 border-blue-200/60 bg-blue-50">
             <div className="flex items-center gap-2 mb-3">
               <MapPin className="w-4 h-4 text-blue-600" />
               <Label className="font-semibold">Alcance de la publicación</Label>
@@ -1682,9 +1682,9 @@ function Publicar() {
               ) : (
                 <>
                   {reachAnalysis && (
-                    <div className="rounded-lg border border-violet-200 bg-violet-50/60 dark:bg-violet-950/20 p-3 space-y-2">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50  p-3 space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge className="bg-violet-600 text-[10px] gap-1">
+                        <Badge className="bg-blue-700 text-[10px] gap-1">
                           <Sparkles className="w-3 h-3" />Nicho: {reachAnalysis.nicho_label}
                         </Badge>
                         <Badge variant="outline" className="text-[10px]">{reachAnalysis.confianza}% confianza</Badge>
@@ -1735,7 +1735,7 @@ function Publicar() {
                           </div>
                           <div className="h-2 rounded-full bg-blue-100 overflow-hidden">
                             <div
-                              className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all"
+                              className="h-full rounded-full bg-blue-700 transition-all"
                               style={{ width: `${pctBar}%` }}
                             />
                           </div>

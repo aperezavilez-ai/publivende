@@ -42,7 +42,7 @@ function Auto() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl md:text-3xl font-bold">Automatizaciones</h1>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button className="bg-gradient-primary border-0"><Plus className="w-4 h-4 mr-1" />Nueva regla</Button></DialogTrigger>
+          <DialogTrigger asChild><Button className="bg-primary border-0"><Plus className="w-4 h-4 mr-1" />Nueva regla</Button></DialogTrigger>
           <DialogContent><DialogHeader><DialogTitle>Nueva regla automática</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div><Label>Nombre</Label><Input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} /></div>

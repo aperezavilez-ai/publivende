@@ -26,6 +26,50 @@ async function markScheduleError(postId: string, message: string) {
     .where(eq(schema.posts.id, postId));
 }
 
+/**
+ * Reintentos reales del programador (Real v1).
+ * Un fallo de publicación ya no mata el post a la primera: se registra el
+ * intento en scheduleMeta.reintentos y el post sigue «programado» con una
+ * nueva fecha (espera creciente 5, 15 y 45 min). Solo cuando se agotan los
+ * reintentos pasa a error final. Los errores permanentes (usuario o link
+ * faltante) siguen yendo directos a markScheduleError.
+ */
+const RETRY_BACKOFF_MINUTES = [5, 15, 45];
+const MAX_SCHEDULE_RETRIES = RETRY_BACKOFF_MINUTES.length;
+
+async function handleScheduleFailure(
+  postId: string,
+  message: string,
+): Promise<{ retried: boolean; nextAt?: Date; retries: number }> {
+  const db = getDb();
+  const rows = await db.select().from(schema.posts).where(eq(schema.posts.id, postId)).limit(1);
+  const post = rows[0];
+  const meta: ScheduleMeta = { ...((post?.scheduleMeta as ScheduleMeta | null) ?? {}) };
+  const retries = meta.reintentos ?? 0;
+  const now = new Date();
+  meta.schedule_error = message;
+  meta.ultimo_intento = now.toISOString();
+
+  if (retries < MAX_SCHEDULE_RETRIES) {
+    const waitMinutes = RETRY_BACKOFF_MINUTES[retries];
+    const nextAt = new Date(now.getTime() + waitMinutes * 60_000);
+    meta.reintentos = retries + 1;
+    meta.proximo_intento = nextAt.toISOString();
+    await db
+      .update(schema.posts)
+      .set({ estado: "programado", fechaProgramada: nextAt, scheduleMeta: meta })
+      .where(eq(schema.posts.id, postId));
+    return { retried: true, nextAt, retries: meta.reintentos };
+  }
+
+  delete meta.proximo_intento;
+  await db
+    .update(schema.posts)
+    .set({ estado: "error", scheduleMeta: meta })
+    .where(eq(schema.posts.id, postId));
+  return { retried: false, retries };
+}
+
 function estimateAdsConversion(peopleMin: number, peopleMax: number) {
   const leadsMin = Math.max(1, Math.round(peopleMin * 0.004));
   const leadsMax = Math.max(leadsMin, Math.round(peopleMax * 0.009));
@@ -153,14 +197,20 @@ export async function executeScheduledPost(post: DbPost): Promise<ScheduledRunRe
 
     if (!result.ok && !published) {
       const err = result.error ?? result.errors.join("; ") ?? "Error al publicar";
-      await markScheduleError(post.id, err);
-      return { postId: post.id, ok: false, error: err };
+      const failure = await handleScheduleFailure(post.id, err);
+      return {
+        postId: post.id,
+        ok: false,
+        error: failure.retried
+          ? `${err} (reintento ${failure.retries} programado para ${failure.nextAt?.toISOString()})`
+          : err,
+      };
     }
 
     return { postId: post.id, ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error en programación automática";
-    await markScheduleError(post.id, msg);
+    await handleScheduleFailure(post.id, msg);
     return { postId: post.id, ok: false, error: msg };
   }
 }

@@ -187,7 +187,7 @@ function Recetas() {
         <TabsContent value="oficiales" className="mt-4">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {RECETAS.map((r) => (
-              <Card key={r.id} className="p-5 hover:shadow-elegant transition">
+              <Card key={r.id} className="p-5 hover:shadow-sm transition">
                 <div className="text-4xl mb-2">{r.emoji}</div>
                 <h3 className="font-bold text-lg">{r.industria}</h3>
                 <p className="text-sm text-muted-foreground mb-4">{r.descripcion}</p>
@@ -196,14 +196,14 @@ function Recetas() {
                   <div>🤖 {r.reglas.length} reglas</div>
                   <div>🛍️ {r.productos.length} productos</div>
                 </div>
-                <Button className="w-full bg-gradient-primary border-0" onClick={() => aplicar(r.id)}>Aplicar receta</Button>
+                <Button className="w-full bg-primary border-0" onClick={() => aplicar(r.id)}>Aplicar receta</Button>
               </Card>
             ))}
           </div>
         </TabsContent>
 
         <TabsContent value="marketplace" className="mt-4 space-y-4">
-          <Card className="p-4 bg-gradient-to-br from-primary/10 to-accent/30 flex items-center justify-between flex-wrap gap-3">
+          <Card className="p-4 bg-slate-50 flex items-center justify-between flex-wrap gap-3">
             <div>
               <div className="font-bold">¿Tienes una receta que funciona?</div>
               <div className="text-xs text-muted-foreground">Publícala y gana el 70% por cada descarga.</div>

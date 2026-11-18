@@ -37,7 +37,7 @@ export const Route = createFileRoute("/_app/whatsapp")({ component: WA });
 
 const ETAPAS: EtapaLead[] = ["nuevo", "contactado", "negociando", "ganado", "perdido"];
 const ETAPA_COLORS: Record<EtapaLead, string> = {
-  nuevo: "bg-blue-500", contactado: "bg-purple-500", negociando: "bg-amber-500", ganado: "bg-green-500", perdido: "bg-gray-400",
+  nuevo: "bg-blue-500", contactado: "bg-blue-600", negociando: "bg-amber-500", ganado: "bg-green-500", perdido: "bg-gray-400",
 };
 
 function WA() {
@@ -354,7 +354,7 @@ function WA() {
                 )}
                 <div className="pt-2 space-y-2">
                   <p className="text-xs text-muted-foreground font-medium">¿Quieres probar el CRM y las respuestas automáticas ahora?</p>
-                  <Button size="sm" className="w-full bg-gradient-primary border-0 text-white gap-1.5" onClick={simularCliente}>
+                  <Button size="sm" className="w-full bg-primary border-0 text-white gap-1.5" onClick={simularCliente}>
                     <Sparkles className="w-3.5 h-3.5" /> Generar prospecto interesado con IA
                   </Button>
                 </div>
@@ -565,7 +565,7 @@ function WA() {
                   <SelectContent>{(["stripe","mercadopago","wompi","payu","kushki","manual"] as PagoProvider[]).map((p) => <SelectItem key={p} value={p}>{PROVIDER_LABEL[p]}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <Button onClick={generarCobro} className="w-full bg-gradient-primary border-0">Generar link de pago</Button>
+              <Button onClick={generarCobro} className="w-full bg-primary border-0">Generar link de pago</Button>
               <p className="text-[10px] text-muted-foreground text-center">Tip: escribe <code>/cobrar 350 descripción</code> directamente en el chat.</p>
             </div>
           ) : (

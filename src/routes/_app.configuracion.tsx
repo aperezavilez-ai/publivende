@@ -394,7 +394,7 @@ function Conf() {
             <Button
               key={p.id}
               size="sm"
-              className={p.highlight ? "bg-gradient-primary border-0" : ""}
+              className={p.highlight ? "bg-primary border-0" : ""}
               variant={p.highlight ? "default" : "outline"}
               disabled={billingBusy}
               onClick={() => runBilling(() => changePlan(p.id))}

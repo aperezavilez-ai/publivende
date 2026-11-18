@@ -129,7 +129,7 @@ function Analiticas() {
                   });
                   navigate({ to: "/publicar" });
                   toast.success("Post cargado para reciclar con IA");
-                }} className="bg-gradient-primary border-0 gap-1"><Sparkles className="w-3 h-3" />Reciclar con IA</Button>
+                }} className="bg-primary border-0 gap-1"><Sparkles className="w-3 h-3" />Reciclar con IA</Button>
               </Card>
             );
           })}

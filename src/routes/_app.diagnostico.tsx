@@ -184,7 +184,7 @@ function Diagnostico() {
         <Button
           onClick={generarPlan}
           disabled={generating}
-          className="gap-2 bg-gradient-primary border-0"
+          className="gap-2 bg-primary border-0"
         >
           <Sparkles className={`w-4 h-4 ${generating ? "animate-pulse" : ""}`} />
           {generating
@@ -500,7 +500,7 @@ function PlanView({
   const { plan } = report;
   return (
     <>
-      <Card className="p-5 bg-gradient-primary text-white border-0">
+      <Card className="p-5 bg-primary text-white border-0">
         <div className="flex items-center justify-between text-xs uppercase opacity-80 mb-1">
           <span>Resumen de tu estratega</span>
           <span>
@@ -976,7 +976,7 @@ function AnalisisMercadoView({
             <Button
               type="submit"
               disabled={loading || !prompt.trim()}
-              className="gap-2 bg-gradient-primary border-0"
+              className="gap-2 bg-primary border-0"
             >
               <Sparkles className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
               {loading ? "Analizando mercado…" : "Analizar mercado"}
@@ -987,7 +987,7 @@ function AnalisisMercadoView({
 
       {analysis && (
         <div className="space-y-4">
-          <Card className="p-5 bg-gradient-primary text-white border-0">
+          <Card className="p-5 bg-primary text-white border-0">
             <div className="flex items-center justify-between text-xs uppercase opacity-85 mb-1.5">
               <span className="font-semibold flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" /> Resumen Ejecutivo

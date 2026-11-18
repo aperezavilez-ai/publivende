@@ -42,11 +42,7 @@ function AuthPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      if (typeof window !== "undefined") {
-        window.location.href = "/dashboard";
-      } else {
-        navigate({ to: "/dashboard" });
-      }
+      navigate({ to: "/dashboard" });
     }
   }, [user, loading, navigate]);
 
@@ -61,19 +57,11 @@ function AuthPage() {
       if (mode === "login") {
         await signIn(form.email, form.password);
         toast.success("¡Bienvenido de vuelta!");
-        if (typeof window !== "undefined") {
-          window.location.href = "/dashboard";
-        } else {
-          navigate({ to: "/dashboard" });
-        }
+        navigate({ to: "/dashboard" });
       } else {
         const profile = await signUp({ ...form, plan: selectedPlan });
         toast.success(`Cuenta creada con plan ${planLabel(profile.plan)} 🎉`);
-        if (typeof window !== "undefined") {
-          window.location.href = "/dashboard";
-        } else {
-          navigate({ to: "/dashboard" });
-        }
+        navigate({ to: "/dashboard" });
       }
     } catch (err) {
       toast.error((err as Error).message);
@@ -83,22 +71,22 @@ function AuthPage() {
   }
 
   if (!loading && user) {
-    return <div className="min-h-screen flex items-center justify-center text-zinc-700 bg-white font-medium">Redirigiendo al panel…</div>;
+    return <div className="min-h-screen flex items-center justify-center text-white/80">Redirigiendo al panel…</div>;
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50/70">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-white">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-between mb-6">
-          <PubliVendeLogo to="/" size="lg" showText textClassName="text-zinc-900 text-xl font-bold" />
+          <PubliVendeLogo to="/" size="lg" showText textClassName="text-white text-xl" />
           <a href="/#precios">
-            <Button variant="ghost" size="sm" className="text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 gap-1">
+            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 gap-1">
               <ArrowLeft className="w-4 h-4" />
               Planes
             </Button>
           </a>
         </div>
-        <Card className="p-6 border border-zinc-200/90 shadow-md bg-white">
+        <Card className="p-6 shadow-sm">
           <div className="grid grid-cols-2 p-1 bg-muted rounded-lg mb-5">
             <button
               type="button"
@@ -130,7 +118,7 @@ function AuthPage() {
           </p>
           {mode === "signup" && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Badge className="bg-gradient-primary border-0">
+              <Badge className="bg-primary border-0">
                 Plan {planOffer.nombre} — {planOffer.precio} MXN/mes
               </Badge>
               <a href="/#precios" className="text-xs text-primary hover:underline">
@@ -179,7 +167,7 @@ function AuthPage() {
                 </div>
               </div>
             )}
-            <Button type="submit" disabled={loadingForm} className="w-full bg-gradient-primary border-0 shadow-elegant">
+            <Button type="submit" disabled={loadingForm} className="w-full bg-primary border-0 shadow-sm">
               {loadingForm ? "..." : mode === "login" ? "Entrar al panel" : "Crear cuenta y continuar"}
             </Button>
           </form>

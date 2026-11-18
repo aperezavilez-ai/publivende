@@ -1,19 +1,11 @@
 import React, { useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
-import { PostComposer } from '@/components/posts/PostComposer';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 
 export function CalendarioView() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [showComposer, setShowComposer] = useState(false);
 
   // Mock scheduled posts
   const scheduledPosts = [
@@ -75,20 +67,14 @@ export function CalendarioView() {
             Planifica y programa tus publicaciones
           </p>
         </div>
-        <Dialog open={showComposer} onOpenChange={setShowComposer}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Nueva Publicación
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Crear Publicación</DialogTitle>
-            </DialogHeader>
-            <PostComposer />
-          </DialogContent>
-        </Dialog>
+        {/* Real v1: crear publicaciones vive SOLO en la pantalla real
+            /publicar (el compositor de fachada sin handlers se eliminó). */}
+        <Button asChild>
+          <Link to="/publicar">
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva Publicación
+          </Link>
+        </Button>
       </div>
 
       {/* Calendar */}

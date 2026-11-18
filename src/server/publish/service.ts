@@ -90,7 +90,10 @@ export async function publishForUser(input: PublishForUserInput): Promise<Publis
     sourceUrl: input.post.source_url,
     alcance: input.post.alcance,
     redesDestino: input.post.redes,
-    estado: (input.post.programar ? "programado" : "publicado") as "publicado" | "programado" | "error",
+    // Real v1 — invariante: el post NACE como borrador (o programado) y solo
+    // pasa a "publicado" cuando una red confirma con external_id verificado.
+    // Antes nacía como "publicado" antes de llamar a ninguna red.
+    estado: (input.post.programar ? "programado" : "borrador") as "programado" | "borrador",
     fechaProgramada: input.post.programar ? new Date(input.post.programar) : undefined,
     fechaPublicacion: input.post.programar ? undefined : now,
     trackingSlug,
@@ -157,7 +160,8 @@ export async function publishForUser(input: PublishForUserInput): Promise<Publis
       if (s.ok && s.external_id && !externalIds[s.red]) externalIds[s.red] = s.external_id;
     }
 
-    const anyOk = surfaces.some((s) => s.ok);
+    // Éxito = superficie ok CON external_id de la red. Un ok sin ID no publica.
+    const anyOk = surfaces.some((s) => s.ok && !!s.external_id);
     await db
       .update(schema.posts)
       .set({
@@ -212,15 +216,20 @@ export async function publishForUser(input: PublishForUserInput): Promise<Publis
   const refreshed = await db.select().from(schema.posts).where(eq(schema.posts.id, saved.id)).limit(1);
 
   return {
-    ok: input.post.programar ? true : input.post.redes.length === 0 ? true : publishedCount > 0 || surfaces.some((s) => s.ok),
+    // Real v1: sin programar, ok SOLO si al menos una red devolvió external_id.
+    // Antes: sin redes destino también devolvía ok:true sin publicar nada.
+    ok: input.post.programar ? true : publishedCount > 0,
     post: dbPostToClient(refreshed[0] ?? saved),
     externalIds,
     surfaces,
     errors,
     waSent,
     error:
-      !input.post.programar && input.post.redes.length > 0 && publishedCount === 0 && !surfaces.some((s) => s.ok)
-        ? errors.join(" · ") || "No se publicó en ninguna red"
+      !input.post.programar && publishedCount === 0
+        ? errors.join(" · ") ||
+          (input.post.redes.length === 0
+            ? "Sin redes destino: no se publicó en ninguna red"
+            : "No se publicó en ninguna red")
         : undefined,
   };
 }

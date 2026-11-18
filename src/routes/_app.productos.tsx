@@ -70,7 +70,7 @@ function Prods() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl md:text-3xl font-bold">Catálogo de productos</h1>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button className="bg-gradient-primary border-0"><Plus className="w-4 h-4 mr-1" />Nuevo producto</Button></DialogTrigger>
+          <DialogTrigger asChild><Button className="bg-primary border-0"><Plus className="w-4 h-4 mr-1" />Nuevo producto</Button></DialogTrigger>
           <DialogContent><DialogHeader><DialogTitle>Nuevo producto</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div><Label>Nombre</Label><Input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} /></div>
@@ -198,7 +198,7 @@ function StoryDialog({ producto, celular, codigoPais, onClose }: { producto: Pro
     canvas.width = 1080; canvas.height = 1920;
 
     const draw = (prodImg: HTMLImageElement | null, logoImg: HTMLImageElement | null) => {
-      // Fondo gradiente
+      // Fondo sólido de la plantilla
       const grad = ctx.createLinearGradient(0, 0, 0, 1920);
       grad.addColorStop(0, cfg.bg1); grad.addColorStop(1, cfg.bg2);
       ctx.fillStyle = grad; ctx.fillRect(0, 0, 1080, 1920);
@@ -298,7 +298,7 @@ function StoryDialog({ producto, celular, codigoPais, onClose }: { producto: Pro
                   {(Object.keys(PLANTILLAS) as Array<StoryConfig["plantilla"]>).map((p) => (
                     <button key={p} onClick={() => aplicarPlantilla(p)}
                       className={`h-10 rounded border-2 text-xs font-semibold capitalize ${cfg.plantilla === p ? "border-primary" : "border-border"}`}
-                      style={{ background: `linear-gradient(135deg, ${PLANTILLAS[p].bg1}, ${PLANTILLAS[p].bg2})`, color: PLANTILLAS[p].textColor }}>
+                      style={{ background: PLANTILLAS[p].bg1, color: PLANTILLAS[p].textColor }}>
                       {p}
                     </button>
                   ))}

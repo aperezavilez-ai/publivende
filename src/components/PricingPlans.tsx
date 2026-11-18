@@ -21,10 +21,10 @@ export function PricingPlans({ signupLinks = true, currentPlan, compact = false 
         return (
           <Card
             key={p.id}
-            className={`p-6 relative flex flex-col ${p.highlight ? "border-primary shadow-elegant md:scale-105 z-10" : ""} ${isCurrent ? "ring-2 ring-primary" : ""}`}
+            className={`p-6 relative flex flex-col ${p.highlight ? "border-primary shadow-sm md:scale-105 z-10" : ""} ${isCurrent ? "ring-2 ring-primary" : ""}`}
           >
             {p.highlight && !isCurrent && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-primary text-white text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
                 Más popular
               </div>
             )}
@@ -54,7 +54,7 @@ export function PricingPlans({ signupLinks = true, currentPlan, compact = false 
                 className="block mt-6"
               >
                 <Button
-                  className={`w-full ${p.highlight ? "bg-gradient-primary border-0 shadow-elegant" : ""}`}
+                  className={`w-full ${p.highlight ? "bg-primary border-0 shadow-sm" : ""}`}
                   variant={p.highlight ? "default" : "outline"}
                 >
                   {p.cta}

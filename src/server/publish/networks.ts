@@ -19,6 +19,117 @@ function trackingUrl(input: PublishToNetworkInput): string {
   return input.linkUrl ?? `${input.appUrl}/p/${input.trackingSlug}`;
 }
 
+/**
+ * Confirmación de estado antes de declarar éxito (Real v1).
+ * Ninguna red se marca publicada sin que la plataforma lo confirme:
+ * TikTok debe llegar a PUBLISH_COMPLETE e Instagram a FINISHED.
+ * La espera es parametrizable por entorno para no colgar el serverless
+ * (presupuesto total por defecto < ~60 s por red).
+ */
+const POLL_INTERVAL_MS = Math.max(0, Number(process.env.PUBLISH_POLL_INTERVAL_MS ?? 5000));
+const TIKTOK_POLL_ATTEMPTS = Math.max(1, Number(process.env.TIKTOK_POLL_ATTEMPTS ?? 10));
+const IG_POLL_ATTEMPTS = Math.max(1, Number(process.env.IG_POLL_ATTEMPTS ?? 12));
+const IG_POLL_INTERVAL_MS = Math.max(0, Number(process.env.IG_POLL_INTERVAL_MS ?? 4000));
+
+function sleep(ms: number): Promise<void> {
+  return ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
+}
+
+/** Espera a que un contenedor de Instagram quede FINISHED antes de media_publish. */
+export async function waitForInstagramContainer(
+  creationId: string,
+  accessToken: string,
+): Promise<{ ok: boolean; status?: string; error?: string }> {
+  let lastStatus: string | undefined;
+  for (let attempt = 0; attempt < IG_POLL_ATTEMPTS; attempt++) {
+    if (attempt > 0) await sleep(IG_POLL_INTERVAL_MS);
+    try {
+      const res = await fetch(
+        `https://graph.facebook.com/v21.0/${creationId}?fields=status_code&access_token=${encodeURIComponent(accessToken)}`,
+      );
+      const json = (await res.json()) as { status_code?: string; error?: { message?: string } };
+      lastStatus = json.status_code ?? lastStatus;
+      if (json.status_code === "FINISHED") return { ok: true, status: json.status_code };
+      if (json.status_code === "ERROR" || json.status_code === "EXPIRED") {
+        return {
+          ok: false,
+          status: json.status_code,
+          error: json.error?.message ?? `El contenedor de Instagram quedó en estado ${json.status_code}`,
+        };
+      }
+      // IN_PROGRESS (o sin estado): seguir esperando dentro del presupuesto.
+    } catch {
+      // Error transitorio de red al consultar: seguir dentro del presupuesto.
+    }
+  }
+  return {
+    ok: false,
+    status: lastStatus,
+    error: `Instagram no terminó de procesar el contenido (último estado: ${lastStatus ?? "desconocido"})`,
+  };
+}
+
+/** Publica un contenedor de Instagram SOLO tras confirmar FINISHED. */
+async function publishInstagramContainer(
+  igUserId: string,
+  creationId: string,
+  accessToken: string,
+): Promise<{ id?: string; error?: string }> {
+  const ready = await waitForInstagramContainer(creationId, accessToken);
+  if (!ready.ok) return { error: ready.error ?? "El contenido de Instagram no quedó listo" };
+
+  const pubRes = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media_publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ creation_id: creationId, access_token: accessToken }),
+  });
+  const pubJson = (await pubRes.json()) as { id?: string; error?: { message?: string } };
+  if (!pubJson.id) return { error: pubJson.error?.message ?? "Error publicando en Instagram" };
+  return { id: pubJson.id };
+}
+
+/** Espera la confirmación final de TikTok: ok solo con PUBLISH_COMPLETE. */
+export async function waitForTikTokPublish(
+  publishId: string,
+  accessToken: string,
+): Promise<{ ok: boolean; status?: string; error?: string }> {
+  let lastStatus: string | undefined;
+  for (let attempt = 0; attempt < TIKTOK_POLL_ATTEMPTS; attempt++) {
+    if (attempt > 0) await sleep(POLL_INTERVAL_MS);
+    try {
+      const res = await fetch("https://open.tiktokapis.com/v2/post/publish/status/fetch/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ publish_id: publishId }),
+      });
+      const json = (await res.json()) as {
+        data?: { status?: string; fail_reason?: string };
+        error?: { message?: string };
+      };
+      lastStatus = json.data?.status ?? lastStatus;
+      if (json.data?.status === "PUBLISH_COMPLETE") return { ok: true, status: json.data.status };
+      if (json.data?.status === "FAILED") {
+        return {
+          ok: false,
+          status: json.data.status,
+          error: json.data.fail_reason ?? json.error?.message ?? "TikTok reportó FAILED",
+        };
+      }
+      // PROCESSING_DOWNLOAD / PROCESSING_UPLOAD / SEND_TO_USER_INBOX: seguir esperando.
+    } catch {
+      // Error transitorio de red al consultar: seguir dentro del presupuesto.
+    }
+  }
+  return {
+    ok: false,
+    status: lastStatus,
+    error: `TikTok sigue procesando (publish_id ${publishId})`,
+  };
+}
+
 async function createInstagramContainer(
   igUserId: string,
   body: Record<string, unknown>,
@@ -114,16 +225,11 @@ async function publishInstagramFeed(input: PublishToNetworkInput): Promise<Publi
     return { red: "instagram", surface: "feed", ok: false, error: createJson.error?.message ?? "Error creando media IG" };
   }
 
-  const pubRes = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media_publish`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ creation_id: createJson.id, access_token: input.accessToken }),
-  });
-  const pubJson = (await pubRes.json()) as { id?: string; error?: { message?: string } };
-  if (!pubJson.id) {
-    return { red: "instagram", surface: "feed", ok: false, error: pubJson.error?.message ?? "Error publicando en IG" };
+  const published = await publishInstagramContainer(igUserId, createJson.id, input.accessToken);
+  if (!published.id) {
+    return { red: "instagram", surface: "feed", ok: false, error: published.error ?? "Error publicando en IG" };
   }
-  return { red: "instagram", surface: "feed", channel_name: "Feed Instagram", external_id: pubJson.id, ok: true };
+  return { red: "instagram", surface: "feed", channel_name: "Feed Instagram", external_id: published.id, ok: true };
 }
 
 async function publishInstagramReel(input: PublishToNetworkInput): Promise<PublishSurfaceResult> {
@@ -147,16 +253,11 @@ async function publishInstagramReel(input: PublishToNetworkInput): Promise<Publi
     return { red: "instagram", surface: "reel", ok: false, error: createJson.error?.message ?? "Error creando Reel" };
   }
 
-  const pubRes = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media_publish`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ creation_id: createJson.id, access_token: input.accessToken }),
-  });
-  const pubJson = (await pubRes.json()) as { id?: string; error?: { message?: string } };
-  if (!pubJson.id) {
-    return { red: "instagram", surface: "reel", ok: false, error: pubJson.error?.message ?? "Error publicando Reel" };
+  const published = await publishInstagramContainer(igUserId, createJson.id, input.accessToken);
+  if (!published.id) {
+    return { red: "instagram", surface: "reel", ok: false, error: published.error ?? "Error publicando Reel" };
   }
-  return { red: "instagram", surface: "reel", channel_name: "Reels", external_id: pubJson.id, ok: true };
+  return { red: "instagram", surface: "reel", channel_name: "Reels", external_id: published.id, ok: true };
 }
 
 async function publishYouTube(input: PublishToNetworkInput): Promise<PublishSurfaceResult> {
@@ -249,6 +350,19 @@ async function publishTikTok(input: PublishToNetworkInput): Promise<PublishSurfa
   };
   if (!initJson.data?.publish_id) {
     return { red: "tiktok", surface: "fyp", ok: false, error: initJson.error?.message ?? "TikTok init falló" };
+  }
+  // Real v1: el publish_id solo prueba que TikTok aceptó el envío, NO que
+  // publicó. Éxito únicamente con la confirmación PUBLISH_COMPLETE.
+  const confirmed = await waitForTikTokPublish(initJson.data.publish_id, input.accessToken);
+  if (!confirmed.ok) {
+    return {
+      red: "tiktok",
+      surface: "fyp",
+      channel_name: "For You Page",
+      external_id: initJson.data.publish_id,
+      ok: false,
+      error: confirmed.error ?? "TikTok no confirmó la publicación",
+    };
   }
   return {
     red: "tiktok",

@@ -204,7 +204,7 @@ function Distribuir() {
         )}
       </Card>
 
-      <Card className="p-5 border-violet-200 bg-violet-50/50 dark:bg-violet-950/20">
+      <Card className="p-5 border-slate-200 bg-slate-50 ">
         <h2 className="font-semibold mb-2 flex items-center gap-2">
           <Rocket className="w-4 h-4" /> Impulsar en la red PubliVende
         </h2>
@@ -256,7 +256,7 @@ function Distribuir() {
               <Button
                 onClick={() => void pedirImpulso()}
                 disabled={!acepto || boosting || sinCupo}
-                className="bg-gradient-primary border-0"
+                className="bg-primary border-0"
               >
                 <Rocket className="w-4 h-4 mr-1" /> {boosting ? "La IA está revisando…" : "Pedir impulso"}
               </Button>
@@ -287,7 +287,7 @@ function Distribuir() {
             <Label className="text-xs">Presupuesto diario (MXN)</Label>
             <Input type="number" min={50} value={budget} onChange={(e) => setBudget(e.target.value)} className="w-32 h-9" />
           </div>
-          <Button onClick={() => void amplificar()} className="bg-gradient-primary border-0">
+          <Button onClick={() => void amplificar()} className="bg-primary border-0">
             Amplificar en Facebook
           </Button>
           {boostUrl && (

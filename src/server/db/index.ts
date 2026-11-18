@@ -12,11 +12,16 @@ let pgClient: postgres.Sql | null = null;
 function proxyConfiguration() {
   const baseUrl = (
     process.env.PUBLIVENDE_SUPABASE_URL ||
+    (process.env.SUPABASE_URL && !process.env.SUPABASE_URL.includes("supabase.gafcore.com") ? process.env.SUPABASE_URL : "") ||
     "https://publivende.gafcore.com"
   ).replace(/\/$/, "");
   const serviceRoleKey =
     process.env.PUBLIVENDE_SQL_SECRET ||
-    "bcb3d770bd571a7e043af537ef796483cccff341850b457df7318bf2f6299c1512b7449febd51240762343b2ffe0b2e8";
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    "";
+  if (!serviceRoleKey) {
+    throw new Error("Falta PUBLIVENDE_SQL_SECRET (o SUPABASE_SERVICE_ROLE_KEY) para el proxy SQL.");
+  }
   return { url: `${baseUrl}/functions/v1/publivende-sql`, serviceRoleKey };
 }
 
@@ -43,14 +48,11 @@ export function getDb() {
   if (!db) {
     const isVercel = !!process.env.VERCEL;
     const databaseUrl = process.env.DATABASE_URL;
-    const isLocalUrl = !databaseUrl || databaseUrl.includes("127.0.0.1") || databaseUrl.includes("localhost");
-
-    if (databaseUrl && !isVercel && !isLocalUrl) {
+    if (databaseUrl && !isVercel) {
       pgClient = postgres(databaseUrl, {
         max: 10,
         idle_timeout: 20,
         connect_timeout: 10,
-        ssl: databaseUrl.includes("supabase.co") ? "require" : undefined,
       });
       db = drizzlePostgres(pgClient, { schema });
     } else {

@@ -125,7 +125,7 @@ function Biblio() {
             Tus publicaciones, hashtags virales y plan de distribución IA
           </p>
         </div>
-        <Button asChild className="bg-gradient-primary border-0">
+        <Button asChild className="bg-primary border-0">
           <Link to="/publicar">+ Crear publicación</Link>
         </Button>
       </div>
@@ -157,7 +157,7 @@ function Biblio() {
               <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
                 Crea una publicación, adapta con IA y se guardará aquí con hashtags y canales de distribución.
               </p>
-              <Button asChild className="mt-4 bg-gradient-primary border-0">
+              <Button asChild className="mt-4 bg-primary border-0">
                 <Link to="/publicar">Ir a Crear publicación</Link>
               </Button>
             </Card>

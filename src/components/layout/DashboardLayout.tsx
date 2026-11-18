@@ -12,6 +12,8 @@ import {
   LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isProductionModeClient } from '@/lib/production/session';
+import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -39,9 +41,9 @@ const navigation = [
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-card border-r">
+      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200">
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex h-16 items-center border-b px-6">
@@ -111,6 +113,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content */}
       <div className="pl-64">
+        {!isProductionModeClient() && (
+          <div className="bg-amber-50 border-b border-amber-300 text-amber-900 px-4 py-2.5 text-sm font-medium flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            Modo demostración: las publicaciones no salen a redes reales.
+          </div>
+        )}
         <main className="p-8">{children}</main>
       </div>
     </div>

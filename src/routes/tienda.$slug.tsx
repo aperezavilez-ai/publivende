@@ -62,9 +62,9 @@ function TiendaPublica() {
         <div className="grid md:grid-cols-2 gap-8">
           <div>
             {producto.imagen ? (
-              <img src={producto.imagen} alt={producto.nombre} className="w-full rounded-xl shadow-elegant" />
+              <img src={producto.imagen} alt={producto.nombre} className="w-full rounded-xl shadow-sm" />
             ) : (
-              <div className="aspect-square rounded-xl bg-gradient-primary" />
+              <div className="aspect-square rounded-xl bg-primary" />
             )}
           </div>
           <div className="space-y-4">
