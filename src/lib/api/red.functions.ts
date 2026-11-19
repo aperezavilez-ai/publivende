@@ -128,6 +128,26 @@ export const requestBoost = createServerFn({ method: "POST" })
     }
   });
 
+/** Mapa público de la red: cuentas oficiales ACTIVAS (sin tokens) para que
+ *  el usuario vea a dónde puede repostearse su contenido según su nicho. */
+export const getRedDistribution = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string() }))
+  .handler(async ({ data }) => {
+    if (!isProductionMode()) return { ok: false as const, error: "Requiere producción" };
+    try {
+      await requireUser(data.token);
+      const channels = await listHubChannels();
+      return {
+        ok: true as const,
+        channels: channels
+          .filter((c) => c.activo)
+          .map((c) => ({ red: c.red, nombre: c.nombre, nichos: c.nichos })),
+      };
+    } catch (err) {
+      return { ok: false as const, error: errorMessage(err) };
+    }
+  });
+
 /* ---------- Administrador ---------- */
 
 export const redAdminOverview = createServerFn({ method: "POST" })

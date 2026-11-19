@@ -17,6 +17,8 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RED_LABELS, RED_LIMITS, RED_COLORS } from "@/lib/redes";
 import { publishPostReal } from "@/lib/api/publish.functions";
+import { getRedDistribution } from "@/lib/api/red.functions";
+import { inferNichoFromText } from "@/services/import/inferNiche";
 import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
 import { generateCaptions, type Tono } from "@/services/ai/mock";
 import {
@@ -104,6 +106,15 @@ function Publicar() {
   const [flyerData, setFlyerData] = useState<FlyerDesignData | null>(null);
   const [flyerSvg, setFlyerSvg] = useState<string>("");
   const [detectedNicho, setDetectedNicho] = useState<string>("");
+  const [redChannels, setRedChannels] = useState<{ red: string; nombre: string; nichos: string[] }[]>([]);
+
+  useEffect(() => {
+    const token = getSessionToken();
+    if (!token || !isProductionModeClient()) return;
+    getRedDistribution({ data: { token } })
+      .then((r) => { if (r.ok) setRedChannels(r.channels); })
+      .catch(() => { /* el mapa simplemente no muestra canales */ });
+  }, []);
   const [media, setMedia] = useState("");
   const [copy, setCopy] = useState("");
   const [copyPorRed, setCopyPorRed] = useState<Partial<Record<Red, string>>>({});
@@ -910,6 +921,85 @@ function Publicar() {
               )}
             </Card>
           
+          )}
+
+          {publishMode === "link" && sourceMeta && (
+            <Card className="p-5">
+              <Label className="font-semibold mb-3 block flex items-center gap-2">
+                <Send className="w-4 h-4 text-primary" />
+                A dónde va tu publicación
+              </Label>
+              {(() => {
+                const nichoKey = inferNichoFromText(sourceMeta.originalCaption, sourceMeta.title ?? "");
+                const NICHO_LABEL: Record<string, string> = {
+                  moda: "Moda", ropa: "Ropa", belleza: "Belleza", comida: "Comida",
+                  fitness: "Fitness y salud", servicios: "Servicios", tecnologia: "Tecnología",
+                  default: "General (sin nicho específico)",
+                };
+                const acepta = (nichos: string[]) =>
+                  nichos.length === 0 ||
+                  nichos.some((n) => n.toLowerCase() === nichoKey || n.toLowerCase() === "general");
+                const canalesOk = redChannels.filter((c) => acepta(c.nichos));
+                const redesMap: { red: Red; label: string }[] = [
+                  { red: "facebook", label: "Facebook" },
+                  { red: "instagram", label: "Instagram" },
+                  { red: "tiktok", label: "TikTok" },
+                  { red: "youtube", label: "YouTube" },
+                ];
+                return (
+                  <div className="space-y-4 text-sm">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">TUS REDES — sale con tu texto y tu WhatsApp</p>
+                      <div className="space-y-1.5">
+                        {redesMap.map(({ red, label }) => {
+                          const acc = accounts.find((a) => a.red === red);
+                          const ok = acc?.estado_conexion === "conectada";
+                          return (
+                            <div key={red} className="flex items-center justify-between gap-2">
+                              <span>{label}</span>
+                              {ok
+                                ? <Badge variant="outline" className="text-emerald-700 border-emerald-300 bg-emerald-50">{acc?.nombre_cuenta}</Badge>
+                                : <Badge variant="outline" className="text-muted-foreground">sin conectar</Badge>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="border-t pt-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">
+                        RED PUBLIVENDE — repost en las cuentas oficiales de tu nicho
+                      </p>
+                      <p className="text-xs mb-2">
+                        Nicho detectado de este post: <span className="font-medium">{NICHO_LABEL[nichoKey] ?? nichoKey}</span>
+                      </p>
+                      {redChannels.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          La red oficial aún no tiene cuentas activas. Tu post sale en tus redes; el impulso se activa cuando Publivende encienda los canales del nicho.
+                        </p>
+                      ) : canalesOk.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          Ninguna cuenta oficial activa acepta este nicho todavía. Tu post sale en tus redes.
+                        </p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {canalesOk.map((c, i) => (
+                            <div key={i} className="flex items-center justify-between gap-2">
+                              <span>{c.nombre}</span>
+                              <Badge variant="outline" className="text-primary border-primary/40 bg-primary/5">
+                                {RED_LABELS[c.red as Red] ?? c.red} · {c.nichos.length === 0 ? "general" : c.nichos.join(", ")}
+                              </Badge>
+                            </div>
+                          ))}
+                          <p className="text-[11px] text-muted-foreground pt-1">
+                            Al publicar podrás solicitar el impulso: tu post entra a revisión y, al aprobarse, se repostea en estas cuentas con tu WhatsApp de ventas.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </Card>
           )}
 
           {publishMode === "link" && sourceMeta?.needsManualInput && !linkAdaptado && (

@@ -116,6 +116,8 @@ export async function fetchMetadataFromLink(
     pageName: resolvedPageName,
   });
 
+  let graphDiag: string | undefined;
+
   // Facebook con cuenta conectada → Graph API (mock listo para producción)
   if (
     platform === "facebook" &&
@@ -158,12 +160,17 @@ export async function fetchMetadataFromLink(
           mediaUrl: graph.imageUrl || "",
           fetchedFromLink: true,
           needsManualInput: !graph.imageUrl,
-          fetchWarning: buildPartialWarning("facebook", graph.pageName ?? resolvedPageName, "image"),
+          fetchWarning:
+            (graph as { diag?: string }).diag ??
+            buildPartialWarning("facebook", graph.pageName ?? resolvedPageName, "image"),
           pageName: graph.pageName ?? resolvedPageName,
           title: graph.title,
           linkDescription: graph.caption,
           importSource: "graph_api",
         };
+      }
+      if (!graph.ok) {
+        graphDiag = (graph as { diag?: string; error?: string }).diag ?? graph.error;
       }
     } catch {
       /* fallback a OG */
@@ -250,7 +257,11 @@ export async function fetchMetadataFromLink(
       mediaUrl: image,
       fetchedFromLink: useful,
       needsManualInput: !hasAll,
-      fetchWarning: !hasAll ? buildPartialWarning(platform, resolvedPageName, !caption ? "text" : "image") : undefined,
+      fetchWarning: !hasAll
+        ? !image && graphDiag
+          ? graphDiag
+          : buildPartialWarning(platform, resolvedPageName, !caption ? "text" : "image")
+        : undefined,
       title: platform === "youtube" ? (previewTitle ?? caption).slice(0, 70) : previewTitle,
       linkDescription: previewDescription,
       importSource: "og_scrape",

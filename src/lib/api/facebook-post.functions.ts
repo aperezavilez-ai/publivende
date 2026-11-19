@@ -3,7 +3,8 @@ import { z } from "zod";
 import { parseOgTagsFromHtml } from "@/services/import/parseOgTags";
 import { extractFacebookPageName, isLoginWallText, pickCaption } from "@/services/import/parseOgTags";
 import { verifySessionToken } from "@/server/auth/crypto";
-import { getOAuthToken } from "@/server/auth/users";
+import { getOAuthAccount } from "@/server/auth/users";
+import { getFreshOAuthAccount } from "@/server/auth/token-refresh";
 
 const BOT_AGENTS = [
   "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
@@ -65,8 +66,8 @@ async function scrapeOg(url: string) {
 function extractPostId(url: string): string | null {
   const patterns = [
     /\/posts\/(pfbid[\w-]+|\d+)/i,
-    /story_fbid=(\d+)/,
-    /[?&]fbid=(\d+)/,
+    /story_fbid=(pfbid[\w-]+|\d+)/i,
+    /[?&]fbid=(pfbid[\w-]+|\d+)/i,
     /\/videos\/(pfbid[\w-]+|\d+)/i,
   ];
   for (const re of patterns) {
@@ -101,65 +102,105 @@ function imageFromPost(post: GraphPost): string {
 const POST_FIELDS =
   "message,full_picture,permalink_url,created_time,attachments{media,subattachments{media}}";
 
+interface GraphPage {
+  id: string;
+  name: string;
+  username?: string;
+  access_token: string;
+}
+
+type GraphOutcome =
+  | { post: { caption: string; imageUrl: string; title?: string; pageName: string } }
+  | { diag: string };
+
 /**
  * Lee el post REAL desde Graph API con el token verdadero del usuario
- * (descifrado en servidor). Primero intenta el post exacto del link;
- * si no, busca entre los posts recientes de su página.
+ * (el mismo que usa el publicador: getFreshOAuthAccount). La página dueña
+ * del post se identifica desde el propio link (username), no desde la
+ * cuenta conectada: el usuario puede importar posts de cualquiera de sus
+ * páginas. Si algo falla, devuelve el motivo (diag) en vez de silencio.
  */
 async function fetchFromGraphApi(
   userToken: string,
-  pageName: string,
+  connectedPageName: string,
   finalUrl: string,
   hintCaption?: string,
-) {
+): Promise<GraphOutcome> {
   const pagesRes = await fetch(
-    `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token&access_token=${encodeURIComponent(userToken)}`,
+    `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,username,access_token&access_token=${encodeURIComponent(userToken)}`,
   );
   const pagesJson = (await pagesRes.json()) as {
-    data?: Array<{ id: string; name: string; access_token: string }>;
+    data?: GraphPage[];
+    error?: { message?: string };
   };
-  const page =
-    pagesJson.data?.find(
-      (p) => pageKey(p.name) === pageKey(pageName) || p.name.toLowerCase().includes(pageName.toLowerCase()),
-    ) ?? pagesJson.data?.[0];
-  if (!page?.access_token) return null;
-  const pageToken = page.access_token;
+  if (pagesJson.error) {
+    return { diag: `Meta rechazó tu conexión de Facebook: ${pagesJson.error.message ?? "token inválido"}. Reconecta Facebook en Configuración → Redes.` };
+  }
+  const pages = pagesJson.data ?? [];
+  if (!pages.length) return { diag: "Tu conexión de Facebook no devolvió ninguna página." };
 
-  const toResult = (post: GraphPost) => ({
+  const slug = extractFacebookPageName(finalUrl);
+  const ownerPage =
+    (slug ? pages.find((p) => p.username && pageKey(p.username) === pageKey(slug)) : undefined) ??
+    (slug ? pages.find((p) => pageKey(p.name) === pageKey(slug)) : undefined);
+  const connectedPage =
+    pages.find(
+      (p) => pageKey(p.name) === pageKey(connectedPageName) || p.name.toLowerCase().includes(connectedPageName.toLowerCase()),
+    ) ?? pages[0];
+
+  const toResult = (post: GraphPost, pageName: string) => ({
     caption: post.message ?? "",
     imageUrl: imageFromPost(post),
     title: post.message?.split("\n")[0]?.slice(0, 70),
-    pageName: page.name,
+    pageName,
   });
 
-  // 1) El post exacto del link
+  // 1) El post exacto del link, probando los tokens con acceso probable
   const postId = extractPostId(finalUrl);
   if (postId) {
-    try {
-      const res = await fetch(
-        `https://graph.facebook.com/v21.0/${postId}?fields=${POST_FIELDS}&access_token=${encodeURIComponent(pageToken)}`,
-      );
-      const post = (await res.json()) as GraphPost & { error?: unknown };
-      if (!post.error && (post.message || imageFromPost(post))) return toResult(post);
-    } catch {
-      /* se intenta la lista */
+    const tokens = [
+      ...new Set(
+        [ownerPage?.access_token, userToken, connectedPage.access_token].filter(
+          (t): t is string => !!t,
+        ),
+      ),
+    ];
+    for (const token of tokens) {
+      try {
+        const res = await fetch(
+          `https://graph.facebook.com/v21.0/${postId}?fields=${POST_FIELDS}&access_token=${encodeURIComponent(token)}`,
+        );
+        const post = (await res.json()) as GraphPost & { error?: unknown };
+        if (!post.error && (post.message || imageFromPost(post))) {
+          return { post: toResult(post, ownerPage?.name ?? connectedPage.name) };
+        }
+      } catch {
+        /* siguiente token */
+      }
     }
   }
 
-  // 2) Respaldo: posts recientes de la página, por permalink o por texto
+  // 2) Respaldo: posts recientes de la página dueña (o la conectada)
+  const listPage = ownerPage ?? connectedPage;
   const postsRes = await fetch(
-    `https://graph.facebook.com/v21.0/${page.id}/published_posts?fields=${POST_FIELDS}&limit=25&access_token=${encodeURIComponent(pageToken)}`,
+    `https://graph.facebook.com/v21.0/${listPage.id}/published_posts?fields=${POST_FIELDS}&limit=25&access_token=${encodeURIComponent(listPage.access_token)}`,
   );
-  const postsJson = (await postsRes.json()) as { data?: GraphPost[] };
+  const postsJson = (await postsRes.json()) as { data?: GraphPost[]; error?: { message?: string } };
+  if (postsJson.error) {
+    return { diag: `Meta no dejó leer los posts de ${listPage.name}: ${postsJson.error.message ?? "sin acceso"}.` };
+  }
   const posts = postsJson.data ?? [];
   const hint = hintCaption?.slice(0, 40).toLowerCase();
   const match =
     posts.find((p) => p.permalink_url && finalUrl.includes(p.permalink_url)) ??
-    posts.find((p) => hint && p.message?.toLowerCase().includes(hint)) ??
-    posts[0];
+    posts.find((p) => hint && p.message?.toLowerCase().includes(hint));
 
-  if (!match?.message && !(match && imageFromPost(match))) return null;
-  return toResult(match!);
+  if (!match) {
+    return {
+      diag: `El post del link no está entre los 25 recientes de ${listPage.name}. Si es de otra página tuya, conecta esa página o usa su link directo (Compartir → Copiar enlace).`,
+    };
+  }
+  return { post: toResult(match, listPage.name) };
 }
 
 export const fetchFacebookPostContent = createServerFn({ method: "POST" })
@@ -181,28 +222,37 @@ export const fetchFacebookPostContent = createServerFn({ method: "POST" })
 
     const scraped = await scrapeOg(finalUrl);
 
-    // Camino real: sesión → token verdadero descifrado en servidor → Graph API
-    let userToken: string | null = null;
+    // Camino real: sesión → token verdadero (la misma fuente del publicador)
+    let diag: string | undefined;
     if (data.token) {
       const session = await verifySessionToken(data.token);
-      if (session) userToken = await getOAuthToken(session.userId, "facebook");
-    }
-    if (userToken) {
-      try {
-        const graphPost = await fetchFromGraphApi(userToken, data.pageName, finalUrl, scraped?.caption);
-        if (graphPost) {
-          return {
-            ok: true as const,
-            source: "graph_api" as const,
-            finalUrl,
-            caption: graphPost.caption,
-            imageUrl: graphPost.imageUrl,
-            title: graphPost.title,
-            pageName: graphPost.pageName,
-          };
+      if (!session) {
+        diag = "Tu sesión expiró: sal y vuelve a entrar para importar con tu cuenta de Facebook.";
+      } else {
+        const fresh = await getFreshOAuthAccount(session.userId, "facebook");
+        const acc = fresh ?? (await getOAuthAccount(session.userId, "facebook"));
+        const userToken = acc?.accessToken ?? null;
+        if (!userToken) {
+          diag = "No hay una conexión de Facebook activa en tu cuenta. Conéctala en Configuración → Redes.";
+        } else {
+          try {
+            const outcome = await fetchFromGraphApi(userToken, data.pageName, finalUrl, scraped?.caption);
+            if ("post" in outcome) {
+              return {
+                ok: true as const,
+                source: "graph_api" as const,
+                finalUrl,
+                caption: outcome.post.caption,
+                imageUrl: outcome.post.imageUrl,
+                title: outcome.post.title,
+                pageName: outcome.post.pageName,
+              };
+            }
+            diag = outcome.diag;
+          } catch {
+            diag = "Meta no respondió al leer el post. Intenta de nuevo en un momento.";
+          }
         }
-      } catch {
-        /* cae a los respaldos */
       }
     }
 
@@ -240,12 +290,16 @@ export const fetchFacebookPostContent = createServerFn({ method: "POST" })
         imageUrl: scraped.imageUrl || "",
         title: scraped.title,
         pageName: slugFromUrl ?? data.pageName,
+        diag,
       };
     }
 
     return {
       ok: false as const,
-      error: "No encontramos el post en tu página conectada. Verifica que el link sea de tu Fan Page.",
+      error:
+        diag ??
+        "No encontramos el post en tu página conectada. Verifica que el link sea de tu Fan Page.",
       finalUrl,
+      diag,
     };
   });
