@@ -86,6 +86,26 @@ export function OAuthCallbackView({
     setStatus("ok");
     setMessage(`${account.nombre_cuenta} conectado correctamente`);
 
+    if (typeof window !== "undefined" && window.opener && window.opener !== window) {
+      try {
+        window.opener.postMessage(
+          {
+            type: "PUBLIVENDE_OAUTH_SUCCESS",
+            provider,
+            red: account.red,
+            account,
+          },
+          window.location.origin,
+        );
+        setTimeout(() => {
+          try { window.close(); } catch {}
+        }, 1200);
+        return;
+      } catch (err) {
+        console.warn("Error enviando mensaje a ventana principal:", err);
+      }
+    }
+
     if (partnerUrl) {
       try {
         const u = new URL(partnerUrl);
@@ -125,18 +145,42 @@ export function OAuthCallbackView({
 
       if (error || search.error_code) {
         setStatus("error");
-        setMessage(
+        const errMsg =
           errorDescription
             ?? error
-            ?? (search.error_code ? `Meta OAuth error (${search.error_code})` : "Autorización cancelada"),
-        );
+            ?? (search.error_code ? `Meta OAuth error (${search.error_code})` : "Autorización cancelada");
+        setMessage(errMsg);
+        if (typeof window !== "undefined" && window.opener && window.opener !== window) {
+          try {
+            window.opener.postMessage(
+              {
+                type: "PUBLIVENDE_OAUTH_ERROR",
+                provider,
+                error: errMsg,
+              },
+              window.location.origin,
+            );
+          } catch {}
+        }
         return;
       }
       if (!code || !state) {
         setStatus("error");
-        setMessage(
-          "No pudimos completar la conexión. Intenta de nuevo desde Configuración o contacta soporte si el problema continúa.",
-        );
+        const errMsg =
+          "No pudimos completar la conexión. Intenta de nuevo desde Configuración o contacta soporte si el problema continúa.";
+        setMessage(errMsg);
+        if (typeof window !== "undefined" && window.opener && window.opener !== window) {
+          try {
+            window.opener.postMessage(
+              {
+                type: "PUBLIVENDE_OAUTH_ERROR",
+                provider,
+                error: errMsg,
+              },
+              window.location.origin,
+            );
+          } catch {}
+        }
         return;
       }
 
@@ -147,6 +191,18 @@ export function OAuthCallbackView({
       if (!result.ok) {
         setStatus("error");
         setMessage(result.error);
+        if (typeof window !== "undefined" && window.opener && window.opener !== window) {
+          try {
+            window.opener.postMessage(
+              {
+                type: "PUBLIVENDE_OAUTH_ERROR",
+                provider,
+                error: result.error,
+              },
+              window.location.origin,
+            );
+          } catch {}
+        }
         return;
       }
 
@@ -295,9 +351,17 @@ export function OAuthCallbackView({
         )}
 
         {status === "error" && (
-          <Button variant="outline" onClick={() => navigate({ to: "/configuracion" })}>
-            Volver a Configuración
-          </Button>
+          <div className="space-y-2">
+            {typeof window !== "undefined" && window.opener ? (
+              <Button variant="outline" onClick={() => window.close()}>
+                Cerrar ventana
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => navigate({ to: "/configuracion" })}>
+                Volver a Configuración
+              </Button>
+            )}
+          </div>
         )}
         {status === "ok" && (
           <p className="text-xs text-muted-foreground">Redirigiendo a {returnTo}…</p>
