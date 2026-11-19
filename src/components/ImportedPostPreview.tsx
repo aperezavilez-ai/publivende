@@ -3,7 +3,8 @@ import { Facebook, Instagram, Music2, Youtube, Heart, MessageCircle, Share2, Mor
 import type { Red, TipoPost } from "@/lib/mock/types";
 import type { SourcePlatform } from "@/services/import/detectPlatform";
 import { RED_COLORS, RED_LABELS } from "@/lib/redes";
-import { sanitizeMediaUrl } from "@/services/import/mediaUrl";
+import { sanitizeMediaUrl, needsMediaProxy } from "@/services/import/mediaUrl";
+import { proxyExternalMedia } from "@/lib/api/media-proxy.functions";
 
 const PLATFORM_ICONS = {
   facebook: Facebook,
@@ -53,12 +54,33 @@ export function ImportedPostPreview({
   const color = RED_COLORS[platform as Red] ?? "#1877F2";
   const [displayUrl, setDisplayUrl] = useState(() => sanitizeMediaUrl(mediaUrl));
   const [mediaFailed, setMediaFailed] = useState(false);
+  const [retryingProxy, setRetryingProxy] = useState(false);
 
   useEffect(() => {
     const clean = sanitizeMediaUrl(mediaUrl);
     setMediaFailed(false);
+    setRetryingProxy(false);
     setDisplayUrl(clean);
   }, [mediaUrl]);
+
+  async function handleMediaError() {
+    // Si la imagen directa falló y es de un CDN con protección (fbcdn, etc.), intentar convertir a base64 vía proxy
+    if (!retryingProxy && displayUrl && needsMediaProxy(displayUrl)) {
+      setRetryingProxy(true);
+      try {
+        const res = await proxyExternalMedia({ data: { url: displayUrl } });
+        if (res.ok && res.dataUrl) {
+          setDisplayUrl(res.dataUrl);
+          return;
+        }
+      } catch (err) {
+        console.warn("Fallo el reintento por proxy de imagen:", err);
+      }
+    }
+    console.warn("Error definitivo renderizando imagen de vista previa:", displayUrl);
+    setMediaFailed(true);
+  }
+
 
   const showMedia = !!displayUrl && !mediaFailed;
   const domain = linkDomain(linkUrl);
@@ -90,11 +112,9 @@ export function ImportedPostPreview({
         <img
           src={displayUrl}
           alt=""
+          referrerPolicy="no-referrer"
           className={`w-full ${compact ? "max-h-56" : "aspect-video"} object-cover bg-muted`}
-          onError={() => {
-            console.warn("Error renderizando imagen de vista previa:", displayUrl);
-            setMediaFailed(true);
-          }}
+          onError={handleMediaError}
         />
       )}
 

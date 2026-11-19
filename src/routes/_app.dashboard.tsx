@@ -530,16 +530,47 @@ function CabinaDifusion() {
             </div>
 
             {sourceMeta ? (
-              <ImportedPostPreview
-                platform={sourceMeta.platform}
-                pageName={sourceMeta.pageName ?? fbAccount?.nombre_cuenta ?? user.nombre_negocio}
-                caption={copyPorRed[activeTabRed] || copy || sourceMeta.originalCaption}
-                mediaUrl={media}
-                mediaType={sourceMeta.mediaType}
-                linkTitle={sourceMeta.title}
-                linkDescription={sourceMeta.linkDescription}
-                linkUrl={sourceMeta.url}
-              />
+              <div className="space-y-3">
+                <ImportedPostPreview
+                  platform={sourceMeta.platform}
+                  pageName={sourceMeta.pageName ?? fbAccount?.nombre_cuenta ?? user.nombre_negocio}
+                  caption={copyPorRed[activeTabRed] || copy || sourceMeta.originalCaption}
+                  mediaUrl={media}
+                  mediaType={sourceMeta.mediaType}
+                  linkTitle={sourceMeta.title}
+                  linkDescription={sourceMeta.linkDescription}
+                  linkUrl={sourceMeta.url}
+                />
+                <div className="pt-2 border-t flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    {media ? "Imagen del post lista para difundir" : "Sin imagen detectada"}
+                  </span>
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*,video/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          const dataUrl = ev.target?.result as string;
+                          if (dataUrl) {
+                            setMedia(dataUrl);
+                            toast.success("Foto del post actualizada correctamente");
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
+                      <Upload className="w-3.5 h-3.5" />
+                      {media ? "Cambiar foto" : "Subir foto"}
+                    </span>
+                  </label>
+                </div>
+              </div>
             ) : (
               <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50">
                 <Link2 className="w-8 h-8 mx-auto text-slate-400 mb-2" />
