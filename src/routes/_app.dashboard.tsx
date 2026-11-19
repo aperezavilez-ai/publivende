@@ -25,7 +25,7 @@ import {
 } from "@/services/import";
 import { inferNichoFromText } from "@/services/import/inferNiche";
 import {
-  analizarAlcanceIA, formatAlcanceNumero, type ReachAIAnalysis
+  analizarAlcanceIA, formatAlcanceNumero, totalAlcanceIA, type ReachAIAnalysis, type AlcancePorRedIA
 } from "@/lib/reach-ai";
 import {
   hashtagsFromVariants, hashtagsFromAlcanceIA, mergeHashtagMaps, pickViralHashtags
@@ -95,6 +95,8 @@ function CabinaDifusion() {
   const [alcanceNivel, setAlcanceNivel] = useState<AlcanceTipo>("local");
   const [detectedNicho, setDetectedNicho] = useState("");
   const [reachAnalysis, setReachAnalysis] = useState<ReachAIAnalysis | null>(null);
+  const [reachPorRed, setReachPorRed] = useState<AlcancePorRedIA[]>([]);
+  const [totalAlcance, setTotalAlcance] = useState<{ personas_min: number; personas_max: number }>({ personas_min: 0, personas_max: 0 });
 
   // Publicación
   const [publishing, setPublishing] = useState(false);
@@ -201,25 +203,37 @@ function CabinaDifusion() {
       setCopyPorRed(newCopyPorRed);
 
       // 4. Calcular análisis de impacto y alcance proyectado
-      const alcanceGeo: PostAlcance = {
-        tipo: alcanceNivel === "global" ? "global" : "local",
-        nivel: alcanceNivel === "global" ? "global" : alcanceNivel === "nacional" ? "nacional" : alcanceNivel === "estatal" ? "estado" : "municipios",
+      const alcanceGeo = {
+        tipo: (alcanceNivel === "global" ? "global" : "local") as "global" | "local",
+        nivel: (alcanceNivel === "global" ? "global" : alcanceNivel === "nacional" ? "nacional" : alcanceNivel === "estatal" ? "estado" : "municipios") as "global" | "nacional" | "estado" | "municipios",
         pais: "México",
         estado: user.ciudad ? undefined : "General",
         ciudad: user.ciudad || undefined,
       };
 
-      const reach = await analizarAlcanceIA({
-        copy: baseCaption,
-        nicho,
-        redes: targetRedes,
+      const reachRes = analizarAlcanceIA({
         alcance: alcanceGeo,
+        redes: targetRedes,
+        industria: nicho,
+        source: meta,
+        copyPorRed: newCopyPorRed,
+        fuente: "link_ia",
       });
-      setReachAnalysis(reach);
 
-      toast.success("¡Enlace importado y adaptado automáticamente con IA!", {
-        description: `Nicho: ${nicho} · Alcance estimado: ${formatAlcanceNumero(reach.total_personas_min)} a ${formatAlcanceNumero(reach.total_personas_max)} personas.`,
-      });
+      if (reachRes) {
+        setReachAnalysis(reachRes.analysis);
+        setReachPorRed(reachRes.por_red);
+        const total = totalAlcanceIA(reachRes.por_red);
+        setTotalAlcance(total);
+
+        toast.success("¡Enlace importado y adaptado automáticamente con IA!", {
+          description: `Nicho: ${reachRes.analysis.nicho_label} · Alcance estimado: ${formatAlcanceNumero(total.personas_min)} a ${formatAlcanceNumero(total.personas_max)} personas.`,
+        });
+      } else {
+        toast.success("¡Enlace importado y adaptado automáticamente con IA!", {
+          description: `Nicho: ${nicho}`,
+        });
+      }
     } catch (err) {
       toast.error((err as Error).message || "Error al procesar el enlace");
     } finally {
@@ -346,22 +360,14 @@ function CabinaDifusion() {
       mergeHashtagMaps(
         hashtagsFromVariants(variants, selectedRedes),
         hashtagsFromAlcanceIA(
-          reachAnalysis?.canales.map((c) => ({
-            red: c.red as Red,
-            afinidad_nicho: 85,
-            personas_min: c.alcance_min,
-            personas_max: c.alcance_max,
-            impresiones_min: c.alcance_min * 2,
-            impresiones_max: c.alcance_max * 2,
-            mercados_red: [detectedNicho || "General"],
-          })) ?? [],
+          reachPorRed,
           selectedRedes,
           detectedNicho || "General",
           copy,
         ),
       ),
     ).slice(0, 10);
-  }, [variants, selectedRedes, reachAnalysis, detectedNicho, copy]);
+  }, [variants, selectedRedes, reachPorRed, detectedNicho, copy]);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -557,7 +563,7 @@ function CabinaDifusion() {
                     <Users className="w-3 h-3 text-blue-600" /> Personas Alcanzadas
                   </div>
                   <div className="text-base font-black text-blue-900 mt-0.5">
-                    {formatAlcanceNumero(reachAnalysis.total_personas_min)} – {formatAlcanceNumero(reachAnalysis.total_personas_max)}
+                    {formatAlcanceNumero(totalAlcance.personas_min)} – {formatAlcanceNumero(totalAlcance.personas_max)}
                   </div>
                 </div>
 
