@@ -10,6 +10,7 @@ import {
   pickCaption,
 } from "./parseOgTags";
 import { sanitizeMediaUrl } from "./mediaUrl";
+import { getSessionToken } from "@/lib/production/session";
 
 /** Catálogo demo — en producción viene de Graph API */
 const KNOWN_POST_MEDIA: { match: RegExp; imageUrl: string; pageName?: string }[] = [
@@ -127,6 +128,9 @@ export async function fetchMetadataFromLink(
         data: {
           url: normalized,
           pageName: options.facebookPageName,
+          // La sesión manda: el servidor descifra y usa el token REAL de Facebook.
+          // accessToken (placeholder del cliente) solo queda para el modo demo.
+          token: getSessionToken() ?? undefined,
           accessToken: options.facebookToken,
         },
       });
