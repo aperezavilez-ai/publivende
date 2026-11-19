@@ -1,31 +1,52 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+const USER_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+  "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+];
+
 export const proxyExternalMedia = createServerFn({ method: "POST" })
   .inputValidator(z.object({ url: z.string().url() }))
   .handler(async ({ data }) => {
-    try {
-      const res = await fetch(data.url, {
-        redirect: "follow",
-        headers: {
-          "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
-          Accept: "image/*,*/*",
-          Referer: "https://www.facebook.com/",
-        },
-      });
-      if (!res.ok) return { ok: false as const, error: `HTTP ${res.status}` };
+    let lastError = "Error desconocido";
 
-      const type = res.headers.get("content-type") ?? "image/jpeg";
-      if (!type.startsWith("image/") && !type.startsWith("video/")) {
-        return { ok: false as const, error: "No es imagen ni video" };
+    for (const ua of USER_AGENTS) {
+      try {
+        const res = await fetch(data.url, {
+          redirect: "follow",
+          headers: {
+            "User-Agent": ua,
+            Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+            "Accept-Language": "es-MX,es;q=0.9,en;q=0.8",
+          },
+        });
+
+        if (!res.ok) {
+          lastError = `HTTP ${res.status}`;
+          continue;
+        }
+
+        const type = res.headers.get("content-type")?.split(";")[0]?.trim() ?? "image/jpeg";
+        if (!type.startsWith("image/") && !type.startsWith("video/")) {
+          lastError = `Tipo no válido: ${type}`;
+          continue;
+        }
+
+        const buf = Buffer.from(await res.arrayBuffer());
+        if (buf.length < 50) {
+          lastError = "Archivo demasiado pequeño";
+          continue;
+        }
+
+        const base64 = buf.toString("base64");
+        return { ok: true as const, dataUrl: `data:${type};base64,${base64}` };
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : "Error de red";
       }
-
-      const buf = Buffer.from(await res.arrayBuffer());
-      if (buf.length < 500) return { ok: false as const, error: "Archivo demasiado pequeño" };
-
-      const base64 = buf.toString("base64");
-      return { ok: true as const, dataUrl: `data:${type};base64,${base64}` };
-    } catch (err) {
-      return { ok: false as const, error: err instanceof Error ? err.message : "Error de red" };
     }
+
+    return { ok: false as const, error: lastError };
   });
+
