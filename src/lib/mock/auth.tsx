@@ -85,9 +85,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (token) {
           const session = await authGetSession({ data: { token } });
           if (session.ok) {
-            await hydrateLocalFromServer(token);
+            try {
+              await hydrateLocalFromServer(token);
+            } catch (err) {
+              console.warn("Error hydrating user data:", err);
+            }
             const db = loadDB();
-            const idx = db.profiles.findIndex((p) => p.id === session.user.id);
+            const idx = db.profiles.findIndex(
+              (p) => p.id === session.user.id || p.email.toLowerCase() === session.user.email.toLowerCase()
+            );
             if (idx >= 0) db.profiles[idx] = session.user;
             else db.profiles.push(session.user);
             db.session_user_id = session.user.id;
@@ -195,9 +201,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await authSignIn({ data: { email, password } });
         if (res.ok) {
           setSessionToken(res.token);
-          await hydrateLocalFromServer(res.token);
+          try {
+            await hydrateLocalFromServer(res.token);
+          } catch (err) {
+            console.warn("Error hydrating user data:", err);
+          }
           const db = loadDB();
-          const idx = db.profiles.findIndex((p) => p.id === res.user.id);
+          const idx = db.profiles.findIndex(
+            (p) => p.id === res.user.id || p.email.toLowerCase() === res.user.email.toLowerCase()
+          );
           if (idx >= 0) db.profiles[idx] = res.user;
           else db.profiles.push(res.user);
           db.session_user_id = res.user.id;

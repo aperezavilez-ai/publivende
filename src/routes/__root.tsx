@@ -8,7 +8,7 @@ import { AuthProvider } from "@/lib/mock/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { registerPWA } from "@/lib/registerPWA";
 
-const SITE_URL = "https://www.publivende.mx";
+const SITE_URL = "https://publivende.mx";
 
 const organizationJsonLd = {
   "@context": "https://schema.org",

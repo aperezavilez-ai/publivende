@@ -28,4 +28,4 @@ Disallow: /connect/
 Disallow: /p/
 Disallow: /tienda/
 
-Sitemap: https://www.publivende.mx/sitemap.xml
+Sitemap: https://publivende.mx/sitemap.xml

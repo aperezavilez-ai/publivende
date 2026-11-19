@@ -57,11 +57,19 @@ function AuthPage() {
       if (mode === "login") {
         await signIn(form.email, form.password);
         toast.success("¡Bienvenido de vuelta!");
-        navigate({ to: "/dashboard" });
+        if (typeof window !== "undefined") {
+          window.location.href = "/dashboard";
+        } else {
+          navigate({ to: "/dashboard" });
+        }
       } else {
         const profile = await signUp({ ...form, plan: selectedPlan });
         toast.success(`Cuenta creada con plan ${planLabel(profile.plan)} 🎉`);
-        navigate({ to: "/dashboard" });
+        if (typeof window !== "undefined") {
+          window.location.href = "/dashboard";
+        } else {
+          navigate({ to: "/dashboard" });
+        }
       }
     } catch (err) {
       toast.error((err as Error).message);
