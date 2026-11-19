@@ -12,23 +12,15 @@ import { useOnline } from "@/hooks/useOnline";
 import { PubliVendeMark } from "@/components/PubliVendeLogo";
 import { isProductionModeClient } from "@/lib/production/session";
 
-// Real v2 — Panel de 6 secciones alrededor de la fuerza del producto:
-// distribución de contenido por nichos controlada por IA.
+// Menú simplificado: Cabina única de difusión y gestión de redes/saldo
 const CLIENT_NAV = [
-  { to: "/dashboard", label: "Inicio — Coordinadora", icon: LayoutDashboard, color: "#1d4ed8", tint: "#DBEAFE" },
-  { to: "/distribuir", label: "Distribuir", icon: Radio, color: "#be123c", tint: "#FFE4E6" },
-  { to: "/calendario", label: "Calendario", icon: Calendar, color: "#0284c7", tint: "#E0F2FE" },
-  { to: "/resultados", label: "Resultados", icon: BarChart3, color: "#059669", tint: "#D1FAE5" },
-  { to: "/biblioteca", label: "Biblioteca", icon: FolderOpen, color: "#b45309", tint: "#FEF3C7" },
-  { to: "/configuracion", label: "Configuración", icon: Settings, color: "#475569", tint: "#F1F5F9" },
+  { to: "/dashboard", label: "Cabina de Difusión", icon: Radio, color: "#1d4ed8", tint: "#DBEAFE" },
+  { to: "/configuracion", label: "Mis Redes & Saldo", icon: Settings, color: "#059669", tint: "#D1FAE5" },
 ] as const;
 
 const MOBILE_TABS = [
-  { to: "/dashboard", label: "Inicio", icon: LayoutDashboard, color: "#1d4ed8", tint: "#DBEAFE" },
-  { to: "/distribuir", label: "Distribuir", icon: Radio, color: "#be123c", tint: "#FFE4E6" },
-  { to: "/calendario", label: "Calendario", icon: Calendar, color: "#0284c7", tint: "#E0F2FE" },
-  { to: "/resultados", label: "Resultados", icon: BarChart3, color: "#059669", tint: "#D1FAE5" },
-  { to: "/configuracion", label: "Ajustes", icon: Settings, color: "#475569", tint: "#F1F5F9" },
+  { to: "/dashboard", label: "Cabina", icon: Radio, color: "#1d4ed8", tint: "#DBEAFE" },
+  { to: "/configuracion", label: "Redes & Saldo", icon: Settings, color: "#059669", tint: "#D1FAE5" },
 ] as const;
 
 function NavLink({
@@ -174,20 +166,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 )}
               >
                 <Rocket className="w-4 h-4 shrink-0 text-amber-600" />
-                <span>Red PubliVende</span>
-              </Link>
-              <Link
-                to="/plataforma"
-                onClick={closeMenu}
-                className={cn(
-                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
-                  isActive("/plataforma")
-                    ? "bg-blue-50 text-blue-800 border border-blue-200"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
-                )}
-              >
-                <Layers className="w-4 h-4 shrink-0 text-sky-600" />
-                <span>Plataforma API</span>
+                <span>Panel Super Admin</span>
               </Link>
             </>
           )}
