@@ -71,16 +71,16 @@ function AuthPage() {
   }
 
   if (!loading && user) {
-    return <div className="min-h-screen flex items-center justify-center text-white/80">Redirigiendo al panel…</div>;
+    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Redirigiendo al panel…</div>;
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-white">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-between mb-6">
-          <PubliVendeLogo to="/" size="lg" showText textClassName="text-white text-xl" />
+          <PubliVendeLogo to="/" size="lg" showText textClassName="text-foreground text-xl" />
           <a href="/#precios">
-            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 gap-1">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground gap-1">
               <ArrowLeft className="w-4 h-4" />
               Planes
             </Button>
