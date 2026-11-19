@@ -423,7 +423,7 @@ function Calendario() {
                   className={`flex items-center gap-2 p-2 rounded-lg border text-left text-xs col-span-2 ${form.whatsapp ? "border-green-500 bg-green-50" : "border-border"}`}
                 >
                   <MessageCircle className="w-3.5 h-3.5 text-green-600" />
-                  WhatsApp CRM ({waContactCount} contactos)
+                  WhatsApp ({waContactCount} contactos)
                 </button>
               </div>
             </div>

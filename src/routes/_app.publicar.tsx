@@ -1126,11 +1126,11 @@ function Publicar() {
               >
                 <MessageCircle className="w-4 h-4 text-green-600" />
                 <div className="flex-1">
-                  <div className="font-medium">WhatsApp CRM</div>
+                  <div className="font-medium">WhatsApp</div>
                   <div className="text-[10px] text-muted-foreground">
                     {user?.whatsapp_configurado
                       ? `${waContactCount} contacto${waContactCount !== 1 ? "s" : ""} · envía link de la publicación`
-                      : "Configura tu número · broadcast a contactos"}
+                      : "Configura tu número · difusión a contactos"}
                   </div>
                 </div>
               </button>
@@ -1147,7 +1147,7 @@ function Publicar() {
               {programar && <Input type="datetime-local" value={fecha} onChange={(e) => setFecha(e.target.value)} />}
               {programar && whatsappSelected && (
                 <p className="text-[11px] text-muted-foreground pt-2 border-t">
-                  WhatsApp CRM se enviará automáticamente a la hora programada si está seleccionado arriba.
+                  WhatsApp se enviará automáticamente a la hora programada si está seleccionado arriba.
                 </p>
               )}
             </Card>

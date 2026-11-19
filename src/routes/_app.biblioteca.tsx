@@ -170,7 +170,7 @@ function Biblio() {
                 onDelete={() => eliminarPost(post.id)}
                 onBroadcast={async () => {
                   if (!user) return;
-                  if (waContactCount === 0) return toast.error("No tienes contactos en WhatsApp CRM");
+                  if (waContactCount === 0) return toast.error("No tienes contactos en WhatsApp");
                   const { sent } = await broadcastPostLink(user.id, post.id);
                   toast.success(`Link enviado a ${sent} contacto${sent > 1 ? "s" : ""}`);
                 }}

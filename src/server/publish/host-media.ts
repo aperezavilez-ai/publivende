@@ -3,6 +3,7 @@ import { resolveAppBaseUrl } from "@/lib/app-url";
 import { getDb, schema } from "@/server/db";
 
 const BOT_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
   "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
   "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
 ];

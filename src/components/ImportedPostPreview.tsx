@@ -3,8 +3,7 @@ import { Facebook, Instagram, Music2, Youtube, Heart, MessageCircle, Share2, Mor
 import type { Red, TipoPost } from "@/lib/mock/types";
 import type { SourcePlatform } from "@/services/import/detectPlatform";
 import { RED_COLORS, RED_LABELS } from "@/lib/redes";
-import { needsMediaProxy, sanitizeMediaUrl } from "@/services/import/mediaUrl";
-import { proxyExternalMedia } from "@/lib/api/media-proxy.functions";
+import { sanitizeMediaUrl } from "@/services/import/mediaUrl";
 
 const PLATFORM_ICONS = {
   facebook: Facebook,
@@ -54,40 +53,11 @@ export function ImportedPostPreview({
   const color = RED_COLORS[platform as Red] ?? "#1877F2";
   const [displayUrl, setDisplayUrl] = useState(() => sanitizeMediaUrl(mediaUrl));
   const [mediaFailed, setMediaFailed] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const clean = sanitizeMediaUrl(mediaUrl);
     setMediaFailed(false);
-    if (!clean) {
-      setDisplayUrl("");
-      return;
-    }
-    if (!needsMediaProxy(clean)) {
-      setDisplayUrl(clean);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    proxyExternalMedia({ data: { url: clean } })
-      .then((res) => {
-        if (cancelled) return;
-        if (res.ok) setDisplayUrl(res.dataUrl);
-        else {
-          setDisplayUrl("");
-          setMediaFailed(true);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setDisplayUrl("");
-          setMediaFailed(true);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
+    setDisplayUrl(clean);
   }, [mediaUrl]);
 
   const showMedia = !!displayUrl && !mediaFailed;
@@ -112,26 +82,34 @@ export function ImportedPostPreview({
         <MoreHorizontal className="w-4 h-4 text-muted-foreground shrink-0" />
       </div>
 
-      {loading && (
-        <div className={`${compact ? "h-40" : "aspect-video"} bg-muted animate-pulse flex items-center justify-center text-xs text-muted-foreground`}>
-          Cargando media del post…
-        </div>
-      )}
-
-      {!loading && showMedia && mediaType === "video" && (
+      {showMedia && mediaType === "video" && (
         <video src={displayUrl} controls className={`w-full ${compact ? "max-h-48" : ""} object-cover bg-black`} />
       )}
 
-      {!loading && showMedia && mediaType !== "video" && (
+      {showMedia && mediaType !== "video" && (
         <img
           src={displayUrl}
           alt=""
           className={`w-full ${compact ? "max-h-56" : "aspect-video"} object-cover bg-muted`}
-          onError={() => setMediaFailed(true)}
+          onError={() => {
+            console.warn("Error renderizando imagen de vista previa:", displayUrl);
+            setMediaFailed(true);
+          }}
         />
       )}
 
-      {!loading && !showMedia && hasLinkPreview && (
+      {mediaFailed && (
+        <div className="p-4 border-b bg-amber-50/70 dark:bg-amber-950/20 text-center space-y-1">
+          <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+            La imagen del post no pudo cargarse directamente desde el enlace
+          </p>
+          <p className="text-[11px] text-amber-700 dark:text-amber-400">
+            Puedes subir la imagen manualmente abajo para que se incluya al publicar en tus redes.
+          </p>
+        </div>
+      )}
+
+      {!showMedia && !mediaFailed && hasLinkPreview && (
         <div className={`border-b bg-muted/30 ${compact ? "" : ""}`}>
           <div className={`${compact ? "h-28" : "aspect-[1.91/1]"} bg-muted/60 flex items-center justify-center border-b`}>
             <Link2 className={`${compact ? "w-8 h-8" : "w-12 h-12"} text-muted-foreground/50`} />
@@ -158,7 +136,7 @@ export function ImportedPostPreview({
         </div>
       )}
 
-      {!loading && !showMedia && !hasLinkPreview && (
+      {!showMedia && !mediaFailed && !hasLinkPreview && (
         <div
           className={`${compact ? "p-4" : "p-6 aspect-video flex flex-col justify-center"} bg-muted/40 text-foreground`}
         >
