@@ -2,12 +2,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { type ReactNode, useEffect, useState } from "react";
+import "../styles.css";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/mock/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { registerPWA } from "@/lib/registerPWA";
 
-const SITE_URL = "https://www.publivende.mx";
+const SITE_URL = "https://publivende.mx";
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
@@ -57,6 +58,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         type: "application/ld+json",
         children: JSON.stringify(organizationJsonLd),
       },
+      {
+        children: `if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    for (var i = 0; i < regs.length; i++) { regs[i].unregister(); }
+  });
+  if (typeof caches !== 'undefined') {
+    caches.keys().then(function(keys) {
+      for (var i = 0; i < keys.length; i++) { caches.delete(keys[i]); }
+    });
+  }
+}`,
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -73,15 +86,12 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 /**
- * Dominio canónico ÚNICO. La sesión vive en el almacenamiento del dominio
- * donde entraste: si el usuario entra por un alias (publivende.mx sin www
- * o publivende.vercel.app), los regresos de OAuth (Meta, Google, TikTok) y
- * de Mercado Pago caen en www.publivende.mx y la app «pierde» su sesión.
- * Aquí toda carga de página en un alias se mueve al dominio oficial con la
- * misma ruta; las llamadas API/cron no pasan por este componente.
+ * Dominio canónico ÚNICO: publivende.mx
+ * Si un usuario entra por www.publivende.mx o por el subdominio de vercel,
+ * se redirige al dominio oficial para compartir la sesión y evitar sesiones rotas en OAuth.
  */
-const CANONICAL_HOST = "www.publivende.mx";
-const ALIAS_HOSTS = new Set(["publivende.mx", "publivende.vercel.app"]);
+const CANONICAL_HOST = "publivende.mx";
+const ALIAS_HOSTS = new Set(["www.publivende.mx", "publivende.vercel.app"]);
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
