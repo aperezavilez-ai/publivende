@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { type ReactNode, useEffect } from "react";
+import "../styles.css";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/mock/auth";
 import { Toaster } from "@/components/ui/sonner";
@@ -56,6 +57,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         type: "application/ld+json",
         children: JSON.stringify(organizationJsonLd),
+      },
+      {
+        children: `if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    for (var i = 0; i < regs.length; i++) { regs[i].unregister(); }
+  });
+  if (typeof caches !== 'undefined') {
+    caches.keys().then(function(keys) {
+      for (var i = 0; i < keys.length; i++) { caches.delete(keys[i]); }
+    });
+  }
+}`,
       },
     ],
   }),

@@ -1,33 +1,16 @@
-// Registro de service worker con guardas para Lovable preview / dev / iframes.
+// Desactiva service workers y limpia caches para evitar estilos rotos y datos obsoletos.
 export function registerPWA() {
-  if (typeof window === "undefined") return;
-  if (!("serviceWorker" in navigator)) return;
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
-  const url = new URL(window.location.href);
-  const host = window.location.hostname;
-  const inIframe = window.self !== window.top;
-  const isDev = !import.meta.env.PROD;
-  const isPreviewHost =
-    host.startsWith("id-preview--") ||
-    host.startsWith("preview--") ||
-    host === "lovableproject.com" || host.endsWith(".lovableproject.com") ||
-    host === "lovableproject-dev.com" || host.endsWith(".lovableproject-dev.com") ||
-    host === "beta.lovable.dev" || host.endsWith(".beta.lovable.dev");
-  const killSwitch = url.searchParams.get("sw") === "off";
-
-  const shouldRefuse = isDev || inIframe || isPreviewHost || killSwitch;
-
-  if (shouldRefuse) {
-    // Limpiar registros previos por si el usuario ya instaló el SW antes.
+  try {
     navigator.serviceWorker.getRegistrations().then((regs) => {
-      regs.forEach((r) => {
-        if (r.active?.scriptURL.endsWith("/sw.js")) r.unregister();
-      });
+      regs.forEach((r) => r.unregister());
     }).catch(() => {});
-    return;
-  }
 
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
-  });
+    if (typeof caches !== "undefined") {
+      caches.keys().then((keys) => {
+        keys.forEach((k) => caches.delete(k));
+      }).catch(() => {});
+    }
+  } catch {}
 }
