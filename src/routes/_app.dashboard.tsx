@@ -216,7 +216,7 @@ function Inicio() {
             );
           })}
           <Button asChild variant="ghost" size="sm" className="gap-1.5 ml-auto">
-            <Link to="/publicar"><PlusSquare className="w-4 h-4" /> Crear publicación manual</Link>
+            <Link to="/publicar"><PlusSquare className="w-4 h-4" /> Crear publicación</Link>
           </Button>
         </div>
       </Card>

@@ -96,7 +96,7 @@ function Publicar() {
   const assets = useDB((db) => db.media_assets.filter((a) => a.user_id === user?.id));
   const db = useDB((d) => d);
 
-  const [publishMode, setPublishMode] = useState<PublishMode>("ai_campaign");
+  const [publishMode, setPublishMode] = useState<PublishMode>("link");
   const [campaignPrompt, setCampaignPrompt] = useState("");
   const [campaignTheme, setCampaignTheme] = useState<"food" | "fashion" | "service" | "tech" | "vibrant">("vibrant");
   const [campaignLoading, setCampaignLoading] = useState(false);
@@ -277,6 +277,19 @@ function Publicar() {
   async function generarCampanaConIA(overridePrompt?: string) {
     if (!user) return;
     const promptToUse = (overridePrompt ?? campaignPrompt).trim();
+    // REGLA DE PRODUCTO: si el usuario pegó un LINK, manda el post ORIGINAL:
+    // se importa su imagen y su texto (flujo «Desde link») y la IA solo adapta
+    // los copies. Nunca se inventa una campaña/flyer que sustituya al link.
+    if (promptToUse && !isFacebookAdCode(promptToUse)) {
+      const parsedLink = normalizeImportInput(promptToUse);
+      if (parsedLink?.url) {
+        setPublishMode("link");
+        setSourceUrl(parsedLink.url);
+        toast.success("Detecté un link: importo el post original. Tu imagen y tu texto se respetan; la IA solo adapta los copies.");
+        await importarDesdeUrl(parsedLink.url);
+        return;
+      }
+    }
     setCampaignLoading(true);
     setCampaignStep(1); // Paso 1: Análisis de negocio e identificación de nicho
     try {
@@ -367,7 +380,10 @@ function Publicar() {
     }
     const parsed = normalizeImportInput(raw);
     if (!parsed?.url) return toast.error("Link no reconocido. Usa FB, IG, TikTok o YouTube.");
-    const url = parsed.url;
+    await importarDesdeUrl(parsed.url);
+  }
+
+  async function importarDesdeUrl(url: string) {
     setImportLoading(true);
     try {
       const meta = await fetchMetadataFromLink(url, {
@@ -742,28 +758,6 @@ function Publicar() {
             Después puedes impulsarlo en la red oficial PubliVende de tu nicho o con Meta Ads.
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex bg-card border rounded-lg p-1 text-sm">
-            <button
-              onClick={() => { setPublishMode("ai_campaign"); setIaOpen(false); }}
-              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 font-medium transition ${publishMode === "ai_campaign" ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <Sparkles className="w-4 h-4 text-amber-300" /> Crear con IA
-            </button>
-            <button
-              onClick={() => { setPublishMode("link"); setIaOpen(false); }}
-              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition ${publishMode === "link" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <Link2 className="w-4 h-4" /> Desde link
-            </button>
-            <button
-              onClick={() => { setPublishMode("manual"); setReachFuente(null); setCopyPorRed({}); setVariants({}); }}
-              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition ${publishMode === "manual" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <PenLine className="w-4 h-4" /> Manual
-            </button>
-          </div>
-        </div>
       </div>
 
       {postsEsteMes === 0 && (
@@ -772,140 +766,9 @@ function Publicar() {
           <ol className="grid sm:grid-cols-4 gap-2 text-xs text-muted-foreground">
             <li className="rounded-md border bg-background p-2"><b className="text-foreground">1. Redes.</b> Conecta Facebook o Instagram en <Link to="/configuracion" className="underline">Configuración</Link>.</li>
             <li className="rounded-md border bg-background p-2"><b className="text-foreground">2. Alcance.</b> Nacional, todo un estado, o municipios sueltos.</li>
-            <li className="rounded-md border bg-background p-2"><b className="text-foreground">3. Contenido.</b> Foto + texto, o campaña con IA.</li>
+            <li className="rounded-md border bg-background p-2"><b className="text-foreground">3. Contenido.</b> Pega el link de tu post: la IA lo adapta a cada red.</li>
             <li className="rounded-md border bg-background p-2"><b className="text-foreground">4. Publicar.</b> En Biblioteca verás si salió en cada red.</li>
           </ol>
-        </Card>
-      )}
-
-      {/* Hero Card de Campaña con IA */}
-      {publishMode === "ai_campaign" && (
-        <Card className="p-5 border-primary/40 bg-slate-50 shadow-sm space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-            <div>
-              <Label className="font-bold text-base flex items-center gap-2 text-primary">
-                <Sparkles className="w-5 h-5 text-amber-500" /> Creador Inteligente de Publicidad & Campañas
-              </Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                La IA de PubliVende identifica tu negocio, diseña tu flyer publicitario profesional y genera copies para Facebook, Instagram, TikTok y YouTube.
-              </p>
-            </div>
-            <Badge variant="outline" className="gap-1 border-primary/50 bg-primary/5 text-primary text-xs">
-              <Sparkles className="w-3.5 h-3.5 text-primary" /> Motor de IA activo
-            </Badge>
-          </div>
-
-          {/* Tarjeta de Reconocimiento del Negocio */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-card/80 p-3 rounded-lg border text-xs">
-            <div>
-              <span className="text-[10px] text-muted-foreground block font-medium">NEGOCIO</span>
-              <span className="font-semibold text-foreground truncate block">{user?.nombre_negocio || user?.nombre || "Mi Negocio"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-muted-foreground block font-medium">GIRO / NICHO</span>
-              <span className="font-semibold text-foreground truncate block">{detectedNicho || user?.industria || "Comercio Local"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-muted-foreground block font-medium">CIUDAD / ALCANCE</span>
-              <span className="font-semibold text-foreground truncate block">{user?.ciudad || "México"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-muted-foreground block font-medium">WHATSAPP CTA</span>
-              <span className="font-semibold text-foreground truncate block">{user?.celular ? `${user.codigo_pais ?? "+52"} ${user.celular}` : "Configurar"}</span>
-            </div>
-          </div>
-
-          {/* Sugerencias Rápidas de 1 Clic */}
-          <div className="space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Sugerencias rápidas recomendadas por la IA:</span>
-            <div className="flex flex-wrap gap-2">
-              {[
-                "🔥 Promo 2x1 este fin de semana",
-                "⭐ Descuento 20% por tiempo limitado",
-                "⚡ Nuevo menú / catálogo disponible",
-                "🎯 Agenda tu cita / cotización sin costo",
-              ].map((sug) => (
-                <button
-                  key={sug}
-                  type="button"
-                  onClick={() => { setCampaignPrompt(sug); void generarCampanaConIA(sug); }}
-                  className="text-xs px-2.5 py-1 bg-card hover:bg-primary/10 border hover:border-primary/40 rounded-full text-foreground transition flex items-center gap-1 active:scale-95"
-                >
-                  {sug}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Input de idea personalizada + Selector de Estilo */}
-          <div className="grid sm:grid-cols-3 gap-3 pt-1">
-            <div className="sm:col-span-2 space-y-1">
-              <Input
-                placeholder="¿Qué deseas promocionar hoy? (ej. Tacos al pastor 2x1 este viernes con bebida gratis)"
-                value={campaignPrompt}
-                onChange={(e) => setCampaignPrompt(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !campaignLoading && void generarCampanaConIA()}
-                className="h-10"
-              />
-            </div>
-            <div className="space-y-1">
-              <Select value={campaignTheme} onValueChange={(v) => void cambiarTemaFlyer(v as any)}>
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Estilo del Flyer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="food">🍔 Gastronomía & Comida</SelectItem>
-                  <SelectItem value="fashion">👗 Moda & Belleza</SelectItem>
-                  <SelectItem value="service">💼 Servicios & Salud</SelectItem>
-                  <SelectItem value="tech">💻 Tecnología & Cursos</SelectItem>
-                  <SelectItem value="vibrant">⚡ Alto Impacto Vibrante</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Pasos y Botón de Generación */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className={`flex items-center gap-1 ${campaignStep >= 1 ? "text-primary font-medium" : ""}`}>
-                <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px]">1</span> Nicho
-              </span>
-              <span>→</span>
-              <span className={`flex items-center gap-1 ${campaignStep >= 2 ? "text-primary font-medium" : ""}`}>
-                <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px]">2</span> Flyer
-              </span>
-              <span>→</span>
-              <span className={`flex items-center gap-1 ${campaignStep >= 3 ? "text-primary font-medium" : ""}`}>
-                <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px]">3</span> Copies
-              </span>
-            </div>
-
-            <Button
-              onClick={() => void generarCampanaConIA()}
-              disabled={campaignLoading}
-              className="bg-primary border-0 text-white gap-2 w-full sm:w-auto h-10 px-5 shadow"
-            >
-              <Sparkles className="w-4 h-4" />
-              {campaignLoading
-                ? (campaignStep === 1 ? "Analizando negocio y nicho…" : campaignStep === 2 ? "Diseñando flyer publicitario…" : "Adaptando copies multi-red…")
-                : (media ? "✨ Regenerar Campaña con IA" : "✨ Generar Campaña y Flyer con IA")}
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {disconnected.length > 0 && redes.some((r) => disconnected.includes(r)) && (
-        <Card className="p-4 border-amber-300 bg-amber-50/80 dark:bg-amber-950/20">
-          <div className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-100">
-            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium">Conecta tus redes para publicar</p>
-              <p className="text-xs mt-1 text-amber-800/90 dark:text-amber-200/90">
-                Falta conectar {disconnected.map((r) => RED_LABELS[r]).join(", ")}.{" "}
-                <Link to="/configuracion" className="underline font-medium">Ir a Configuración</Link>
-              </p>
-            </div>
-          </div>
         </Card>
       )}
 
@@ -1008,78 +871,7 @@ function Publicar() {
 
       <div className="grid lg:grid-cols-2 gap-5">
         <div className="space-y-4">
-          {publishMode === "ai_campaign" ? (
-            <Card className="p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="font-semibold flex items-center gap-2">
-                  <Palette className="w-4 h-4 text-primary" />
-                  Flyer Publicitario Generado (1080x1080)
-                </Label>
-                {media && (
-                  <Badge variant="outline" className="text-green-700 bg-green-50 border-green-300 text-[10px] gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> Alta Resolución
-                  </Badge>
-                )}
-              </div>
-
-              {media ? (
-                <div className="space-y-3">
-                  <div className="relative rounded-xl overflow-hidden border shadow-sm aspect-square bg-slate-900 group">
-                    <img src={media} alt="Flyer Publicitario" className="w-full h-full object-contain" />
-                    <div className="absolute bottom-2 right-2 flex gap-1.5 opacity-90 group-hover:opacity-100 transition">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-8 text-xs bg-white/90 backdrop-blur text-slate-900 shadow"
-                        onClick={() => {
-                          const a = document.createElement("a");
-                          a.href = media;
-                          a.download = `flyer-${user?.nombre_negocio || "publivende"}.png`;
-                          a.click();
-                          toast.success("Flyer descargado");
-                        }}
-                      >
-                        <Download className="w-3.5 h-3.5 mr-1" /> Descargar
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 p-2.5 bg-muted/50 rounded-lg text-xs">
-                    <span className="text-muted-foreground">Estilo visual:</span>
-                    <div className="flex gap-1 flex-wrap">
-                      {(["food", "fashion", "service", "tech", "vibrant"] as const).map((t) => (
-                        <button
-                          key={t}
-                          onClick={() => void cambiarTemaFlyer(t)}
-                          className={`px-2 py-0.5 rounded text-[11px] capitalize border ${campaignTheme === t ? "bg-primary text-white border-primary" : "bg-card text-muted-foreground hover:bg-muted"}`}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-primary/30 rounded-xl p-8 text-center bg-primary/5 space-y-3">
-                  <Sparkles className="w-10 h-10 mx-auto text-primary animate-pulse" />
-                  <div>
-                    <p className="font-semibold text-sm">Tu Flyer Publicitario se generará aquí</p>
-                    <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                      Elige una sugerencia o escribe qué deseas promocionar arriba y presiona <b>Generar Campaña con IA</b>.
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => void generarCampanaConIA()}
-                    disabled={campaignLoading}
-                    className="bg-primary border-0 text-white gap-1.5"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" /> Generar con 1 clic
-                  </Button>
-                </div>
-              )}
-            </Card>
-          ) : publishMode === "link" ? (
+          {publishMode === "link" && (
             <Card className="p-5">
               <Label className="font-semibold mb-3 block flex items-center gap-2">
                 <Link2 className="w-4 h-4 text-primary" />
@@ -1117,37 +909,7 @@ function Publicar() {
                 </div>
               )}
             </Card>
-          ) : (
-            <Card className="p-5">
-              <Label className="font-semibold mb-3 block">Contenido</Label>
-              {media ? (
-                <div className="relative">
-                  <img src={media} alt="" className="w-full aspect-square object-cover rounded-lg" />
-                  <Button size="sm" variant="secondary" onClick={() => setMedia("")} className="absolute top-2 right-2">Cambiar</Button>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                  <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground mt-2">Sube imagen o video</p>
-                  <div className="flex gap-2 justify-center mt-3">
-                    <Button asChild size="sm" variant="outline"><label className="cursor-pointer"><input type="file" accept="image/*,video/*" className="hidden" onChange={(e) => onFile(e, setMedia)} />Subir archivo</label></Button>
-                    <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-                      <DialogTrigger asChild><Button size="sm" variant="outline"><FolderOpen className="w-4 h-4 mr-1" />Biblioteca</Button></DialogTrigger>
-                      <DialogContent><DialogHeader><DialogTitle>Tu biblioteca</DialogTitle></DialogHeader>
-                        <div className="grid grid-cols-3 gap-2 max-h-96 overflow-y-auto">
-                          {assets.length === 0 && <p className="col-span-3 text-sm text-muted-foreground py-8 text-center">Tu biblioteca está vacía.</p>}
-                          {assets.map((a) => (
-                            <button key={a.id} onClick={() => { setMedia(a.url); setPickerOpen(false); }}>
-                              <img src={a.url} alt="" className="aspect-square object-cover rounded-md hover:ring-2 ring-primary" />
-                            </button>
-                          ))}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </div>
-              )}
-            </Card>
+          
           )}
 
           {publishMode === "link" && sourceMeta?.needsManualInput && !linkAdaptado && (
@@ -1171,17 +933,9 @@ function Publicar() {
             </Card>
           )}
 
-          {publishMode === "ai_campaign" && Object.keys(copyPorRed).length === 0 && (
-            <Card className="p-6 text-center border-dashed border-primary/30 bg-muted/20 space-y-2">
-              <Sparkles className="w-8 h-8 mx-auto text-primary/60 animate-bounce" />
-              <p className="font-semibold text-sm">Copies Multi-Red por IA</p>
-              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                Pulsa <b>Generar Campaña con IA</b> arriba para crear los copies optimizados con ganchos y hashtags para Facebook, Instagram, TikTok y YouTube.
-              </p>
-            </Card>
-          )}
+          
 
-          {(publishMode === "link" && linkAdaptado) || (publishMode === "ai_campaign" && Object.keys(copyPorRed).length > 0) ? (
+          {(publishMode === "link" && linkAdaptado) ? (
             <Card className="p-5">
               <div className="flex items-center justify-between mb-3">
                 <Label className="font-semibold block">Copy adaptado por red con IA</Label>
@@ -1237,45 +991,6 @@ function Publicar() {
                   </TabsContent>
                 ))}
               </Tabs>
-            </Card>
-          ) : publishMode === "manual" ? (
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-2">
-                <Label className="font-semibold">Copy</Label>
-                <Dialog open={iaOpen} onOpenChange={setIaOpen}>
-                  <DialogTrigger asChild><Button size="sm" variant="outline" className="gap-1"><Sparkles className="w-4 h-4" />Generar con IA</Button></DialogTrigger>
-                  <DialogContent className="max-w-lg"><DialogHeader><DialogTitle>Generador IA de captions</DialogTitle></DialogHeader>
-                    <div className="space-y-3">
-                      <div><Label>Idea o producto</Label><Input value={idea} onChange={(e) => setIdea(e.target.value)} placeholder="Ej: blusa floral nueva talla M" /></div>
-                      <div><Label>Tono</Label>
-                        <Select value={tono} onValueChange={(v) => setTono(v as Tono)}><SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>{(["casual", "profesional", "divertido", "promocional", "inspirador"] as Tono[]).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex gap-4 text-sm">
-                        <label className="flex items-center gap-2"><Switch checked={emojis} onCheckedChange={setEmojis} />Emojis</label>
-                        <label className="flex items-center gap-2"><Switch checked={hashtags} onCheckedChange={setHashtags} />Hashtags</label>
-                        <label className="flex items-center gap-2"><Switch checked={cta} onCheckedChange={setCta} />CTA</label>
-                      </div>
-                      <Button onClick={generar} disabled={iaLoading} className="w-full bg-primary border-0">{iaLoading ? "Generando…" : "Generar 3 opciones"}</Button>
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {gens.map((g, i) => (
-                          <button key={i} onClick={() => { setCopy(g); setIaOpen(false); toast.success("Caption aplicado"); }} className="w-full p-3 text-left text-sm rounded-lg border hover:border-primary hover:bg-accent">{g}</button>
-                        ))}
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-              <Textarea rows={5} value={copy} onChange={(e) => setCopy(e.target.value)} placeholder="Escribe tu mensaje…" />
-              <div className="flex flex-wrap gap-3 mt-2 text-xs">
-                {ALL_REDES.map(r => (
-                  <span key={r} className={overLimit(r) ? "text-destructive font-semibold" : "text-muted-foreground"}>
-                    {RED_LABELS[r]}: {charCountFor(r)}/{RED_LIMITS[r]}
-                  </span>
-                ))}
-              </div>
-              <HookMeter copy={copy} />
             </Card>
           ) : null}
 
