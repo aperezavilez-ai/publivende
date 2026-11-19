@@ -87,7 +87,7 @@ function reviewByRules(post: DbPost, user: DbUser, candidates: DbHubChannel[]) {
   return {
     nicho,
     score,
-    motivo: "Revisión básica sin IA (falta configurar MeAI): se evaluó si trae imagen o video y la longitud del texto.",
+    motivo: "Revisión básica sin IA (IA no configurada): se evaluó si trae imagen o video y la longitud del texto.",
     copy: `${negocio}${user.ciudad ? ` (${user.ciudad})` : ""} 👇\n\n${post.copy}`.slice(0, 900),
     canales: channelsForNicho(candidates, nicho).map((c) => c.id),
   };

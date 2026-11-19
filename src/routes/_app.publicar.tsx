@@ -791,7 +791,7 @@ function Publicar() {
               </p>
             </div>
             <Badge variant="outline" className="gap-1 border-primary/50 bg-primary/5 text-primary text-xs">
-              <Sparkles className="w-3.5 h-3.5 text-primary" /> Motor MeAI Activo
+              <Sparkles className="w-3.5 h-3.5 text-primary" /> Motor de IA activo
             </Badge>
           </div>
 
