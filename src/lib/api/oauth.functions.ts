@@ -17,6 +17,8 @@ import {
   verifyOAuthState,
 } from "@/lib/oauth/state.server";
 import { isProductionMode } from "@/server/config";
+import { getDb, schema } from "@/server/db";
+import { and, eq } from "drizzle-orm";
 import { findUserById, upsertOAuthAccount } from "@/server/auth/users";
 import { verifySessionToken } from "@/server/auth/crypto";
 import { upsertHubChannel } from "@/server/red/channels";
@@ -587,4 +589,30 @@ export const completeMetaPageSelection = createServerFn({ method: "POST" })
     } catch (err) {
       return { ok: false as const, error: err instanceof Error ? err.message : "Error OAuth" };
     }
+  });
+
+/**
+ * Real v2 — Desconectar una red TAMBIÉN en el servidor.
+ * Antes desconectar solo cambiaba el estado en el localStorage del navegador:
+ * la fila oauth_accounts seguía viva en BD y el servidor podía seguir
+ * publicando con un token que la UI decía desconectado. Ahora la fila se
+ * BORRA de la BD (el token deja de existir) y la UI refleja lo mismo.
+ */
+export const disconnectOAuthAccountServer = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string(), red: redSchema }))
+  .handler(async ({ data }) => {
+    if (!isProductionMode()) {
+      return { ok: false as const, error: "Requiere modo producción" };
+    }
+    const session = await verifySessionToken(data.token);
+    if (!session) return { ok: false as const, error: "Sesión inválida" };
+    await getDb()
+      .delete(schema.oauthAccounts)
+      .where(
+        and(
+          eq(schema.oauthAccounts.userId, session.userId),
+          eq(schema.oauthAccounts.red, data.red),
+        ),
+      );
+    return { ok: true as const };
   });

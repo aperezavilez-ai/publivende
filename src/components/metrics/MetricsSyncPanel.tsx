@@ -9,7 +9,7 @@ import { useDB } from "@/lib/mock/useDB";
 import { loadDB, saveDB } from "@/lib/mock/db";
 import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
 import { syncMyMetricsServer } from "@/lib/api/metrics.functions";
-import { RED_LABELS } from "@/services/social/mock";
+import { RED_LABELS } from "@/lib/redes";
 import type { AccountSnapshot, MetricsSyncStatus, PostMetric, Red } from "@/lib/mock/types";
 
 type RealMetrics = {

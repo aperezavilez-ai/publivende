@@ -1,4 +1,8 @@
-// Generador mock de links de cobro — listo para reemplazar por SDK real de Stripe / MercadoPago / Wompi
+// Links de cobro REALES (Stripe / Mercado Pago vía servidor).
+// Real v2: se eliminó el «generador mock» que fabricaba URLs inexistentes
+// (buy.stripe.com/test_<random>, mpago.la/<random>) cuando el proveedor no
+// respondía. Ahora, sin proveedor real configurado, generarLinkCobro LANZA
+// un error claro: jamás se presenta un link de cobro falso como real.
 import type { PagoProvider } from "@/lib/mock/types";
 
 export interface CobroLink {
@@ -21,53 +25,13 @@ export const PROVIDER_LABEL: Record<PagoProvider, string> = {
   manual: "Transferencia",
 };
 
-const BASES: Record<PagoProvider, string> = {
-  stripe: "https://buy.stripe.com/test_",
-  mercadopago: "https://mpago.la/",
-  wompi: "https://checkout.wompi.co/l/",
-  payu: "https://checkout.payulatam.com/ppp-web-gateway-payu/",
-  kushki: "https://app.kushkipagos.com/checkout/",
-  manual: "https://publivende.app/pay/",
-};
-
-function rnd(len = 10) {
-  return Math.random().toString(36).slice(2, 2 + len).toUpperCase();
-}
-
-async function tryRealPaymentLink(opts: {
-  provider: PagoProvider;
-  monto: number;
-  moneda: string;
-  descripcion: string;
-}): Promise<CobroLink | null> {
-  if (opts.provider !== "stripe" && opts.provider !== "mercadopago") return null;
-  try {
-    const { createPaymentLinkServer } = await import("@/lib/api/payments.functions");
-    const real = await createPaymentLinkServer({
-      data: {
-        title: opts.descripcion,
-        amount: opts.monto,
-        currency: opts.moneda,
-        provider: opts.provider,
-      },
-    });
-    if (real.ok && real.url) {
-      const ref = rnd(8);
-      return {
-        url: real.url,
-        provider: opts.provider,
-        referencia: real.preferenceId ?? ref,
-        monto: opts.monto,
-        moneda: opts.moneda,
-        descripcion: opts.descripcion,
-        qr_url: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(real.url)}`,
-        expira: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      };
-    }
-  } catch {
-    /* fallback mock */
+export class PagoNoDisponibleError extends Error {
+  constructor(provider: PagoProvider) {
+    super(
+      `No se pudo generar el link de cobro con ${PROVIDER_LABEL[provider]}: el proveedor no está configurado o no respondió. No se creó ningún link.`,
+    );
+    this.name = "PagoNoDisponibleError";
   }
-  return null;
 }
 
 export async function generarLinkCobro(opts: {
@@ -76,21 +40,34 @@ export async function generarLinkCobro(opts: {
   moneda: string;
   descripcion: string;
 }): Promise<CobroLink> {
-  const real = await tryRealPaymentLink(opts);
-  if (real) return real;
-
-  const ref = rnd(8);
-  const url = `${BASES[opts.provider]}${ref}?amount=${opts.monto}&currency=${opts.moneda.toLowerCase()}`;
-  return {
-    url,
-    provider: opts.provider,
-    referencia: ref,
-    monto: opts.monto,
-    moneda: opts.moneda,
-    descripcion: opts.descripcion,
-    qr_url: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`,
-    expira: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-  };
+  if (opts.provider === "stripe" || opts.provider === "mercadopago") {
+    try {
+      const { createPaymentLinkServer } = await import("@/lib/api/payments.functions");
+      const real = await createPaymentLinkServer({
+        data: {
+          title: opts.descripcion,
+          amount: opts.monto,
+          currency: opts.moneda,
+          provider: opts.provider,
+        },
+      });
+      if (real.ok && real.url) {
+        return {
+          url: real.url,
+          provider: opts.provider,
+          referencia: real.preferenceId ?? "",
+          monto: opts.monto,
+          moneda: opts.moneda,
+          descripcion: opts.descripcion,
+          qr_url: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(real.url)}`,
+          expira: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        };
+      }
+    } catch {
+      /* cae al error claro de abajo */
+    }
+  }
+  throw new PagoNoDisponibleError(opts.provider);
 }
 
 // Parser del comando "/cobrar 350 [descripción]"

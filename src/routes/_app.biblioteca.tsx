@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Post, Red, EstadoPost } from "@/lib/mock/types";
-import { RED_COLORS, RED_LABELS } from "@/services/social/mock";
+import { RED_COLORS, RED_LABELS } from "@/lib/redes";
 import { broadcastPostLink } from "@/services/whatsapp/mock";
 import { buildPostPageUrl } from "@/lib/whatsapp-post";
 import { postStatusLabel } from "@/lib/publish-status";

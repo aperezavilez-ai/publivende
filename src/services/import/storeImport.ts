@@ -1,5 +1,4 @@
 import type { Tono } from "@/services/ai/mock";
-import { suggestProductImage } from "@/services/ai/catalog";
 
 export type StorePlatform = "mercadolibre" | "instagram" | "facebook" | "tiktok_shop" | "shopify" | "web";
 
@@ -141,7 +140,7 @@ export async function importStoreFromLink(url: string, ctx: StoreImportContext):
     const seed = seeds[(h + i) % seeds.length];
     const nombre = i === 0 ? `${seed.nombre} — ${tienda_nombre}`.slice(0, 60) : seed.nombre;
     const precio = seed.precio > 0 ? seed.precio + (h % 7) * 50 : 999;
-    const imagen = suggestProductImage(nombre, ctx.industria);
+    const imagen = ""; // Real v2: sin foto de stock fingida; el usuario sube la suya
     const item: ImportedStoreProduct = {
       nombre,
       precio: platform === "web" && seed.precio === 0 ? 0 : precio,

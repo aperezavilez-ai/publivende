@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Facebook, Instagram, Music2, Youtube, Heart, MessageCircle, Share2, MoreHorizontal, Link2, ExternalLink } from "lucide-react";
 import type { Red, TipoPost } from "@/lib/mock/types";
 import type { SourcePlatform } from "@/services/import/detectPlatform";
-import { RED_COLORS, RED_LABELS } from "@/services/social/mock";
+import { RED_COLORS, RED_LABELS } from "@/lib/redes";
 import { needsMediaProxy, sanitizeMediaUrl } from "@/services/import/mediaUrl";
 import { proxyExternalMedia } from "@/lib/api/media-proxy.functions";
 

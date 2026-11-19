@@ -5,7 +5,7 @@ import {
   completeOAuthCallback,
   type MetaPageOption,
 } from "@/lib/api/oauth.functions";
-import { connectAccountOAuth } from "@/services/social/mock";
+import { loadDB, saveDB, uid } from "@/lib/mock/db";
 import { useAuth } from "@/lib/mock/auth";
 import { Card } from "@/components/ui/card";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
@@ -27,15 +27,33 @@ interface OAuthSearch {
 
 async function saveConnectedAccount(userId: string, account: OAuthConnectPublicResult) {
   // El servidor ya persistió la cuenta (cifrada) en completeOAuthCallback.
-  // En el navegador solo vive la metadata visible, jamás el token.
-  connectAccountOAuth(userId, account.red, {
-    nombre_cuenta: account.nombre_cuenta,
-    access_token: "oauth_authenticated",
-    external_account_id: account.external_account_id,
-    token_expires_at: account.token_expires_at,
-    avatar: account.avatar,
-    oauth_provider: account.provider,
-  });
+  // En el navegador solo vive la metadata visible, jamás el token: este espejo
+  // local guarda únicamente nombre/avatar/estado para pintar la UI.
+  const db = loadDB();
+  const acc = db.social_accounts.find((a) => a.user_id === userId && a.red === account.red);
+  if (acc) {
+    acc.estado_conexion = "conectada";
+    acc.token_placeholder = "oauth_authenticated";
+    acc.nombre_cuenta = account.nombre_cuenta;
+    acc.external_account_id = account.external_account_id;
+    acc.token_expires_at = account.token_expires_at;
+    acc.oauth_provider = account.provider;
+    if (account.avatar) acc.avatar = account.avatar;
+  } else {
+    db.social_accounts.push({
+      id: uid(),
+      user_id: userId,
+      red: account.red,
+      nombre_cuenta: account.nombre_cuenta,
+      avatar: account.avatar ?? "",
+      estado_conexion: "conectada",
+      token_placeholder: "oauth_authenticated",
+      external_account_id: account.external_account_id,
+      token_expires_at: account.token_expires_at,
+      oauth_provider: account.provider,
+    });
+  }
+  saveDB(db);
 }
 
 export function OAuthCallbackView({

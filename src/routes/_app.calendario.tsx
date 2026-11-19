@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useCallback, useEffect, useState } from "react";
-import { RED_COLORS, RED_LABELS } from "@/services/social/mock";
+import { RED_COLORS, RED_LABELS } from "@/lib/redes";
 import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
 import { listCalendarPosts, scheduleLinkPost, cancelScheduledPost } from "@/lib/api/calendar.functions";
 import { getDueLocalScheduledPosts, runLocalScheduledPost } from "@/lib/schedule-local";

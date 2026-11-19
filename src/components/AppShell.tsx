@@ -1,8 +1,8 @@
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard, PlusSquare, Calendar, MessageCircle, Zap, BarChart3, Settings, LogOut,
-  FolderOpen, ShoppingBag, Menu, Wifi, WifiOff,
-  Radio, Layers, Stethoscope, Bot, Rocket, AlertTriangle,
+  LayoutDashboard, Calendar, BarChart3, Settings, LogOut,
+  FolderOpen, Menu,
+  Radio, Layers, Rocket, AlertTriangle,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/mock/auth";
@@ -12,27 +12,23 @@ import { useOnline } from "@/hooks/useOnline";
 import { PubliVendeMark } from "@/components/PubliVendeLogo";
 import { isProductionModeClient } from "@/lib/production/session";
 
+// Real v2 — Panel de 6 secciones alrededor de la fuerza del producto:
+// distribución de contenido por nichos controlada por IA.
 const CLIENT_NAV = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/diagnostico", label: "Diagnóstico IA", icon: Stethoscope },
-  { to: "/piloto", label: "Piloto automático", icon: Bot },
-  { to: "/publicar", label: "Crear publicación", icon: PlusSquare },
-  { to: "/biblioteca", label: "Biblioteca", icon: FolderOpen },
-  { to: "/distribuir", label: "Distribución", icon: Radio },
-  { to: "/calendario", label: "Calendario", icon: Calendar },
-  { to: "/whatsapp", label: "WhatsApp CRM", icon: MessageCircle },
-  { to: "/productos", label: "Productos", icon: ShoppingBag },
-  { to: "/automatizaciones", label: "Automatizaciones", icon: Zap },
-  { to: "/analiticas", label: "Analíticas", icon: BarChart3 },
-  { to: "/configuracion", label: "Configuración", icon: Settings },
+  { to: "/dashboard", label: "Inicio — Coordinadora", icon: LayoutDashboard, color: "#1d4ed8", tint: "#DBEAFE" },
+  { to: "/distribuir", label: "Distribuir", icon: Radio, color: "#be123c", tint: "#FFE4E6" },
+  { to: "/calendario", label: "Calendario", icon: Calendar, color: "#0284c7", tint: "#E0F2FE" },
+  { to: "/resultados", label: "Resultados", icon: BarChart3, color: "#059669", tint: "#D1FAE5" },
+  { to: "/biblioteca", label: "Biblioteca", icon: FolderOpen, color: "#b45309", tint: "#FEF3C7" },
+  { to: "/configuracion", label: "Configuración", icon: Settings, color: "#475569", tint: "#F1F5F9" },
 ] as const;
 
 const MOBILE_TABS = [
-  { to: "/dashboard", label: "Inicio", icon: LayoutDashboard },
-  { to: "/publicar", label: "Publicar", icon: PlusSquare },
-  { to: "/diagnostico", label: "IA", icon: Stethoscope },
-  { to: "/whatsapp", label: "CRM", icon: MessageCircle },
-  { to: "/configuracion", label: "Ajustes", icon: Settings },
+  { to: "/dashboard", label: "Inicio", icon: LayoutDashboard, color: "#1d4ed8", tint: "#DBEAFE" },
+  { to: "/distribuir", label: "Distribuir", icon: Radio, color: "#be123c", tint: "#FFE4E6" },
+  { to: "/calendario", label: "Calendario", icon: Calendar, color: "#0284c7", tint: "#E0F2FE" },
+  { to: "/resultados", label: "Resultados", icon: BarChart3, color: "#059669", tint: "#D1FAE5" },
+  { to: "/configuracion", label: "Ajustes", icon: Settings, color: "#475569", tint: "#F1F5F9" },
 ] as const;
 
 function NavLink({
@@ -148,7 +144,15 @@ export function AppShell({ children }: { children: ReactNode }) {
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
                 )}
               >
-                <Icon className={cn("w-4 h-4 shrink-0 transition-colors", active ? "text-blue-700" : "text-slate-500 group-hover:text-slate-700")} />
+                <span
+                  className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-colors"
+                  style={active ? { backgroundColor: item.tint } : undefined}
+                >
+                  <Icon
+                    className="w-4 h-4 shrink-0 transition-colors"
+                    style={{ color: active ? item.color : "#64748b" }}
+                  />
+                </span>
                 <span>{item.label}</span>
               </Link>
             );
@@ -169,7 +173,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
                 )}
               >
-                <Rocket className="w-4 h-4 shrink-0 text-amber-400" />
+                <Rocket className="w-4 h-4 shrink-0 text-amber-600" />
                 <span>Red PubliVende</span>
               </Link>
               <Link
@@ -182,7 +186,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
                 )}
               >
-                <Layers className="w-4 h-4 shrink-0 text-cyan-400" />
+                <Layers className="w-4 h-4 shrink-0 text-sky-600" />
                 <span>Plataforma API</span>
               </Link>
             </>
@@ -250,7 +254,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                   active ? "text-blue-700 font-semibold" : "text-slate-500 hover:text-slate-800",
                 )}
               >
-                <Icon className="w-4 h-4" />
+                <span
+                  className="w-7 h-6 rounded-md flex items-center justify-center"
+                  style={active ? { backgroundColor: item.tint } : undefined}
+                >
+                  <Icon className="w-4 h-4" style={{ color: active ? item.color : "#64748b" }} />
+                </span>
                 <span>{item.label}</span>
               </Link>
             );

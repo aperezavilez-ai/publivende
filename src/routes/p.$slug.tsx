@@ -1,29 +1,53 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useDB } from "@/lib/mock/useDB";
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { buildPostWhatsAppLink } from "@/lib/whatsapp-post";
-import { RED_LABELS } from "@/services/social/mock";
-import { MessageCircle, ExternalLink } from "lucide-react";
+import { RED_LABELS } from "@/lib/redes";
+import { resolveTrackingPost } from "@/lib/api/tracking.functions";
+import { MessageCircle, ExternalLink, Loader2 } from "lucide-react";
+import type { Red } from "@/lib/mock/types";
 
 export const Route = createFileRoute("/p/$slug")({
   component: PublicacionPage,
 });
 
+type TrackingData = Awaited<ReturnType<typeof resolveTrackingPost>>;
+
 function PublicacionPage() {
   const { slug } = Route.useParams();
-  const match = useDB((db) => db.posts.find((p) => p.tracking_slug === slug));
-  const owner = useDB((db) =>
-    match ? db.profiles.find((p) => p.id === match.user_id) : undefined,
-  );
+  const [data, setData] = useState<TrackingData | null>(null);
+  const ran = useRef(false);
 
-  if (!match) {
+  useEffect(() => {
+    if (ran.current) return;
+    ran.current = true;
+    // La resolución y el registro del clic ocurren en el servidor (BD real).
+    resolveTrackingPost({
+      data: {
+        slug,
+        referer: typeof document !== "undefined" ? document.referrer || undefined : undefined,
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+      },
+    })
+      .then(setData)
+      .catch(() => setData({ ok: false, error: "Publicación no encontrada" }));
+  }, [slug]);
+
+  if (!data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!data.ok) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
         <Card className="p-8 max-w-md text-center">
           <h1 className="text-xl font-bold">Publicación no encontrada</h1>
           <p className="text-sm text-muted-foreground mt-2">
-            El enlace puede haber expirado o no existe en este dispositivo.
+            El enlace puede haber expirado o la publicación ya no existe.
           </p>
           <Button asChild className="mt-4"><Link to="/">Ir al inicio</Link></Button>
         </Card>
@@ -31,7 +55,14 @@ function PublicacionPage() {
     );
   }
 
-  const waLink = owner ? buildPostWhatsAppLink(owner, match) : null;
+  const { post, owner } = data;
+  // El mensaje lleva el link /p/<slug> y la ref: el webhook de WhatsApp
+  // atribuye el lead a este post (resolvePostFromTextServer).
+  const waLink = owner
+    ? `https://wa.me/${(owner.codigo_pais + owner.celular).replace(/\D/g, "")}?text=${encodeURIComponent(
+        `Hola! Vi tu publicación /p/${post.tracking_slug} (ref: ${post.tracking_slug})`,
+      )}`
+    : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -44,19 +75,19 @@ function PublicacionPage() {
       </header>
 
       <main className="max-w-2xl mx-auto p-4 space-y-4">
-        {match.media_url && (
-          <img src={match.media_url} alt="" className="w-full rounded-xl object-cover max-h-[420px] bg-muted" />
+        {post.media_url && (
+          <img src={post.media_url} alt="" className="w-full rounded-xl object-cover max-h-[420px] bg-muted" />
         )}
         <Card className="p-5 space-y-3">
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">{match.copy}</p>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">{post.copy}</p>
           <div className="flex flex-wrap gap-1.5">
-            {match.redes_destino.map((r) => (
-              <span key={r} className="text-[10px] px-2 py-0.5 rounded-full bg-muted">{RED_LABELS[r]}</span>
+            {post.redes_destino.map((r) => (
+              <span key={r} className="text-[10px] px-2 py-0.5 rounded-full bg-muted">{RED_LABELS[r as Red] ?? r}</span>
             ))}
           </div>
-          {match.source_url && (
+          {post.source_url && (
             <a
-              href={match.source_url}
+              href={post.source_url}
               target="_blank"
               rel="noreferrer"
               className="text-xs text-primary flex items-center gap-1 hover:underline"
@@ -75,9 +106,9 @@ function PublicacionPage() {
           </Button>
         )}
 
-        {match.hashtags_virales && match.hashtags_virales.length > 0 && (
+        {post.hashtags_virales && post.hashtags_virales.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {match.hashtags_virales.map((h) => (
+            {post.hashtags_virales.map((h) => (
               <span key={h} className="text-[10px] text-muted-foreground">{h}</span>
             ))}
           </div>

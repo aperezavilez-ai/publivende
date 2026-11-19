@@ -41,6 +41,8 @@ function buildListaPrecios(productos: OnboardingProductInput[]): string {
  * En producción el snapshot se sincroniza al servidor (productos y reglas incluidos).
  */
 export async function bootstrapClientFromOnboarding(userId: string, input: OnboardingBootstrapInput) {
+  // Real v2: si el proveedor de cobro no está configurado, el producto queda
+  // SIN link (vacío) — nunca con una URL fabricada.
   const cobros = await Promise.all(
     input.productos.map((p) =>
       generarLinkCobro({
@@ -48,7 +50,7 @@ export async function bootstrapClientFromOnboarding(userId: string, input: Onboa
         monto: p.precio > 0 ? p.precio : 1,
         moneda: "MXN",
         descripcion: p.nombre,
-      }),
+      }).catch(() => null),
     ),
   );
 

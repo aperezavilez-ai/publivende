@@ -342,6 +342,20 @@ export const postMetrics = pgTable(
   (t) => [uniqueIndex("post_metrics_post_red_idx").on(t.postId, t.red)],
 );
 
+/** Clics reales en la página pública /p/<slug> (Real v2: tracking en servidor). */
+export const postClicks = pgTable("post_clicks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  postId: uuid("post_id")
+    .notNull()
+    .references(() => posts.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  referer: text("referer"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** Foto diaria de la cuenta en cada red (seguidores, alcance) para medir crecimiento. */
 export const accountSnapshots = pgTable(
   "account_snapshots",

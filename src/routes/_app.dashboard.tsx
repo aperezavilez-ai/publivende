@@ -1,519 +1,355 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/mock/auth";
 import { useDB } from "@/lib/mock/useDB";
-import { loadDB, saveDB, uid } from "@/lib/mock/db";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Sparkles,
-  Globe,
-  ArrowRight,
-  CheckCircle2,
-  Zap,
-  MessageCircle,
-  Instagram,
-  Facebook,
-  Youtube,
-  TrendingUp,
-  FileDown,
-  Layers,
-  Bot,
-  Calendar,
-  Share2,
-  Clock,
-  Send,
-  Loader2,
-  Check,
-  ChevronRight,
-  ShieldCheck,
-  CreditCard,
+  Sparkles, Globe, ArrowRight, CheckCircle2, MessageCircle, TrendingUp, Zap,
+  Loader2, Bot, Play, Pause, FileDown, PlusSquare, BarChart3,
 } from "lucide-react";
-import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
+import { useDiagnosis, useBrainReports, saveBrainReport } from "@/lib/brain/useDiagnosis";
+import { generateBrainPlanServer } from "@/lib/api/brain.functions";
+import {
+  getAutopilotServer,
+  saveAutopilotSettingsServer,
+  generateAutopilotServer,
+  approveAllAutopilotServer,
+} from "@/lib/api/autopilot.functions";
+import { RED_LABELS, REDES_ORDEN } from "@/lib/redes";
 import type { Red } from "@/lib/mock/types";
 
-export const Route = createFileRoute("/_app/dashboard")({ component: DashboardView });
+export const Route = createFileRoute("/_app/dashboard")({ component: Inicio });
 
 const OBJECTIVES = [
-  { id: "ventas", label: "Ventas WhatsApp", icon: MessageCircle, desc: "Cierre directo de pedidos y catálogo" },
-  { id: "alcance", label: "Crecimiento & Alcance", icon: TrendingUp, desc: "Viralidad orgánica y nuevos seguidores" },
-  { id: "leads", label: "Captación de Leads", icon: Zap, desc: "Prospectos calificados para cotizaciones" },
-  { id: "branding", label: "Posicionamiento", icon: Sparkles, desc: "Autoridad y confianza de marca" },
+  { id: "ventas", label: "Ventas WhatsApp", icon: MessageCircle },
+  { id: "alcance", label: "Crecimiento & Alcance", icon: TrendingUp },
+  { id: "leads", label: "Captación de Leads", icon: Zap },
+  { id: "branding", label: "Posicionamiento", icon: Sparkles },
 ] as const;
 
-function DashboardView() {
+type AutopilotState = Awaited<ReturnType<typeof getAutopilotServer>>;
+
+function Inicio() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [businessUrl, setBusinessUrl] = useState("");
-  const [selectedObjective, setSelectedObjective] = useState<typeof OBJECTIVES[number]["id"]>("ventas");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [activeStep, setActiveStep] = useState<string | null>(null);
-  const [strategyResult, setStrategyResult] = useState<{
-    niche: string;
-    summary: string;
-    posts: Array<{
-      day: string;
-      red: Red;
-      hook: string;
-      copy: string;
-      cta: string;
-      approved: boolean;
-    }>;
-  } | null>(null);
+  const [objective, setObjective] = useState<(typeof OBJECTIVES)[number]["id"]>("ventas");
 
-  const posts = useDB((db) => db.posts.filter((p) => p.user_id === user?.id));
-  const contacts = useDB((db) => db.whatsapp_contacts.filter((c) => c.user_id === user?.id));
+  const accounts = useDB((db) => db.social_accounts.filter((a) => a.user_id === user?.id));
+  const diagnosis = useDiagnosis();
+  const reports = useBrainReports();
+  const latestReport = reports[reports.length - 1];
+  const [generatingPlan, setGeneratingPlan] = useState(false);
 
-  // Simulación guiada o ejecución en vivo del enlace
-  const handleAnalyzeBusiness = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!businessUrl.trim()) {
-      toast.error("Por favor introduce el enlace de tu negocio o producto");
-      return;
-    }
+  const [autopilot, setAutopilot] = useState<AutopilotState | null>(null);
+  const [autopilotBusy, setAutopilotBusy] = useState(false);
 
-    setIsAnalyzing(true);
-    setActiveStep("Conectando con el enlace e inspeccionando metadatos...");
+  const token = getSessionToken();
+  const produccion = isProductionModeClient() && !!token;
 
+  useEffect(() => {
+    if (!produccion || !token) return;
+    getAutopilotServer({ data: { token } }).then(setAutopilot).catch(() => setAutopilot(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [produccion]);
+
+  if (!user) return null;
+
+  const estadoRed = (red: Red) => {
+    const acc = accounts.find((a) => a.red === red);
+    return {
+      conectada: acc?.estado_conexion === "conectada",
+      nombre: acc?.nombre_cuenta ?? null,
+    };
+  };
+  const redesConectadas = REDES_ORDEN.filter((r) => estadoRed(r).conectada).length;
+
+  function coordinar() {
+    const url = businessUrl.trim();
+    if (!url) return toast.error("Pega el enlace de tu tienda, web o perfil social");
+    // El flujo real vive en Publicar: ahí se lee el link, la IA investiga el
+    // nicho y redacta los copys por red. Nada se simula en esta pantalla.
+    navigate({ to: "/publicar", search: { link: url } });
+  }
+
+  async function generarPlan() {
+    if (!diagnosis) return;
+    setGeneratingPlan(true);
     try {
-      await new Promise((r) => setTimeout(r, 800));
-      setActiveStep("Analizando propuesta de valor y catálogo comercial...");
-      await new Promise((r) => setTimeout(r, 900));
-      setActiveStep("Aplicando fórmulas de ganchos de alta conversión...");
-      await new Promise((r) => setTimeout(r, 900));
-
-      const cleanUrl = businessUrl.trim();
-      const detectedNiche = cleanUrl.includes("moda") || cleanUrl.includes("tienda") || cleanUrl.includes("shop")
-        ? "Moda y Retail"
-        : cleanUrl.includes("comida") || cleanUrl.includes("rest") || cleanUrl.includes("tacos")
-        ? "Gastronomía y Alimentos"
-        : "Servicios y Comercio Local";
-
-      setStrategyResult({
-        niche: detectedNiche,
-        summary: `Estrategia de crecimiento coordinada para ${cleanUrl.replace(/^https?:\/\//, "").slice(0, 30)}. La IA ha optimizado los copys para captación directa con cierre por WhatsApp.`,
-        posts: [
-          {
-            day: "Lunes · 8:00 PM",
-            red: "instagram",
-            hook: "Lo que nadie te dice antes de comprar esto...",
-            copy: `Si estás buscando la mejor calidad sin pagar de más, mira este detalle. Envíos garantizados a todo México 🇲🇽.`,
-            cta: "Escríbenos por WhatsApp para enviarte el catálogo disponible hoy.",
-            approved: false,
-          },
-          {
-            day: "Miércoles · 7:30 PM",
-            red: "facebook",
-            hook: "3 razones por las que nuestros clientes no cambian de marca 👇",
-            copy: `1. Atención personalizada al instante.\n2. Pagos 100% seguros con Mercado Pago.\n3. Envíos express. ¿Ya conocías nuestra nueva colección?`,
-            cta: "Toca el enlace para chatear con nuestro asesor en WhatsApp.",
-            approved: false,
-          },
-          {
-            day: "Viernes · 6:00 PM",
-            red: "tiktok",
-            hook: "El producto más vendido de la semana en acción 🔥",
-            copy: `Unboxing rápido de los favoritos de nuestros clientes. Pide el tuyo antes de que se agote el stock disponible.`,
-            cta: "Link en bio directo a WhatsApp.",
-            approved: false,
-          },
-        ],
+      if (produccion && token) {
+        const res = await generateBrainPlanServer({ data: { token, diagnosis } });
+        if (res.ok) {
+          saveBrainReport(res.report);
+          toast.success(res.report.plan.fuente === "ia" ? "Tu plan con IA está listo" : "Tu plan está listo");
+          return;
+        }
+        if ("report" in res && res.report) {
+          saveBrainReport(res.report);
+          toast.message(res.error);
+          return;
+        }
+        if (!("useLocal" in res)) {
+          toast.error(res.error);
+          return;
+        }
+      }
+      toast.message("El plan con IA requiere modo producción", {
+        description: "El diagnóstico por reglas de abajo ya refleja tus datos locales.",
       });
-
-      toast.success("¡Estrategia coordinada con éxito por la IA!");
-    } catch {
-      toast.error("Error al procesar el enlace. Intenta de nuevo.");
     } finally {
-      setIsAnalyzing(false);
-      setActiveStep(null);
+      setGeneratingPlan(false);
     }
-  };
+  }
 
-  const approvePost = (index: number) => {
-    if (!strategyResult || !user) return;
-    const postItem = strategyResult.posts[index];
-    const db = loadDB();
+  async function autopilotToggle() {
+    if (!token || !autopilot?.ok) return;
+    setAutopilotBusy(true);
+    try {
+      const s = autopilot.settings;
+      const res = await saveAutopilotSettingsServer({
+        data: {
+          token,
+          activo: !s.activo,
+          modo: s.modo,
+          posts_semana: s.posts_semana,
+          redes: s.redes,
+        },
+      });
+      if (res.ok) {
+        setAutopilot({ ...autopilot, settings: res.settings });
+        toast.success(res.settings.activo ? "Piloto automático activado" : "Piloto automático en pausa");
+      } else toast.error(res.error);
+    } finally {
+      setAutopilotBusy(false);
+    }
+  }
 
-    db.posts.push({
-      id: uid(),
-      user_id: user.id,
-      tipo: "post",
-      media_url: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800",
-      copy: `${postItem.hook}\n\n${postItem.copy}\n\n📲 ${postItem.cta}`,
-      redes_destino: [postItem.red],
-      estado: "programado",
-      tracking_slug: uid().slice(0, 8),
-      alcance: { impresiones: 0, engagement_rate: 0 },
-      fecha_creacion: new Date().toISOString(),
-      fecha_publicacion: new Date(Date.now() + (index + 1) * 86400000).toISOString(),
-    });
+  async function autopilotGenerar() {
+    if (!token) return;
+    setAutopilotBusy(true);
+    try {
+      const res = await generateAutopilotServer({ data: { token } });
+      if (res.ok) {
+        toast.success("Semana generada: revisa y aprueba los posts");
+        const fresh = await getAutopilotServer({ data: { token } });
+        setAutopilot(fresh);
+      } else toast.error(res.error);
+    } finally {
+      setAutopilotBusy(false);
+    }
+  }
 
-    saveDB(db);
+  async function autopilotAprobarTodo() {
+    if (!token) return;
+    setAutopilotBusy(true);
+    try {
+      const res = await approveAllAutopilotServer({ data: { token } });
+      if (res.ok) {
+        toast.success("Posts aprobados y programados");
+        const fresh = await getAutopilotServer({ data: { token } });
+        setAutopilot(fresh);
+      } else toast.error(res.error);
+    } finally {
+      setAutopilotBusy(false);
+    }
+  }
 
-    const updated = [...strategyResult.posts];
-    updated[index].approved = true;
-    setStrategyResult({ ...strategyResult, posts: updated });
-    toast.success("Publicación aprobada y guardada en el Calendario");
-  };
-
-  const exportPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("PubliVende AI — Informe de Coordinación", 14, 20);
-    doc.setFontSize(10);
-    doc.text(`Negocio: ${user?.nombre_negocio || "Mi Negocio"} | Fecha: ${new Date().toLocaleDateString()}`, 14, 28);
-
-    autoTable(doc, {
-      startY: 35,
-      head: [["Métrica", "Valor", "Estado"]],
-      body: [
-        ["Canal WhatsApp", "Activo", "Vendedor IA 24/7"],
-        ["Pasarela de Pagos", "Mercado Pago", "Activo"],
-        ["Publicaciones Activas", `${posts.length} posts`, "Sincronizado"],
-        ["Conversaciones CRM", `${contacts.length} clientes`, "Atendidos por IA"],
-      ],
-    });
-
-    doc.save("publivende-reporte.pdf");
-    toast.success("Reporte PDF descargado");
-  };
+  const autopilotPendientes = autopilot?.ok
+    ? autopilot.posts.filter((p) => p.estado === "borrador").length
+    : 0;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Top Welcome Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200">
-        <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-              Hola, {user?.nombre?.split(" ")[0]} <span className="text-xl">👋</span>
-            </h1>
-            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-500/20 text-[11px] px-2 py-0.5 font-medium">
-              Centro de Mando Activo
-            </Badge>
-          </div>
-          <p className="text-xs text-slate-500">
-            {user?.nombre_negocio || "PubliVende"} · Coordinación autónoma con <span className="text-slate-700 font-medium">MeAI Cloud</span> y cobros en <span className="text-sky-700 font-medium">Mercado Pago</span>.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <Button
-            onClick={exportPDF}
-            variant="outline"
-            size="sm"
-            className="border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900 text-xs gap-1.5 h-8"
-          >
-            <FileDown className="w-3.5 h-3.5" />
-            <span>Exportar PDF</span>
-          </Button>
-          <Link to="/calendario">
-            <Button size="sm" className="bg-blue-700 hover:bg-blue-800 text-white text-xs gap-1.5 h-8 shadow-sm">
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Ver Calendario</span>
-            </Button>
-          </Link>
-        </div>
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold">Hola, {user.nombre.split(" ")[0]} 👋</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          {user.nombre_negocio || "Tu negocio"} · La IA coordina; tú solo pega el link.
+        </p>
       </div>
 
-      {/* Main Command Center Hero (Perplexity / Linear style) */}
-      <Card className="relative overflow-hidden bg-white border-slate-200 p-6 md:p-8 shadow-sm">
-        {/* Glow backdrop */}
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-32 bg-slate-100 blur-3xl pointer-events-none rounded-full" />
-
-        <div className="relative z-10 max-w-3xl mx-auto text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-300 text-blue-700 text-xs font-semibold tracking-wide uppercase">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>IA Coordinadora Autónoma</span>
+      {/* Coordinadora */}
+      <Card className="p-5 md:p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="w-4 h-4 text-blue-700" />
+          <span className="text-[11px] font-bold tracking-widest text-blue-700 uppercase">IA Coordinadora</span>
+        </div>
+        <h2 className="text-xl md:text-2xl font-bold">¿Qué negocio o producto impulsamos hoy?</h2>
+        <p className="text-sm text-slate-500 mt-1 max-w-2xl">
+          Pega el enlace de tu tienda, web o perfil social. La IA investiga tu nicho, redacta los copys
+          de alto impacto por red y prepara tu vendedor de WhatsApp.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2 mt-4">
+          <div className="relative flex-1">
+            <Globe className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              value={businessUrl}
+              onChange={(e) => setBusinessUrl(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && coordinar()}
+              placeholder="Pega el enlace de tu tienda, web o Instagram (ej: mitienda.com, instagram.com/tu.negocio)"
+              className="pl-9 h-11"
+            />
           </div>
-
-          <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-            ¿Qué negocio o producto impulsamos hoy?
-          </h2>
-
-          <p className="text-xs md:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
-            Introduce el enlace de tu tienda, web o perfil social. La IA investigará tu nicho, redactará copys de alto impacto y preparará a tu vendedor de WhatsApp.
-          </p>
-
-          {/* Interactive URL Input Command Bar */}
-          <form onSubmit={handleAnalyzeBusiness} className="pt-2 space-y-4">
-            <div className="relative flex items-center shadow-sm rounded-xl bg-white border border-slate-300 focus-within:border-blue-700 focus-within:ring-2 focus-within:ring-blue-700/20 transition-all p-1.5">
-              <div className="pl-3 pr-2 text-slate-500">
-                <Globe className="w-5 h-5 text-blue-700" />
-              </div>
-              <Input
-                type="text"
-                placeholder="Pega el enlace de tu tienda, web o Instagram (ej: mitienda.com, instagram.com/minegocio)..."
-                value={businessUrl}
-                onChange={(e) => setBusinessUrl(e.target.value)}
-                className="bg-transparent border-0 text-slate-900 placeholder:text-slate-500 text-xs md:text-sm focus-visible:ring-0 shadow-none px-2 h-10"
-              />
-              <Button
-                type="submit"
-                disabled={isAnalyzing}
-                className="bg-blue-700 hover:bg-blue-800 text-white font-medium text-xs md:text-sm px-4 md:px-5 h-9 shrink-0 gap-1.5 shadow-sm"
+          <Button onClick={coordinar} className="h-11 gap-2 shrink-0">
+            Coordinar con IA <ArrowRight className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <span className="text-xs text-slate-500">Objetivo:</span>
+          {OBJECTIVES.map((o) => {
+            const Icon = o.icon;
+            const active = objective === o.id;
+            return (
+              <button
+                key={o.id}
+                onClick={() => setObjective(o.id)}
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                  active ? "bg-blue-50 border-blue-300 text-blue-800 font-semibold" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
               >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Analizando...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Coordinar con IA ⚡</span>
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {/* Objective Selector Pills */}
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-              <span className="text-[11px] text-slate-500 font-medium mr-1">Objetivo:</span>
-              {OBJECTIVES.map((obj) => {
-                const Icon = obj.icon;
-                const isSelected = selectedObjective === obj.id;
-                return (
-                  <button
-                    key={obj.id}
-                    type="button"
-                    onClick={() => setSelectedObjective(obj.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      isSelected
-                        ? "bg-slate-100 text-blue-700 border border-slate-300 shadow-sm"
-                        : "bg-slate-50 text-slate-500 border border-slate-200 hover:text-slate-900 hover:bg-white"
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{obj.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Active Analysis Step Feedback */}
-            {isAnalyzing && (
-              <div className="flex items-center justify-center gap-2 text-xs text-blue-700 animate-pulse pt-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>{activeStep}</span>
-              </div>
-            )}
-          </form>
+                <Icon className="w-3.5 h-3.5" /> {o.label}
+              </button>
+            );
+          })}
+          <Button asChild variant="ghost" size="sm" className="gap-1.5 ml-auto">
+            <Link to="/publicar"><PlusSquare className="w-4 h-4" /> Crear publicación manual</Link>
+          </Button>
         </div>
       </Card>
 
-      {/* Generated Strategy Preview Card (If available) */}
-      {strategyResult && (
-        <Card className="bg-slate-50 border-slate-300 p-6 space-y-4 shadow-sm relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200">
-            <div>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-slate-100 text-blue-700 border-slate-300 text-xs">
-                  {strategyResult.niche}
-                </Badge>
-                <h3 className="text-base font-bold text-slate-900">Estrategia Semanal Coordinada</h3>
+      <div className="grid lg:grid-cols-2 gap-4">
+        {/* Estado real de canales */}
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold">Tus canales</h3>
+            <Link to="/configuracion" className="text-xs text-blue-700 font-medium hover:underline">Gestionar accesos</Link>
+          </div>
+          <div className="space-y-2">
+            {REDES_ORDEN.map((red) => {
+              const st = estadoRed(red);
+              return (
+                <div key={red} className="flex items-center justify-between border rounded-lg px-3 py-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">{RED_LABELS[red]}</div>
+                    <div className="text-xs text-slate-500 truncate">{st.conectada ? st.nombre ?? "Cuenta conectada" : "Sin conectar"}</div>
+                  </div>
+                  {st.conectada
+                    ? <Badge variant="outline" className="text-[10px] border-green-400 text-green-800 bg-green-50 shrink-0">Conectada</Badge>
+                    : <Badge variant="outline" className="text-[10px] border-slate-300 text-slate-500 shrink-0">Sin conectar</Badge>}
+                </div>
+              );
+            })}
+            <div className="flex items-center justify-between border rounded-lg px-3 py-2">
+              <div>
+                <div className="text-sm font-medium">WhatsApp</div>
+                <div className="text-xs text-slate-500">{user.whatsapp_configurado ? "Vendedor configurado" : "Sin configurar"}</div>
               </div>
-              <p className="text-xs text-slate-500 mt-1">{strategyResult.summary}</p>
+              {user.whatsapp_configurado
+                ? <Badge variant="outline" className="text-[10px] border-green-400 text-green-800 bg-green-50 shrink-0">Activo</Badge>
+                : <Badge variant="outline" className="text-[10px] border-slate-300 text-slate-500 shrink-0">Sin configurar</Badge>}
             </div>
-            <Link to="/piloto">
-              <Button size="sm" variant="outline" className="border-slate-300 bg-white text-xs gap-1.5 h-8">
-                <span>Abrir en Piloto Automático</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Button>
-            </Link>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-            {strategyResult.posts.map((post, idx) => (
-              <div key={idx} className="p-4 rounded-xl bg-white border border-slate-200 flex flex-col justify-between space-y-3">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-                      {post.red === "instagram" && <Instagram className="w-3.5 h-3.5 text-pink-600" />}
-                      {post.red === "facebook" && <Facebook className="w-3.5 h-3.5 text-blue-700" />}
-                      {post.red === "tiktok" && <Share2 className="w-3.5 h-3.5 text-teal-700" />}
-                      {post.red.toUpperCase()}
-                    </span>
-                    <span className="text-[10px] text-slate-500">{post.day}</span>
-                  </div>
-
-                  <div className="text-xs font-semibold text-blue-700 leading-snug">
-                    "{post.hook}"
-                  </div>
-
-                  <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">
-                    {post.copy}
-                  </p>
-
-                  <div className="text-[11px] text-emerald-700 font-medium flex items-center gap-1">
-                    <MessageCircle className="w-3 h-3" />
-                    <span>{post.cta}</span>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-200">
-                  {post.approved ? (
-                    <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-700 font-medium py-1">
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Programado</span>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={() => approvePost(idx)}
-                      size="sm"
-                      className="w-full bg-blue-700 hover:bg-blue-800 text-white text-xs h-8 gap-1.5"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Aprobar con 1 Clic</span>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <p className="text-xs text-slate-400 mt-3">
+            {redesConectadas} de 4 redes conectadas. El estado sale de tus cuentas reales, no de una lista fija.
+          </p>
         </Card>
-      )}
 
-      {/* Grid: Canales Conectados & Timeline de la IA */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Canales Autorizados (2 columnas) */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <Share2 className="w-4 h-4 text-blue-700" />
-              Canales & Canales de Distribución
-            </h3>
-            <Link to="/configuracion" className="text-xs text-blue-700 hover:underline">
-              Gestionar accesos
-            </Link>
+        {/* Diagnóstico IA (acción) */}
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold">Diagnóstico IA</h3>
+            {diagnosis && (
+              <Badge variant="secondary" className="text-xs">Score {Math.round(diagnosis.score)} · {diagnosis.nicho}</Badge>
+            )}
           </div>
+          {diagnosis ? (
+            <>
+              <p className="text-xs text-slate-500">
+                Diagnóstico por reglas sobre tus datos reales (publicaciones, métricas y leads).
+              </p>
+              {diagnosis.fortalezas[0] && (
+                <p className="text-sm mt-2 flex gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> {diagnosis.fortalezas[0].titulo}</p>
+              )}
+              {diagnosis.deficits[0] && (
+                <p className="text-sm mt-1.5 text-slate-600">A mejorar: {diagnosis.deficits[0].titulo}</p>
+              )}
+              {latestReport && (
+                <div className="mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3">
+                  <p className="text-xs font-semibold mb-1">
+                    Último plan {latestReport.plan.fuente === "ia" ? "(generado con IA)" : "(por reglas)"} · {new Date(latestReport.created_at).toLocaleDateString("es-MX")}
+                  </p>
+                  <p className="text-sm text-slate-600 line-clamp-3">{latestReport.plan.resumen}</p>
+                </div>
+              )}
+              <Button onClick={generarPlan} disabled={generatingPlan} className="mt-3 gap-2" size="sm">
+                {generatingPlan ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {latestReport ? "Regenerar plan" : "Generar mi plan con IA"}
+              </Button>
+            </>
+          ) : (
+            <p className="text-sm text-slate-500">Completa tu perfil y publica para activar el diagnóstico.</p>
+          )}
+        </Card>
+      </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            {/* Instagram */}
-            <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between hover:border-slate-300 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-600">
-                  <Instagram className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
-                    Instagram Business
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                  </div>
-                  <div className="text-[11px] text-slate-500">Reels & Feed autorizados</div>
-                </div>
-              </div>
-              <Badge variant="outline" className="border-emerald-600/30 text-emerald-700 bg-emerald-50 text-[10px]">
-                Listo
-              </Badge>
-            </Card>
-
-            {/* WhatsApp Business */}
-            <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between hover:border-slate-300 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-700">
-                  <MessageCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
-                    WhatsApp Cloud API
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                  </div>
-                  <div className="text-[11px] text-slate-500">Vendedor IA activo (24/7)</div>
-                </div>
-              </div>
-              <Badge variant="outline" className="border-emerald-600/30 text-emerald-700 bg-emerald-50 text-[10px]">
-                Activo
-              </Badge>
-            </Card>
-
-            {/* Facebook */}
-            <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between hover:border-slate-300 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-700">
-                  <Facebook className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
-                    Facebook Fanpage
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                  </div>
-                  <div className="text-[11px] text-slate-500">Página conectada</div>
-                </div>
-              </div>
-              <Badge variant="outline" className="border-emerald-600/30 text-emerald-700 bg-emerald-50 text-[10px]">
-                Listo
-              </Badge>
-            </Card>
-
-            {/* Mercado Pago */}
-            <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl flex items-center justify-between hover:border-slate-300 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-700">
-                  <CreditCard className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
-                    Mercado Pago
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                  </div>
-                  <div className="text-[11px] text-slate-500">Links de cobro automáticos</div>
-                </div>
-              </div>
-              <Badge variant="outline" className="border-emerald-600/30 text-emerald-700 bg-emerald-50 text-[10px]">
-                Conectado
-              </Badge>
-            </Card>
+      {/* Piloto automático (acción) */}
+      <Card className="p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-semibold flex items-center gap-2"><Bot className="w-4 h-4 text-sky-700" /> Piloto automático</h3>
+            <p className="text-sm text-slate-500 mt-0.5">
+              {!produccion
+                ? "Disponible en modo producción: genera y programa tu semana sola."
+                : autopilot?.ok
+                  ? autopilot.settings.activo
+                    ? `Activo · modo ${autopilot.settings.modo} · ${autopilot.settings.posts_semana} posts/semana${autopilotPendientes ? ` · ${autopilotPendientes} por aprobar` : ""}`
+                    : "En pausa. Actívalo y la IA genera tu semana de contenido."
+                  : "No se pudo leer su estado."}
+            </p>
           </div>
-        </div>
-
-        {/* Timeline de la IA Coordinadora (Activity Ledger) */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Clock className="w-4 h-4 text-blue-700" />
-            Acciones de la IA Coordinadora
-          </h3>
-
-          <Card className="bg-slate-50 border-slate-200 p-4 rounded-xl space-y-3.5">
-            <div className="space-y-3">
-              <div className="flex items-start gap-2.5">
-                <div className="w-2 h-2 rounded-full bg-blue-700 mt-1.5 shrink-0" />
-                <div className="text-xs">
-                  <div className="font-semibold text-slate-900">Motor MeAI Cloud listo</div>
-                  <div className="text-slate-500 text-[11px]">Claude Haiku 4.5 activo para copywriting y ventas.</div>
-                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">Hace 2 min</div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <div className="w-2 h-2 rounded-full bg-emerald-600 mt-1.5 shrink-0" />
-                <div className="text-xs">
-                  <div className="font-semibold text-slate-900">Vendedor WhatsApp disponible</div>
-                  <div className="text-slate-500 text-[11px]">Respuestas inteligentes con contexto comercial activadas.</div>
-                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">En guardia 24/7</div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <div className="w-2 h-2 rounded-full bg-sky-400 mt-1.5 shrink-0" />
-                <div className="text-xs">
-                  <div className="font-semibold text-slate-900">Pasarela Mercado Pago</div>
-                  <div className="text-slate-500 text-[11px]">Links de pago directos listos para adjuntar en DMs.</div>
-                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">Operativo</div>
-                </div>
-              </div>
+          {produccion && autopilot?.ok && (
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant={autopilot.settings.activo ? "outline" : "default"} onClick={autopilotToggle} disabled={autopilotBusy} className="gap-1.5">
+                {autopilot.settings.activo ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                {autopilot.settings.activo ? "Pausar" : "Activar"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={autopilotGenerar} disabled={autopilotBusy}>
+                Generar semana
+              </Button>
+              {autopilotPendientes > 0 && (
+                <Button size="sm" onClick={autopilotAprobarTodo} disabled={autopilotBusy}>
+                  Aprobar todo ({autopilotPendientes})
+                </Button>
+              )}
             </div>
-
-            <div className="pt-2 border-t border-slate-200">
-              <Link to="/piloto" className="text-[11px] text-blue-700 hover:text-blue-700 font-medium flex items-center justify-between">
-                <span>Configurar reglas de piloto automático</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </Card>
+          )}
         </div>
+      </Card>
+
+      {/* Accesos a resultados */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Card className="p-5 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-semibold flex items-center gap-2"><BarChart3 className="w-4 h-4 text-emerald-700" /> Resultados</h3>
+            <p className="text-sm text-slate-500 mt-0.5">Lo importante, lo que falta por hacer y tu Reporte de Lanzamiento en PDF.</p>
+          </div>
+          <Button asChild variant="outline" size="sm" className="gap-1.5 shrink-0">
+            <Link to="/resultados"><FileDown className="w-4 h-4" /> Ver resultados</Link>
+          </Button>
+        </Card>
+        <Card className="p-5 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-semibold">Red PubliVende</h3>
+            <p className="text-sm text-slate-500 mt-0.5">Impulsa tus posts en los canales de tu nicho desde Distribuir.</p>
+          </div>
+          <Button asChild variant="outline" size="sm" className="shrink-0">
+            <Link to="/distribuir">Ir a Distribuir</Link>
+          </Button>
+        </Card>
       </div>
     </div>
   );

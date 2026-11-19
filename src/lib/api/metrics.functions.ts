@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { isProductionMode } from "@/server/config";
 import { getDb, schema } from "@/server/db";
 import { verifySessionToken } from "@/server/auth/crypto";
@@ -29,6 +29,60 @@ async function realMetricsFor(userId: string) {
     metrics_sync: data.metrics_sync ?? [],
   };
 }
+
+/**
+ * Real v2 — Resultados: UN paquete de datos reales por usuario/periodo.
+ * La pantalla Resultados y el PDF «Reporte de Lanzamiento» salen de aquí:
+ * es imposible que digan cosas distintas.
+ */
+export const getResultadosServer = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      token: z.string(),
+      dias: z.number().int().min(1).max(365).default(30),
+      postId: z.string().uuid().optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    if (!isProductionMode())
+      return { ok: false as const, error: "Resultados requiere modo producción (datos reales de tus redes)" };
+    const session = await verifySessionToken(data.token);
+    if (!session) return { ok: false as const, error: "Sesión inválida" };
+    const { buildResultados } = await import("@/server/metrics/resultados");
+    const paquete = await buildResultados(session.userId, { dias: data.dias, postId: data.postId });
+    return { ok: true as const, paquete };
+  });
+
+/** Lista breve de posts publicados del usuario, para el filtro por post/campaña del reporte. */
+export const listMyPublishedPostsServer = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string() }))
+  .handler(async ({ data }) => {
+    if (!isProductionMode()) return { ok: false as const, error: "Requiere modo producción" };
+    const session = await verifySessionToken(data.token);
+    if (!session) return { ok: false as const, error: "Sesión inválida" };
+    const rows = await getDb()
+      .select({
+        id: schema.posts.id,
+        copy: schema.posts.copy,
+        fechaPublicacion: schema.posts.fechaPublicacion,
+        nichoLabel: schema.posts.nichoLabel,
+      })
+      .from(schema.posts)
+      .where(eq(schema.posts.userId, session.userId))
+      .orderBy(desc(schema.posts.fechaPublicacion))
+      .limit(100);
+    return {
+      ok: true as const,
+      posts: rows
+        .filter((r) => r.fechaPublicacion)
+        .map((r) => ({
+          id: r.id,
+          copy: r.copy.length > 80 ? `${r.copy.slice(0, 80)}…` : r.copy,
+          fecha_publicacion: r.fechaPublicacion?.toISOString() ?? null,
+          nicho_label: r.nichoLabel ?? null,
+        })),
+    };
+  });
 
 export const syncMyMetricsServer = createServerFn({ method: "POST" })
   .inputValidator(z.object({ token: z.string() }))

@@ -41,12 +41,9 @@ const PENALTY: Record<Severidad, number> = { alta: 45, media: 25, baja: 10 };
 
 export type BrainRoute =
   | "/publicar"
-  | "/whatsapp"
   | "/configuracion"
-  | "/productos"
-  | "/automatizaciones"
   | "/calendario"
-  | "/analiticas";
+  | "/resultados";
 
 export interface BrainAction {
   label: string;
@@ -534,7 +531,7 @@ export function diagnose(input: BrainInput): Diagnosis {
         evidencia: `${vistas30.toLocaleString("es-MX")} vistas en los últimos 30 días contra ${vistasPrev.toLocaleString("es-MX")} en los 30 anteriores (${Math.round(cambio * 100)}%).`,
         impacto: "Menos vistas hoy son menos mensajes y ventas en las próximas semanas.",
         accion: "Repite el formato de tu post con más vistas y publica en tus mejores horarios.",
-        cta: { label: "Ver qué funcionó", to: "/analiticas" },
+        cta: { label: "Ver qué funcionó", to: "/resultados" },
       });
     } else if (cambio >= 0.2) {
       fortalezas.push({
@@ -586,7 +583,7 @@ export function diagnose(input: BrainInput): Diagnosis {
       impacto:
         "Sin datos reales, el diagnóstico usa referencias generales del nicho en lugar de lo que funciona con tu audiencia.",
       accion: "Publica desde PubliVende y actualiza las métricas en Analíticas.",
-      cta: { label: "Actualizar métricas", to: "/analiticas" },
+      cta: { label: "Actualizar métricas", to: "/resultados" },
     });
   }
 
@@ -606,7 +603,7 @@ export function diagnose(input: BrainInput): Diagnosis {
       impacto:
         "Pierdes el registro de qué post trae cada cliente y las respuestas automáticas 24/7.",
       accion: "Conecta tu número de WhatsApp Business en 2 minutos.",
-      cta: { label: "Conectar WhatsApp", to: "/whatsapp" },
+      cta: { label: "Conectar WhatsApp", to: "/configuracion" },
     });
   }
   if (sinCtaPct != null) {
@@ -718,7 +715,7 @@ export function diagnose(input: BrainInput): Diagnosis {
         "Un cliente que no recibe respuesta en minutos le compra a otro. Es la fuga de ventas más cara y la más fácil de tapar.",
       accion:
         "Respóndeles ahora y activa el vendedor IA para que conteste al instante, incluso de noche.",
-      cta: { label: "Responder ahora", to: "/whatsapp" },
+      cta: { label: "Responder ahora", to: "/configuracion" },
       dinero: ticket > 0 ? dineroSinResponder : undefined,
     });
   }
@@ -733,7 +730,7 @@ export function diagnose(input: BrainInput): Diagnosis {
         impacto: "La probabilidad de venta cae fuerte después de los primeros 5–10 minutos.",
         accion:
           "Activa una regla de bienvenida automática y deja que la IA conteste preguntas de precio y disponibilidad.",
-        cta: { label: "Activar respuestas automáticas", to: "/automatizaciones" },
+        cta: { label: "Activar respuestas automáticas", to: "/configuracion" },
       });
     } else if (respuestaMediana <= 10) {
       fortalezas.push({
@@ -756,7 +753,7 @@ export function diagnose(input: BrainInput): Diagnosis {
         "La mayoría de las ventas se cierran en el segundo o tercer contacto, no en el primero.",
       accion:
         "Mándales un mensaje corto con una razón para decidir hoy (última pieza, promo, envío gratis).",
-      cta: { label: "Ver clientes pendientes", to: "/whatsapp" },
+      cta: { label: "Ver clientes pendientes", to: "/configuracion" },
       dinero: ticket > 0 ? dineroSeguimientos : undefined,
     });
   }
@@ -770,7 +767,7 @@ export function diagnose(input: BrainInput): Diagnosis {
         evidencia: `${tasaCierre}% de tus contactos terminan como venta ganada.`,
         impacto: "Estás pagando (en tiempo o anuncios) por conversaciones que no se convierten.",
         accion: `Prepara respuestas para las objeciones típicas de ${niche.label}: ${niche.objeciones.map((o) => `"${o.objecion}"`).join(", ")}.`,
-        cta: { label: "Configurar respuestas", to: "/automatizaciones" },
+        cta: { label: "Configurar respuestas", to: "/configuracion" },
       });
     } else if (tasaCierre >= 25) {
       fortalezas.push({
@@ -791,7 +788,7 @@ export function diagnose(input: BrainInput): Diagnosis {
       impacto:
         "El primer mensaje marca la venta: una respuesta inmediata retiene al cliente mientras lo atiendes.",
       accion: "Crea una bienvenida con tu catálogo y horario.",
-      cta: { label: "Crear bienvenida", to: "/automatizaciones" },
+      cta: { label: "Crear bienvenida", to: "/configuracion" },
     });
   }
 
@@ -806,7 +803,7 @@ export function diagnose(input: BrainInput): Diagnosis {
       evidencia: "El vendedor IA no puede dar precios ni mandar links de pago.",
       impacto: "Sin catálogo, cada venta depende de que tú respondas manualmente.",
       accion: "Agrega tus 3 productos o servicios más vendidos con precio y foto.",
-      cta: { label: "Agregar productos", to: "/productos" },
+      cta: { label: "Agregar productos", to: "/configuracion" },
     });
   } else {
     const sinLink = activos.filter((p) => !p.link_pago).length;
@@ -821,7 +818,7 @@ export function diagnose(input: BrainInput): Diagnosis {
         impacto:
           "Cada paso extra para pagar (transferencia, datos bancarios) hace que se caigan ventas.",
         accion: "Genera links de pago para cobrar en el mismo chat.",
-        cta: { label: "Generar links de pago", to: "/productos" },
+        cta: { label: "Generar links de pago", to: "/configuracion" },
       });
     }
   }

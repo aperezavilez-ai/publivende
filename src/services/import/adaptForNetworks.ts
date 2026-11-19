@@ -1,6 +1,6 @@
 import type { Red } from "@/lib/mock/types";
 import type { Tono } from "@/services/ai/mock";
-import { RED_LIMITS } from "@/services/social/mock";
+import { RED_LIMITS } from "@/lib/redes";
 import { getNicheHashtags } from "./nicheHashtags";
 import type { SourceMetadata } from "./fetchMetadata";
 

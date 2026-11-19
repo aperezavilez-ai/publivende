@@ -1,4 +1,5 @@
 import { getMercadoPagoToken } from "../config";
+import { getAppBaseUrl } from "@/lib/oauth/config.server";
 
 export interface MercadoPagoPreferenceInput {
   title: string;
@@ -36,6 +37,9 @@ export async function createMercadoPagoPreference(
         },
       ],
       external_reference: input.reference,
+      // Real v2: las notificaciones llegan al webhook que confirma el plan
+      // cuando el pago se aprueba (external_reference «plan:<userId>:<plan>»).
+      notification_url: `${getAppBaseUrl()}/api/webhook/mercadopago`,
       auto_return: "approved",
     }),
   });

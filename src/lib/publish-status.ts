@@ -1,5 +1,5 @@
 import type { Post, Red } from "@/lib/mock/types";
-import { RED_LABELS } from "@/services/social/mock";
+import { RED_LABELS } from "@/lib/redes";
 
 export function countApiPublishedRedes(post: Post): number {
   return post.external_ids ? Object.keys(post.external_ids).length : 0;

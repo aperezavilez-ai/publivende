@@ -134,12 +134,22 @@ export const getMetaBoostForPost = createServerFn({ method: "POST" })
       dailyBudgetCents: budgetMxn * 100,
     });
 
+    // Real v2: si Meta no creó la pauta, esto es un error — nunca un ok.
+    if (!boost.ok) {
+      return {
+        ok: false as const,
+        error: boost.error ?? "No se pudo crear la pauta en Meta",
+        boost_url: boost.boost_url,
+      };
+    }
+
     const reach = estimateBoostReach(budgetMxn);
 
     return {
       ok: true as const,
       boost_url: boost.boost_url,
       mode: boost.mode,
+      campaign_id: boost.campaign_id,
       estimated_reach: reach,
       daily_budget_mxn: budgetMxn,
     };

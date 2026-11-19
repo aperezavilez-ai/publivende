@@ -15,9 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { publishPost, RED_LABELS, RED_LIMITS, RED_COLORS } from "@/services/social/mock";
+import { RED_LABELS, RED_LIMITS, RED_COLORS } from "@/lib/redes";
 import { publishPostReal } from "@/lib/api/publish.functions";
-import { broadcastPostLink } from "@/services/whatsapp/mock";
 import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
 import { generateCaptions, type Tono } from "@/services/ai/mock";
 import {
@@ -69,7 +68,7 @@ import {
   type AlcanceNivel,
   type PublishAlcance,
 } from "@/lib/geo-targeting";
-import type { Red, PostAlcance } from "@/lib/mock/types";
+import type { Red, Post, PostAlcance } from "@/lib/mock/types";
 import { PLAN_LIMITS } from "@/lib/mock/types";
 import { planLabel } from "@/lib/plans";
 import { buildPublishResultMessage, disconnectedRedes, resolveMediaForPublish } from "@/lib/publish-status";
@@ -163,10 +162,6 @@ function Publicar() {
     toast.success("Contenido precargado");
   }, []);
 
-  const [abMode, setAbMode] = useState(false);
-  const [copyB, setCopyB] = useState("");
-  const [mediaB, setMediaB] = useState("");
-  const [abMetric, setAbMetric] = useState<"vistas" | "mensajes_generados" | "engagement">("mensajes_generados");
 
   const paisInicial = paisFromCodigoTelefono(user?.codigo_pais ?? "+52");
   const mxInicial = ubicacionInicialMexico(user?.ciudad);
@@ -621,36 +616,6 @@ function Publicar() {
 
     const alcance = buildPostAlcance();
     const meta = buildPublishMeta();
-    let realPublishResult: {
-      ok: boolean;
-      errors?: string[];
-      externalIds?: Record<string, string>;
-      surfaces?: { ok: boolean }[];
-      waSent?: number;
-      error?: string;
-      post?: { id: string };
-    } | null = null;
-
-    if (abMode) {
-      if (!copyB) return toast.error("Agrega el copy de la variante B");
-      const finalMediaB = mediaB || media;
-      const a = await publishPost({ user_id: user.id, tipo: "imagen", media_url: media, copy: primaryCopy, redes, copy_por_red: isMultiCopyMode ? copyPorRed : undefined, source_url: sourceMeta?.url, alcance });
-      const b = await publishPost({ user_id: user.id, tipo: "imagen", media_url: finalMediaB, copy: copyB, redes, alcance });
-      const cur = loadDB();
-      cur.ab_experiments = cur.ab_experiments ?? [];
-      cur.ab_experiments.push({
-        id: uid(), user_id: user.id,
-        nombre: `Experimento ${new Date().toLocaleDateString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
-        variante_a_post_id: a.id, variante_b_post_id: b.id, metric: abMetric,
-        inicio: new Date().toISOString(),
-        fin_estimado: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        estado: "corriendo",
-      });
-      saveDB(cur);
-      toast.success("Experimento A/B lanzado 🧪 — ganador en 24h");
-      navigate({ to: "/experimentos" });
-      return;
-    }
 
     const scheduleMeta =
       programar && fecha
@@ -671,31 +636,15 @@ function Publicar() {
       publishMedia = resolved;
     }
 
-    const published = await publishPost({
-      user_id: user.id,
-      tipo: sourceMeta?.mediaType ?? "imagen",
-      media_url: publishMedia,
-      copy: primaryCopy || "⏰ Compartida programada",
-      copy_por_red: isMultiCopyMode ? copyPorRed : undefined,
-      source_url: (sourceMeta?.url ?? sourceUrl) || undefined,
-      redes,
-      alcance,
-      programar: programar && fecha ? new Date(fecha).toISOString() : undefined,
-      draft_id: draftPostId,
-      schedule_meta: scheduleMeta,
-      ...meta,
-    });
-
-    let realPublishErrors: string[] = [];
-    let apiExternalIds: Partial<Record<Red, string>> = {};
-    let surfacesOk = 0;
-    let waSentCount = 0;
+    // Real v2 — UNA sola verdad al publicar:
+    // en producción SOLO publica el servidor (publishPostReal). Si el
+    // servidor no confirma con external_id, NO existe post «publicado» en
+    // ninguna parte. Fuera de producción se guarda como BORRADOR honesto.
     if (isProductionModeClient() && sessionToken) {
-      realPublishResult = await publishPostReal({
+      const res = await publishPostReal({
         data: {
           token: sessionToken,
           post: {
-            id: published.id,
             draft_id: draftPostId,
             tipo: sourceMeta?.mediaType ?? "imagen",
             media_url: publishMedia,
@@ -705,79 +654,76 @@ function Publicar() {
             alcance,
             redes,
             programar: programar && fecha ? new Date(fecha).toISOString() : undefined,
-            tracking_slug: published.tracking_slug,
             schedule_meta: scheduleMeta,
             ...meta,
           },
           notifyWhatsApp: programar ? false : whatsappSelected,
         },
       });
-      if (realPublishResult.ok) {
-        if (realPublishResult.errors?.length) realPublishErrors = realPublishResult.errors;
-        if (realPublishResult.externalIds) apiExternalIds = realPublishResult.externalIds;
-        if (realPublishResult.surfaces) surfacesOk = realPublishResult.surfaces.filter((s) => s.ok).length;
-        if (realPublishResult.waSent) {
-          waSentCount = realPublishResult.waSent;
-          toast.success(`WhatsApp: ${realPublishResult.waSent} contacto${realPublishResult.waSent > 1 ? "s" : ""} notificados`);
-        }
-      } else {
-        if (realPublishResult.errors?.length) realPublishErrors = realPublishResult.errors;
-        if (!programar) {
-          toast.error(realPublishResult.error ?? "No se pudo publicar en tus redes", {
-            description: "Tu publicación quedó guardada en la Biblioteca.",
-          });
-          navigate({ to: "/biblioteca" });
-          return;
-        }
-      }
-    } else if (whatsappSelected && !programar) {
-      if (waContactCount === 0) {
-        toast.message("Sin contactos en CRM", {
-          description: "Publicación guardada. Cuando tengas contactos en WhatsApp CRM, podrás enviarles el link desde Biblioteca.",
+
+      if (!res.ok) {
+        toast.error(res.error ?? "No se pudo publicar en tus redes", {
+          description: "No se guardó ninguna publicación como exitosa. Revisa tus conexiones e intenta de nuevo.",
+          duration: 8000,
         });
-      } else {
-        const { sent } = await broadcastPostLink(user.id, published.id);
-        waSentCount = sent;
-        toast.success(`WhatsApp: link enviado a ${sent} contacto${sent > 1 ? "s" : ""}`);
+        return;
       }
-    }
 
-    const effectivePostId = realPublishResult?.post?.id || published.id;
-    if (Object.keys(apiExternalIds).length || realPublishErrors.length) {
+      // Espejo local del post REAL que devolvió el servidor (solo lectura
+      // para Biblioteca/Calendario; la verdad vive en la BD del servidor).
+      const serverPost = res.post as unknown as Post;
       const db = loadDB();
-      const row = db.posts.find((p) => p.id === published.id || p.id === effectivePostId);
-      if (row) {
-        row.id = effectivePostId;
-        row.external_ids = apiExternalIds;
-        saveDB(db);
+      const idx = db.posts.findIndex((p) => p.id === serverPost.id);
+      if (idx >= 0) db.posts[idx] = { ...db.posts[idx], ...serverPost };
+      else db.posts.push(serverPost);
+      if (draftPostId && draftPostId !== serverPost.id) {
+        db.posts = db.posts.filter((p) => p.id !== draftPostId);
       }
+      saveDB(db);
+
+      const apiExternalIds = (res.externalIds ?? {}) as Partial<Record<Red, string>>;
+      const surfacesOk = res.surfaces?.filter((s) => s.ok).length ?? 0;
+      const realPublishErrors = res.errors ?? [];
+      if (res.waSent) {
+        toast.success(`WhatsApp: ${res.waSent} contacto${res.waSent > 1 ? "s" : ""} notificados`);
+      }
+      if (realPublishErrors.length && Object.keys(apiExternalIds).length) {
+        toast.message("Publicado parcialmente", { description: realPublishErrors.join(" · ") });
+      }
+      toast.success(
+        buildPublishResultMessage({
+          redes,
+          apiPublished: apiExternalIds,
+          surfacesOk,
+          errors: realPublishErrors,
+          waSent: res.waSent ?? 0,
+          programar: !!(programar && fecha),
+        }),
+      );
+      navigate({
+        to: programar ? "/calendario" : surfacesOk > 0 ? "/distribuir" : "/biblioteca",
+        search: programar ? undefined : { post: serverPost.id },
+      });
+      return;
     }
 
-    if (realPublishErrors.length && Object.keys(apiExternalIds).length) {
-      toast.message("Publicado parcialmente", { description: realPublishErrors.join(" · ") });
-    }
-
-    toast.success(
-      buildPublishResultMessage({
-        redes,
-        apiPublished: apiExternalIds,
-        surfacesOk,
-        errors: realPublishErrors,
-        waSent: waSentCount,
-        programar: !!(programar && fecha),
-      }),
-    );
-    navigate({
-      to: programar
-        ? "/calendario"
-        : isProductionModeClient() && surfacesOk > 0
-          ? "/distribuir"
-          : "/biblioteca",
-      search:
-        programar || !isProductionModeClient()
-          ? undefined
-          : { post: effectivePostId },
+    // Modo demostración: jamás se marca «publicado»; queda como borrador.
+    saveDraftPost({
+      user_id: user.id,
+      draft_id: draftPostId,
+      tipo: sourceMeta?.mediaType ?? "imagen",
+      media_url: publishMedia,
+      copy: primaryCopy || "⏰ Compartida programada",
+      copy_por_red: isMultiCopyMode ? copyPorRed : undefined,
+      source_url: (sourceMeta?.url ?? sourceUrl) || undefined,
+      alcance,
+      redes,
+      ...meta,
     });
+    toast.message("Modo demostración: guardado como borrador", {
+      description: "No se publicó en ninguna red. Activa el modo producción para publicar de verdad.",
+    });
+    navigate({ to: "/biblioteca" });
   }
 
   function charCountFor(red: Red): number {
@@ -817,13 +763,6 @@ function Publicar() {
               <PenLine className="w-4 h-4" /> Manual
             </button>
           </div>
-          {publishMode === "manual" && (
-            <label className="flex items-center gap-2 text-sm bg-card border rounded-lg px-3 py-2">
-              <FlaskConical className="w-4 h-4 text-primary" />
-              <span className="font-medium">Modo A/B</span>
-              <Switch checked={abMode} onCheckedChange={setAbMode} />
-            </label>
-          )}
         </div>
       </div>
 
@@ -1180,7 +1119,7 @@ function Publicar() {
             </Card>
           ) : (
             <Card className="p-5">
-              <Label className="font-semibold mb-3 block">Contenido {abMode && "— Variante A"}</Label>
+              <Label className="font-semibold mb-3 block">Contenido</Label>
               {media ? (
                 <div className="relative">
                   <img src={media} alt="" className="w-full aspect-square object-cover rounded-lg" />
@@ -1302,7 +1241,7 @@ function Publicar() {
           ) : publishMode === "manual" ? (
             <Card className="p-5">
               <div className="flex items-center justify-between mb-2">
-                <Label className="font-semibold">Copy {abMode && "— Variante A"}</Label>
+                <Label className="font-semibold">Copy</Label>
                 <Dialog open={iaOpen} onOpenChange={setIaOpen}>
                   <DialogTrigger asChild><Button size="sm" variant="outline" className="gap-1"><Sparkles className="w-4 h-4" />Generar con IA</Button></DialogTrigger>
                   <DialogContent className="max-w-lg"><DialogHeader><DialogTitle>Generador IA de captions</DialogTitle></DialogHeader>
@@ -1340,34 +1279,6 @@ function Publicar() {
             </Card>
           ) : null}
 
-          {abMode && publishMode === "manual" && (
-            <Card className="p-5 border-primary/40 border-2 bg-primary/5">
-              <Label className="font-semibold mb-3 block flex items-center gap-2"><FlaskConical className="w-4 h-4" />Variante B</Label>
-              {mediaB ? (
-                <div className="relative mb-3">
-                  <img src={mediaB} alt="" className="w-full aspect-square object-cover rounded-lg" />
-                  <Button size="sm" variant="secondary" onClick={() => setMediaB("")} className="absolute top-2 right-2">Cambiar</Button>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed rounded-lg p-4 text-center mb-3">
-                  <Button asChild size="sm" variant="outline"><label className="cursor-pointer"><input type="file" accept="image/*,video/*" className="hidden" onChange={(e) => onFile(e, setMediaB)} />Subir imagen B (opcional)</label></Button>
-                  <p className="text-[10px] text-muted-foreground mt-1">Si no subes, se usa la misma imagen que A</p>
-                </div>
-              )}
-              <Textarea rows={4} value={copyB} onChange={(e) => setCopyB(e.target.value)} placeholder="Copy alternativo para probar…" />
-              <div className="mt-3">
-                <Label className="text-xs">Métrica de éxito</Label>
-                <Select value={abMetric} onValueChange={(v) => setAbMetric(v as typeof abMetric)}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mensajes_generados">DMs generados</SelectItem>
-                    <SelectItem value="vistas">Vistas</SelectItem>
-                    <SelectItem value="engagement">Engagement %</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </Card>
-          )}
 
           <Card className="p-5">
             <div className="flex items-center justify-between mb-1">
@@ -1421,8 +1332,7 @@ function Publicar() {
             </div>
           </Card>
 
-          {!abMode && (
-            <Card className="p-5 space-y-3">
+          <Card className="p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="font-semibold">Programar</Label>
@@ -1436,7 +1346,6 @@ function Publicar() {
                 </p>
               )}
             </Card>
-          )}
 
           <Button
             onClick={publicar}
@@ -1444,7 +1353,7 @@ function Publicar() {
             className="w-full bg-primary border-0 shadow-sm text-white h-12 text-base font-semibold"
             disabled={!programar && redes.length === 0 && !whatsappSelected}
           >
-            {abMode ? "Lanzar experimento A/B" : programar ? "Programar publicación" : (() => {
+            {programar ? "Programar publicación" : (() => {
               if (publishMode === "ai_campaign") {
                 return "🚀 Publicar Campaña en Red PubliVende y mis Redes";
               }

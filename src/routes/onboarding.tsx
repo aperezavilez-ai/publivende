@@ -8,11 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RED_LABELS } from "@/services/social/mock";
+import { RED_LABELS } from "@/lib/redes";
 import { connectSocialNetwork } from "@/services/social/connectSocial";
 import { bootstrapClientFromOnboarding, type OnboardingProductInput } from "@/lib/bootstrap";
-import { RECETAS } from "@/lib/recetas";
-import { generateCatalogFromBusiness, suggestProductImage } from "@/services/ai/catalog";
+const INDUSTRIAS = [
+  "Ropa y moda", "Belleza y cosmética", "Comida y delivery", "Salón / barbería",
+  "Inmobiliaria", "Infoproductos / cursos", "Fitness y wellness", "Servicios profesionales",
+];
 import { importStoreFromLink, getStorePlatformLabel, detectStorePlatform } from "@/services/import/storeImport";
 import { Instagram, Facebook, Youtube, Music2, Check, MessageCircle, Sparkles, Store, Bot, Plus, Trash2, Wand2, Upload, Package, ImageIcon, Link2 } from "lucide-react";
 import { PubliVendeLogo } from "@/components/PubliVendeLogo";
@@ -35,7 +37,7 @@ function Onboarding() {
   const accounts = useDB((db) => db.social_accounts.filter((a) => a.user_id === user?.id));
 
   const [negocio, setNegocio] = useState({
-    industria: user?.industria ?? RECETAS[0].industria,
+    industria: user?.industria ?? INDUSTRIAS[0],
     descripcion: user?.descripcion_negocio ?? "",
     publico: user?.publico_objetivo ?? "",
     tono: user?.tono_marca ?? "casual",
@@ -47,12 +49,10 @@ function Onboarding() {
   const [productos, setProductos] = useState<OnboardingProductInput[]>([
     { ...EMPTY_PRODUCT },
   ]);
-  const [catalogMode, setCatalogMode] = useState<"manual" | "ai" | "import">("manual");
-  const [aiLoading, setAiLoading] = useState(false);
+  const [catalogMode, setCatalogMode] = useState<"manual" | "import">("manual");
   const [importLoading, setImportLoading] = useState(false);
   const [storeUrl, setStoreUrl] = useState("");
   const [importMeta, setImportMeta] = useState<{ platform: string; tienda: string } | null>(null);
-  const [precioRango, setPrecioRango] = useState({ min: 200, max: 1500 });
 
   const [wa, setWa] = useState({ codigo: user?.codigo_pais ?? "+52", numero: user?.celular ?? "" });
 
@@ -81,43 +81,6 @@ function Onboarding() {
     const f = e.target.files?.[0];
     if (!f) return;
     updateProducto(i, { imagen: URL.createObjectURL(f) });
-  }
-
-  async function generarCatalogoIA() {
-    if (negocio.descripcion.trim().length < 10) return toast.error("Completa la descripción del negocio (paso 1)");
-    setAiLoading(true);
-    try {
-      const items = await generateCatalogFromBusiness({
-        nombre_negocio: user!.nombre_negocio,
-        industria: negocio.industria,
-        descripcion: negocio.descripcion,
-        publico_objetivo: negocio.publico,
-        tono: negocio.tono as import("@/services/ai/mock").Tono,
-        ciudad: negocio.ciudad,
-        precio_min: precioRango.min,
-        precio_max: precioRango.max,
-      });
-      setProductos(items.map((it) => ({
-        nombre: it.nombre,
-        precio: it.precio,
-        descripcion: it.descripcion,
-        imagen: it.imagen,
-        tipo: it.tipo,
-        copy_publicacion: it.copy_publicacion,
-        generado_ia: true,
-      })));
-      setCatalogMode("manual");
-      toast.success(`${items.length} productos/servicios generados — revísalos y edita lo que quieras`);
-    } finally {
-      setAiLoading(false);
-    }
-  }
-
-  function sugerirImagenProducto(i: number) {
-    const p = productos[i];
-    if (!p?.nombre.trim()) return toast.error("Escribe el nombre del producto primero");
-    updateProducto(i, { imagen: suggestProductImage(p.nombre, negocio.industria) });
-    toast.success("Imagen sugerida por IA");
   }
 
   async function importarTienda() {
@@ -227,7 +190,7 @@ function Onboarding() {
                 <Label>Industria</Label>
                 <Select value={negocio.industria} onValueChange={(v) => setNegocio({ ...negocio, industria: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{RECETAS.map((r) => <SelectItem key={r.id} value={r.industria}>{r.emoji} {r.industria}</SelectItem>)}</SelectContent>
+                  <SelectContent>{INDUSTRIAS.map((ind) => <SelectItem key={ind} value={ind}>{ind}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
@@ -276,9 +239,6 @@ function Onboarding() {
               <button type="button" onClick={() => setCatalogMode("import")} className={`flex-1 text-sm py-2 px-2 rounded-md transition flex items-center justify-center gap-1 ${catalogMode === "import" ? "bg-background shadow font-medium" : "text-muted-foreground"}`}>
                 <Link2 className="w-3 h-3" /> Importar tienda
               </button>
-              <button type="button" onClick={() => setCatalogMode("ai")} className={`flex-1 text-sm py-2 px-2 rounded-md transition flex items-center justify-center gap-1 ${catalogMode === "ai" ? "bg-background shadow font-medium" : "text-muted-foreground"}`}>
-                <Wand2 className="w-3 h-3" /> IA lo crea
-              </button>
             </div>
 
             {catalogMode === "import" ? (
@@ -313,19 +273,6 @@ function Onboarding() {
               </div>
             ) : null}
 
-            {catalogMode === "ai" ? (
-              <div className="mt-5 p-4 border border-primary/30 rounded-lg bg-primary/5 space-y-3">
-                <p className="text-sm">Con tu industria y descripción, la IA propone productos/servicios con precios, fotos y copies listos para publicar.</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div><Label className="text-xs">Precio mínimo (MXN)</Label><Input type="number" value={precioRango.min} onChange={(e) => setPrecioRango({ ...precioRango, min: Number(e.target.value) })} /></div>
-                  <div><Label className="text-xs">Precio máximo (MXN)</Label><Input type="number" value={precioRango.max} onChange={(e) => setPrecioRango({ ...precioRango, max: Number(e.target.value) })} /></div>
-                </div>
-                <Button onClick={generarCatalogoIA} disabled={aiLoading} className="w-full bg-primary border-0 gap-2">
-                  <Sparkles className="w-4 h-4" />{aiLoading ? "Generando catálogo…" : "Generar catálogo con IA"}
-                </Button>
-              </div>
-            ) : null}
-
             <div className="mt-5 space-y-4">
               {productos.map((p, i) => (
                 <div key={i} className="p-3 border rounded-lg space-y-2 relative">
@@ -343,9 +290,6 @@ function Onboarding() {
                     <div className="flex-1 flex flex-col gap-1">
                       <Button type="button" size="sm" variant="outline" className="h-8 text-xs gap-1" asChild>
                         <label className="cursor-pointer"><Upload className="w-3 h-3" /><input type="file" accept="image/*" className="hidden" onChange={(e) => onProductImage(e, i)} />Subir foto</label>
-                      </Button>
-                      <Button type="button" size="sm" variant="ghost" className="h-8 text-xs gap-1" onClick={() => sugerirImagenProducto(i)}>
-                        <Wand2 className="w-3 h-3" />IA sugiere foto
                       </Button>
                     </div>
                   </div>

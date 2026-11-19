@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { disconnectAccount, RED_LABELS } from "@/services/social/mock";
+import { RED_LABELS } from "@/lib/redes";
+import { disconnectOAuthAccountServer } from "@/lib/api/oauth.functions";
+import { generarLinkCobro } from "@/lib/payments";
 import { connectSocialNetwork } from "@/services/social/connectSocial";
 import { fetchOAuthProvidersStatus, oauthProviderLabel } from "@/services/social/oauth";
 import { checkMetaPublishHealth } from "@/lib/api/meta-health.functions";
@@ -46,7 +48,6 @@ function Conf() {
   const metricsSync = useDB((db) => db.metrics_sync ?? []);
   const posts = useDB((db) => db.posts.filter((p) => p.user_id === user?.id && p.estado === "publicado"));
   const contacts = useDB((db) => db.whatsapp_contacts.filter((c) => c.user_id === user?.id));
-  const reglas = useDB((db) => db.automation_rules.filter((r) => r.user_id === user?.id));
   const productos = useDB((db) => db.productos.filter((p) => p.user_id === user?.id));
   const [oauthReady, setOauthReady] = useState<{
     meta: boolean;
@@ -138,7 +139,90 @@ function Conf() {
     }
   }
   const limits = PLAN_LIMITS[user.plan];
-  const usado = { posts: posts.length, conv: contacts.length, reglas: reglas.length, prods: productos.length };
+  const usado = { posts: posts.length, conv: contacts.length, prods: productos.length };
+
+  // Real v2: desconectar borra el token EN EL SERVIDOR (fila oauth_accounts)
+  // y después refleja lo mismo en el espejo local. Ya no es solo visual.
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  async function onDisconnect(red: (typeof accounts)[0]["red"]) {
+    setDisconnecting(red);
+    try {
+      const token = getSessionToken();
+      if (isProductionModeClient() && token) {
+        const res = await disconnectOAuthAccountServer({ data: { token, red } });
+        if (!res.ok) {
+          toast.error(res.error ?? "No se pudo desconectar en el servidor");
+          return;
+        }
+      }
+      const db = loadDB();
+      const acc = db.social_accounts.find((a) => a.user_id === user!.id && a.red === red);
+      if (acc) {
+        acc.estado_conexion = "desconectada";
+        acc.token_placeholder = "";
+        acc.external_account_id = undefined;
+        acc.token_expires_at = undefined;
+        acc.oauth_provider = undefined;
+        saveDB(db);
+      }
+      toast.success("Desconectado: el token se eliminó del servidor");
+    } finally {
+      setDisconnecting(null);
+    }
+  }
+
+  // Productos (viven aquí en el panel nuevo): CRUD local con sync al servidor
+  // y links de cobro SOLO reales — sin proveedor, error claro.
+  const [nuevoProd, setNuevoProd] = useState({ nombre: "", precio: "", descripcion: "" });
+  const [cobroBusy, setCobroBusy] = useState<string | null>(null);
+  function agregarProducto() {
+    const precio = Number(nuevoProd.precio);
+    if (!nuevoProd.nombre.trim() || !Number.isFinite(precio) || precio <= 0) {
+      return toast.error("Escribe nombre y un precio válido");
+    }
+    const db = loadDB();
+    db.productos.push({
+      id: uid(),
+      user_id: user!.id,
+      nombre: nuevoProd.nombre.trim(),
+      precio,
+      moneda: "MXN",
+      descripcion: nuevoProd.descripcion.trim(),
+      imagen: "",
+      link_pago: "",
+      pago_provider: user!.pago_provider_default ?? undefined,
+      activo: true,
+    });
+    saveDB(db);
+    setNuevoProd({ nombre: "", precio: "", descripcion: "" });
+    toast.success("Producto agregado");
+  }
+  function borrarProducto(id: string) {
+    const db = loadDB();
+    db.productos = db.productos.filter((p) => p.id !== id);
+    saveDB(db);
+  }
+  async function linkCobroProducto(prodId: string) {
+    const prod = productos.find((p) => p.id === prodId);
+    if (!prod) return;
+    setCobroBusy(prodId);
+    try {
+      const link = await generarLinkCobro({
+        provider: prod.pago_provider ?? user!.pago_provider_default ?? "mercadopago",
+        monto: prod.precio,
+        moneda: prod.moneda || "MXN",
+        descripcion: prod.nombre,
+      });
+      const db = loadDB();
+      const row = db.productos.find((p) => p.id === prodId);
+      if (row) { row.link_pago = link.url; saveDB(db); }
+      toast.success("Link de cobro real generado");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo generar el link de cobro", { duration: 8000 });
+    } finally {
+      setCobroBusy(null);
+    }
+  }
 
   async function runBilling(action: () => Promise<void>) {
     setBillingBusy(true);
@@ -364,8 +448,8 @@ function Conf() {
                   )}
                 </div>
                 {isConectada ? (
-                  <Button size="sm" variant="outline" onClick={() => { disconnectAccount(user.id, a.red); toast.success("Desconectado"); }}>
-                    Desconectar
+                  <Button size="sm" variant="outline" disabled={disconnecting === a.red} onClick={() => onDisconnect(a.red)}>
+                    {disconnecting === a.red ? "Desconectando…" : "Desconectar"}
                   </Button>
                 ) : (
                 <Button
@@ -382,6 +466,43 @@ function Conf() {
           );
         })}
         </div>
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="font-semibold mb-1">Productos</h2>
+        <p className="text-xs text-muted-foreground mb-4">
+          Tu catálogo para publicar y cobrar. Los links de cobro se generan con tu proveedor real
+          (Stripe o Mercado Pago): si no está configurado, verás el error — nunca un link falso.
+        </p>
+        <div className="space-y-2 mb-4">
+          {productos.length === 0 && (
+            <p className="text-sm text-muted-foreground">Aún no tienes productos. Agrega el primero abajo.</p>
+          )}
+          {productos.map((p) => (
+            <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 border rounded-lg p-3">
+              <div className="min-w-0">
+                <div className="font-medium text-sm">{p.nombre} · ${p.precio.toLocaleString("es-MX")} {p.moneda}</div>
+                {p.link_pago
+                  ? <a href={p.link_pago} target="_blank" rel="noreferrer" className="text-xs text-blue-700 hover:underline break-all">{p.link_pago}</a>
+                  : <div className="text-xs text-amber-700">Sin link de cobro todavía</div>}
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Button size="sm" variant="outline" disabled={cobroBusy === p.id} onClick={() => linkCobroProducto(p.id)}>
+                  {cobroBusy === p.id ? "Generando…" : p.link_pago ? "Regenerar link" : "Generar link de cobro"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => borrarProducto(p.id)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="grid sm:grid-cols-[1fr_140px] gap-2">
+          <Input placeholder="Nombre del producto o servicio" value={nuevoProd.nombre} onChange={(e) => setNuevoProd({ ...nuevoProd, nombre: e.target.value })} />
+          <Input type="number" placeholder="Precio MXN" value={nuevoProd.precio} onChange={(e) => setNuevoProd({ ...nuevoProd, precio: e.target.value })} />
+        </div>
+        <Input className="mt-2" placeholder="Descripción (opcional)" value={nuevoProd.descripcion} onChange={(e) => setNuevoProd({ ...nuevoProd, descripcion: e.target.value })} />
+        <Button size="sm" className="mt-3" onClick={agregarProducto}>Agregar producto</Button>
       </Card>
 
       <Card className="p-5">
@@ -412,7 +533,6 @@ function Conf() {
           {[
             { label: "Publicaciones este mes", v: usado.posts, max: limits.posts_mes },
             { label: "Conversaciones WhatsApp", v: usado.conv, max: limits.conversaciones },
-            { label: "Reglas automáticas", v: usado.reglas, max: limits.reglas },
             { label: "Productos en catálogo", v: usado.prods, max: limits.productos },
           ].map((u) => (
             <div key={u.label}>

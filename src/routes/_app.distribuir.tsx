@@ -118,10 +118,12 @@ function Distribuir() {
     const res = await getMetaBoostForPost({ data: { token, postId, dailyBudgetMxn: monto } });
     if (res.ok) {
       setBoostUrl(res.boost_url);
-      window.open(res.boost_url, "_blank", "noopener");
-      toast.success(`Alcance estimado: ${res.estimated_reach.min.toLocaleString()}–${res.estimated_reach.max.toLocaleString()} personas/día`);
+      // Real v2: la pauta YA quedó creada y activa en Meta vía API.
+      toast.success(
+        `Pauta activa en Meta${res.campaign_id ? ` (campaña ${res.campaign_id})` : ""}. Alcance estimado: ${res.estimated_reach.min.toLocaleString()}–${res.estimated_reach.max.toLocaleString()} personas/día`,
+      );
     } else {
-      toast.error(res.error ?? "No se pudo preparar amplificación");
+      toast.error(res.error ?? "No se pudo crear la pauta en Meta", { duration: 8000 });
     }
   }
 

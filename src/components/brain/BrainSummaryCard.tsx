@@ -60,7 +60,7 @@ export function BrainSummaryCard() {
           )}
         </div>
         <Button asChild className="gap-1 shrink-0">
-          <Link to="/diagnostico">
+          <Link to="/dashboard">
             Ver diagnóstico <ArrowRight className="w-4 h-4" />
           </Link>
         </Button>

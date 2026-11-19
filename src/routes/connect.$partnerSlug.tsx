@@ -8,7 +8,7 @@ import { Loader2, MessageCircle, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { getPartnerConnectPage, startPartnerOAuthFromConnect } from "@/lib/api/partner.functions";
 import { PartnerConnectWhatsApp } from "@/components/whatsapp/PartnerConnectWhatsApp";
-import { RED_LABELS } from "@/services/social/mock";
+import { RED_LABELS } from "@/lib/redes";
 import type { Red } from "@/lib/mock/types";
 
 const searchSchema = z.object({
