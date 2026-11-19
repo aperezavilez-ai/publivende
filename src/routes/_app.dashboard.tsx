@@ -123,13 +123,15 @@ function CabinaDifusion() {
 
   // Conectar red mediante popup seguro de Fase B
   async function handleConnect(red: Red) {
+    if (!user?.id) {
+      toast.error("Debes iniciar sesión para conectar redes");
+      return;
+    }
     setConnectingRed(red);
     try {
-      const res = await connectSocialNetwork(red);
-      if (res.ok) {
+      const ok = await connectSocialNetwork(user.id, red, "/dashboard");
+      if (ok) {
         toast.success(`¡${RED_LABELS[red]} conectada con éxito!`);
-      } else if (!res.cancelled) {
-        toast.error(res.error ?? "No se pudo completar la conexión");
       }
     } catch (err) {
       toast.error((err as Error).message);
