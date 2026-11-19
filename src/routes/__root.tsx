@@ -1,14 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
-import { type ReactNode, useEffect } from "react";
-import "../styles.css";
+import { type ReactNode, useEffect, useState } from "react";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/mock/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { registerPWA } from "@/lib/registerPWA";
 
-const SITE_URL = "https://publivende.mx";
+const SITE_URL = "https://www.publivende.mx";
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
@@ -58,63 +57,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         type: "application/ld+json",
         children: JSON.stringify(organizationJsonLd),
       },
-      {
-        children: `if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(regs) {
-    for (var i = 0; i < regs.length; i++) { regs[i].unregister(); }
-  });
-  if (typeof caches !== 'undefined') {
-    caches.keys().then(function(keys) {
-      for (var i = 0; i < keys.length; i++) { caches.delete(keys[i]); }
-    });
-  }
-}`,
-      },
     ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
-  errorComponent: RootErrorComponent,
 });
-
-function RootErrorComponent({ error, reset }: { error: any; reset: () => void }) {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background text-foreground text-center">
-      <div className="max-w-md w-full bg-card p-6 rounded-xl border shadow-sm space-y-4">
-        <h2 className="text-xl font-bold text-destructive">Algo no salió como esperábamos</h2>
-        <p className="text-sm text-muted-foreground">
-          {error?.message || "Ocurrió un error inesperado al cargar la aplicación."}
-        </p>
-        {error?.stack && (
-          <details className="text-left bg-muted p-3 rounded text-xs text-muted-foreground overflow-auto max-h-40">
-            <summary className="cursor-pointer font-medium text-foreground mb-1">Detalles técnicos</summary>
-            <pre className="whitespace-pre-wrap">{error.stack}</pre>
-          </details>
-        )}
-        <div className="flex flex-col sm:flex-row gap-2 pt-2">
-          <button
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.href = "/";
-              }
-            }}
-            className="flex-1 px-4 py-2 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-md font-medium text-xs transition cursor-pointer"
-          >
-            Limpiar sesión y reiniciar
-          </button>
-          <button
-            onClick={() => reset()}
-            className="flex-1 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-medium text-xs transition cursor-pointer"
-          >
-            Reintentar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
@@ -125,9 +72,30 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Dominio canónico ÚNICO. La sesión vive en el almacenamiento del dominio
+ * donde entraste: si el usuario entra por un alias (publivende.mx sin www
+ * o publivende.vercel.app), los regresos de OAuth (Meta, Google, TikTok) y
+ * de Mercado Pago caen en www.publivende.mx y la app «pierde» su sesión.
+ * Aquí toda carga de página en un alias se mueve al dominio oficial con la
+ * misma ruta; las llamadas API/cron no pasan por este componente.
+ */
+const CANONICAL_HOST = "www.publivende.mx";
+const ALIAS_HOSTS = new Set(["publivende.mx", "publivende.vercel.app"]);
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const [wrongHost, setWrongHost] = useState(false);
   useEffect(() => { registerPWA(); }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (ALIAS_HOSTS.has(window.location.hostname)) {
+      setWrongHost(true);
+      const target = `https://${CANONICAL_HOST}${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.replace(target);
+    }
+  }, []);
+  if (wrongHost) return null;
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -138,4 +106,3 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
-
