@@ -81,10 +81,14 @@ export function OAuthCallbackView({
     nextReturnTo: string,
     partnerUrl?: string,
     extUserId?: string,
+    linkedAccount?: OAuthConnectPublicResult,
   ) {
     setReturnTo(nextReturnTo);
     setStatus("ok");
-    setMessage(`${account.nombre_cuenta} conectado correctamente`);
+    const label = linkedAccount
+      ? `${account.nombre_cuenta} y ${linkedAccount.nombre_cuenta}`
+      : account.nombre_cuenta;
+    setMessage(`${label} conectado correctamente`);
 
     if (typeof window !== "undefined" && window.opener && window.opener !== window) {
       try {
@@ -94,6 +98,7 @@ export function OAuthCallbackView({
             provider,
             red: account.red,
             account,
+            linkedAccount,
           },
           window.location.origin,
         );
@@ -237,11 +242,15 @@ export function OAuthCallbackView({
             return;
           }
           await saveConnectedAccount(result.userId, selection.account);
+          if (selection.linkedAccount) {
+            await saveConnectedAccount(result.userId, selection.linkedAccount);
+          }
           finishSuccess(
             selection.account,
             selection.returnTo,
             selection.partnerReturnUrl,
             selection.externalUserId,
+            selection.linkedAccount,
           );
           return;
         }
@@ -265,7 +274,16 @@ export function OAuthCallbackView({
       }
 
       await saveConnectedAccount(result.userId, result.account);
-      finishSuccess(result.account, result.returnTo, result.partnerReturnUrl, result.externalUserId);
+      if (result.linkedAccount) {
+        await saveConnectedAccount(result.userId, result.linkedAccount);
+      }
+      finishSuccess(
+        result.account,
+        result.returnTo,
+        result.partnerReturnUrl,
+        result.externalUserId,
+        result.linkedAccount,
+      );
     }
 
     run().catch((err) => {

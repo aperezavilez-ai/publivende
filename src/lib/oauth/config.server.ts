@@ -16,13 +16,14 @@ export function getOAuthStateSecret(): string {
 }
 
 export function getMetaScopesForRed(red: Red): string[] {
-  // Meta retiró publish_to_groups (Groups API) y read_insights en v21.0: pedirlo causa "Invalid Scopes".
+  // Meta requiere pages_show_list, pages_read_engagement, pages_manage_posts
+  // e instagram_basic, instagram_content_publish para conectar ambas redes a la vez.
   const base = [
     "pages_show_list",
     "pages_read_engagement",
     "pages_manage_posts",
   ];
-  if (red === "instagram") {
+  if (red === "instagram" || red === "facebook") {
     return [...base, "instagram_basic", "instagram_content_publish"];
   }
   return base;
@@ -32,10 +33,15 @@ export function getMetaOAuthConfig() {
   const appId = process.env.META_APP_ID;
   const appSecret = process.env.META_APP_SECRET;
   if (!appId || !appSecret) return null;
+  // Meta tiene registrada en la lista blanca oficial https://www.publivende.mx/facebook/callback
+  const baseUrl =
+    process.env.NODE_ENV === "production" || process.env.VERCEL === "1"
+      ? "https://www.publivende.mx"
+      : getAppBaseUrl();
   return {
     appId,
     appSecret,
-    redirectUri: `${getAppBaseUrl()}/facebook/callback`,
+    redirectUri: `${baseUrl}/facebook/callback`,
     scopes: getMetaScopesForRed("facebook"),
   };
 }

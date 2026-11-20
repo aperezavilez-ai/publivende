@@ -19,7 +19,8 @@ import {
 import { isProductionMode } from "@/server/config";
 import { getDb, schema } from "@/server/db";
 import { and, eq } from "drizzle-orm";
-import { findUserById, upsertOAuthAccount } from "@/server/auth/users";
+import { findUserById, getOAuthAccount, upsertOAuthAccount } from "@/server/auth/users";
+import { getFreshOAuthAccount } from "@/server/auth/token-refresh";
 import { verifySessionToken } from "@/server/auth/crypto";
 import { upsertHubChannel } from "@/server/red/channels";
 import { findPartnerById } from "@/server/partners/users";
@@ -243,7 +244,7 @@ async function finalizeMetaOAuth(
   userAccessToken: string,
   pageId?: string,
 ): Promise<
-  | { kind: "connected"; result: OAuthConnectResult }
+  | { kind: "connected"; result: OAuthConnectResult; linkedResult?: OAuthConnectResult }
   | { kind: "select_page"; pages: MetaPageOption[]; pageSelectToken: string }
 > {
   if (!payload) throw new Error("Sesión OAuth inválida");
@@ -262,14 +263,39 @@ async function finalizeMetaOAuth(
     );
   }
 
+  const buildResultWithLinked = (page: MetaPageRaw) => {
+    const mainResult = buildMetaConnectResult(page, payload.red);
+    let linkedResult: OAuthConnectResult | undefined;
+    if (payload.red === "facebook" && page.instagram_business_account?.username) {
+      linkedResult = {
+        red: "instagram",
+        nombre_cuenta: `@${page.instagram_business_account.username}`,
+        access_token: page.access_token,
+        external_account_id: page.instagram_business_account.id,
+        avatar: page.picture?.data?.url,
+        provider: "meta",
+      };
+    } else if (payload.red === "instagram") {
+      linkedResult = {
+        red: "facebook",
+        nombre_cuenta: page.name,
+        access_token: page.access_token,
+        external_account_id: page.id,
+        avatar: page.picture?.data?.url,
+        provider: "meta",
+      };
+    }
+    return { kind: "connected" as const, result: mainResult, linkedResult };
+  };
+
   if (pageId) {
     const page = eligible.find((p) => p.id === pageId);
     if (!page) throw new Error("La página seleccionada no está disponible. Intenta conectar de nuevo.");
-    return { kind: "connected", result: buildMetaConnectResult(page, payload.red) };
+    return buildResultWithLinked(page);
   }
 
   if (eligible.length === 1) {
-    return { kind: "connected", result: buildMetaConnectResult(eligible[0], payload.red) };
+    return buildResultWithLinked(eligible[0]);
   }
 
   return {
@@ -502,6 +528,9 @@ export const completeOAuthCallback = createServerFn({ method: "POST" })
         }
 
         await persistOAuthConnect(payload, meta.result);
+        if (meta.linkedResult) {
+          await persistOAuthConnect({ ...payload, red: meta.linkedResult.red }, meta.linkedResult);
+        }
 
         return {
           ok: true as const,
@@ -511,6 +540,7 @@ export const completeOAuthCallback = createServerFn({ method: "POST" })
           partnerReturnUrl: payload.partnerReturnUrl,
           externalUserId: payload.externalUserId,
           account: publicAccount(meta.result),
+          linkedAccount: meta.linkedResult ? publicAccount(meta.linkedResult) : undefined,
         };
       }
 
@@ -578,6 +608,21 @@ export const completeMetaPageSelection = createServerFn({ method: "POST" })
         meta.result,
       );
 
+      if (meta.linkedResult) {
+        await persistOAuthConnect(
+          {
+            userId: payload.userId,
+            red: meta.linkedResult.red,
+            returnTo: payload.returnTo,
+            ts: payload.ts,
+            partnerId: payload.partnerId,
+            externalUserId: payload.externalUserId,
+            partnerReturnUrl: payload.partnerReturnUrl,
+          },
+          meta.linkedResult,
+        );
+      }
+
       return {
         ok: true as const,
         userId: payload.userId,
@@ -585,9 +630,55 @@ export const completeMetaPageSelection = createServerFn({ method: "POST" })
         partnerReturnUrl: payload.partnerReturnUrl,
         externalUserId: payload.externalUserId,
         account: publicAccount(meta.result),
+        linkedAccount: meta.linkedResult ? publicAccount(meta.linkedResult) : undefined,
       };
     } catch (err) {
       return { ok: false as const, error: err instanceof Error ? err.message : "Error OAuth" };
+    }
+  });
+
+/**
+ * Conecta Instagram automáticamente a partir del token ya activo de Facebook,
+ * sin necesidad de abrir ningún popup ni pedir login adicional.
+ */
+export const autoConnectInstagramFromFacebook = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ userId: z.string().min(1) }))
+  .handler(async ({ data }) => {
+    const fresh = await getFreshOAuthAccount(data.userId, "facebook");
+    const fbAcc = fresh ?? (await getOAuthAccount(data.userId, "facebook"));
+    if (!fbAcc?.accessToken) {
+      return { ok: false as const, error: "Primero conecta tu cuenta de Facebook" };
+    }
+
+    try {
+      const pages = await fetchMetaPages(fbAcc.accessToken);
+      const eligible = pages.filter((p) => p.instagram_business_account?.username);
+      if (!eligible.length) {
+        return {
+          ok: false as const,
+          error: "Tu Fan Page de Facebook no tiene un perfil de Instagram Business vinculado en Meta Business Suite.",
+        };
+      }
+
+      const page = eligible[0];
+      const ig = page.instagram_business_account!;
+      const igResult: OAuthConnectResult = {
+        red: "instagram",
+        nombre_cuenta: `@${ig.username}`,
+        access_token: page.access_token,
+        external_account_id: ig.id,
+        avatar: page.picture?.data?.url,
+        provider: "meta",
+      };
+
+      await upsertOAuthAccount(data.userId, igResult);
+
+      return {
+        ok: true as const,
+        account: publicAccount(igResult),
+      };
+    } catch (err) {
+      return { ok: false as const, error: err instanceof Error ? err.message : "Error al conectar Instagram" };
     }
   });
 
