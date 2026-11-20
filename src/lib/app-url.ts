@@ -6,8 +6,12 @@ export function normalizeAppUrl(url: string): string {
 }
 
 export function resolveAppBaseUrl(): string {
-  const raw = process.env.VITE_APP_URL ?? process.env.APP_URL;
-  if (raw?.trim()) return normalizeAppUrl(raw.trim());
-  if (process.env.NODE_ENV === "production") return PRODUCTION_APP_URL;
-  return "http://localhost:8083";
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL === "1") {
+    return PRODUCTION_APP_URL;
+  }
+  const raw = process.env.APP_URL ?? process.env.VITE_APP_URL;
+  if (raw?.trim() && !raw.includes("localhost") && !raw.includes("127.0.0.1")) {
+    return normalizeAppUrl(raw.trim());
+  }
+  return PRODUCTION_APP_URL;
 }

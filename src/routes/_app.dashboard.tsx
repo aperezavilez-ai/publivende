@@ -256,10 +256,10 @@ function CabinaDifusion() {
     }
   }
 
-  // Difundir Ahora (Publicación Real)
+  // Compartir Publicación (Publicación Real)
   async function ejecutarDifusion() {
     if (selectedRedes.length === 0 && !whatsappSelected) {
-      toast.error("Selecciona al menos una red de destino para difundir");
+      toast.error("Selecciona al menos una red de destino para compartir");
       return;
     }
     if (!copy.trim() && !media) {
@@ -350,7 +350,7 @@ function CabinaDifusion() {
         toast.success("¡Difusión simulada completada exitosamente!");
       }
     } catch (err) {
-      toast.error((err as Error).message || "Error al difundir publicación");
+      toast.error((err as Error).message || "Error al compartir publicación");
     } finally {
       setPublishing(false);
     }
@@ -543,7 +543,7 @@ function CabinaDifusion() {
                 />
                 <div className="pt-2 border-t flex items-center justify-between gap-2">
                   <span className="text-[11px] text-slate-500 font-medium">
-                    {media ? "Imagen del post lista para difundir" : "Sin imagen detectada"}
+                    {media ? "Imagen lista para compartir" : "Sin imagen detectada"}
                   </span>
                   <label className="cursor-pointer">
                     <input
@@ -738,7 +738,7 @@ function CabinaDifusion() {
           {/* Redes de Destino Activas */}
           <Card className="p-5 border-slate-200 shadow-sm bg-white">
             <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-bold text-slate-900">¿A dónde difundir ahora?</div>
+              <div className="text-sm font-bold text-slate-900">¿En qué redes compartir?</div>
               <span className="text-xs text-slate-500">
                 {selectedRedes.length} redes seleccionadas
               </span>
@@ -806,11 +806,11 @@ function CabinaDifusion() {
             >
               {publishing ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" /> Publicando en tus redes…
+                  <Loader2 className="w-5 h-5 animate-spin" /> Compartiendo en tus redes…
                 </>
               ) : (
                 <>
-                  <Share2 className="w-5 h-5" /> DIFUNDIR AHORA EN {selectedRedes.length} REDES
+                  <Share2 className="w-5 h-5" /> COMPARTIR PUBLICACIÓN EN {selectedRedes.length} REDES
                 </>
               )}
             </Button>

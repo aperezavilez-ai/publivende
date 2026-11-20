@@ -156,8 +156,9 @@ async function publishFacebookFeed(input: PublishToNetworkInput): Promise<Publis
     return { red: "facebook", surface: "feed", ok: false, error: "Falta Page ID de Facebook" };
   }
 
-  const postUrl = trackingUrl(input);
-  const caption = `${input.copy}\n\n${postUrl}`;
+  const isLocal = input.appUrl.includes("localhost") || input.appUrl.includes("127.0.0.1");
+  const postUrl = isLocal ? "" : trackingUrl(input);
+  const caption = postUrl && !input.copy.includes(postUrl) ? `${input.copy}\n\n${postUrl}` : input.copy;
 
   if (input.mediaUrl?.startsWith("http") && input.mediaType === "video") {
     const res = await fetch(`https://graph.facebook.com/v21.0/${pageId}/videos`, {
@@ -190,8 +191,8 @@ async function publishFacebookFeed(input: PublishToNetworkInput): Promise<Publis
     return { red: "facebook", surface: "feed", channel_name: "Feed de página", external_id: id, ok: true };
   }
 
+  // Publicación de solo texto en Feed de Facebook
   const body: Record<string, string> = { message: caption, access_token: input.accessToken };
-  if (input.mediaUrl?.startsWith("http")) body.link = input.mediaUrl;
 
   const res = await fetch(`https://graph.facebook.com/v21.0/${pageId}/feed`, {
     method: "POST",

@@ -5,6 +5,7 @@ import { extractFacebookPageName, isLoginWallText, pickCaption } from "@/service
 import { verifySessionToken } from "@/server/auth/crypto";
 import { getOAuthAccount } from "@/server/auth/users";
 import { getFreshOAuthAccount } from "@/server/auth/token-refresh";
+import { ensurePublicMediaUrl } from "@/server/publish/host-media";
 
 const BOT_AGENTS = [
   "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
@@ -78,29 +79,42 @@ function extractPostId(url: string): string | null {
 }
 
 interface GraphPost {
+  id?: string;
   message?: string;
   full_picture?: string;
+  picture?: string;
   permalink_url?: string;
   attachments?: {
     data?: Array<{
-      media?: { image?: { src?: string } };
+      type?: string;
+      title?: string;
+      url?: string;
+      media?: { image?: { src?: string; height?: number; width?: number }; source?: string };
       subattachments?: { data?: Array<{ media?: { image?: { src?: string } } }> };
     }>;
   };
 }
 
 function imageFromPost(post: GraphPost): string {
-  if (post.full_picture) return post.full_picture;
-  const att = post.attachments?.data?.[0];
-  return (
-    att?.media?.image?.src ??
-    att?.subattachments?.data?.[0]?.media?.image?.src ??
-    ""
-  );
+  if (post.full_picture && !post.full_picture.includes("pixel")) return post.full_picture;
+  const atts = post.attachments?.data ?? [];
+  for (const att of atts) {
+    if (att?.media?.image?.src && !att.media.image.src.includes("pixel")) {
+      return att.media.image.src;
+    }
+    const subs = att?.subattachments?.data ?? [];
+    for (const sub of subs) {
+      if (sub?.media?.image?.src && !sub.media.image.src.includes("pixel")) {
+        return sub.media.image.src;
+      }
+    }
+  }
+  if (post.picture && !post.picture.includes("pixel")) return post.picture;
+  return "";
 }
 
 const POST_FIELDS =
-  "message,full_picture,permalink_url,created_time,attachments{media,subattachments{media}}";
+  "message,full_picture,picture,permalink_url,created_time,attachments{media{image},subattachments{media{image}},type,title,url}";
 
 interface GraphPage {
   id: string;
@@ -238,12 +252,21 @@ export const fetchFacebookPostContent = createServerFn({ method: "POST" })
           try {
             const outcome = await fetchFromGraphApi(userToken, data.pageName, finalUrl, scraped?.caption);
             if ("post" in outcome) {
+              let finalImageUrl = outcome.post.imageUrl;
+              if (finalImageUrl?.startsWith("http")) {
+                try {
+                  const hosted = await ensurePublicMediaUrl(session.userId, finalImageUrl);
+                  if (hosted) finalImageUrl = hosted;
+                } catch {
+                  /* fallback a URL directa */
+                }
+              }
               return {
                 ok: true as const,
                 source: "graph_api" as const,
                 finalUrl,
                 caption: outcome.post.caption,
-                imageUrl: outcome.post.imageUrl,
+                imageUrl: finalImageUrl,
                 title: outcome.post.title,
                 pageName: outcome.post.pageName,
               };
