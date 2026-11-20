@@ -276,6 +276,47 @@ export const redSyncAdminAccountsToHub = createServerFn({ method: "POST" })
         if (!decryptedToken) continue;
 
         if (acc.oauthProvider === "meta") {
+          // 1. Probar primero directamente sobre la página (/me) con el Page Access Token
+          try {
+            const pageId = acc.externalAccountId || "me";
+            const meRes = await fetch(
+              `https://graph.facebook.com/v21.0/${pageId}?fields=id,name,picture,instagram_business_account{id,username}&access_token=${decryptedToken}`,
+            );
+            const meJson = (await meRes.json()) as {
+              id?: string;
+              name?: string;
+              picture?: { data?: { url?: string } };
+              instagram_business_account?: { id: string; username: string };
+            };
+            if (meJson.id && meJson.name) {
+              await upsertHubChannel({
+                red: "facebook",
+                externalAccountId: meJson.id,
+                nombre: meJson.name,
+                avatar: meJson.picture?.data?.url,
+                accessToken: decryptedToken,
+                oauthProvider: "meta",
+              });
+              synced.push(`Facebook: ${meJson.name}`);
+
+              const ig = meJson.instagram_business_account;
+              if (ig?.username) {
+                await upsertHubChannel({
+                  red: "instagram",
+                  externalAccountId: ig.id,
+                  nombre: `@${ig.username}`,
+                  avatar: meJson.picture?.data?.url,
+                  accessToken: decryptedToken,
+                  oauthProvider: "meta",
+                });
+                synced.push(`Instagram: @${ig.username}`);
+              }
+            }
+          } catch {
+            // fallback
+          }
+
+          // 2. Probar /me/accounts por si el token fuera User Access Token
           try {
             const pagesRes = await fetch(
               `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,picture,instagram_business_account{id,username}&access_token=${decryptedToken}`,

@@ -121,8 +121,13 @@ function Conf() {
     setConnecting(red);
     const hint = fanPageHint.trim() || [user!.nombre, user!.nombre_negocio].filter(Boolean).join(" ").trim();
     if (hint) localStorage.setItem("pv_fan_page_hint", hint);
-    await connectSocialNetwork(user!.id, red, "/configuracion", hint || undefined);
-    setConnecting(null);
+    try {
+      await connectSocialNetwork(user!.id, red, "/configuracion", hint || undefined);
+    } catch (e) {
+      toast.error((e as Error).message || "Error al conectar la red");
+    } finally {
+      setConnecting(null);
+    }
     const token = getSessionToken();
     if (token && isProductionModeClient()) {
       const res = await checkMetaPublishHealth({ data: { token } });

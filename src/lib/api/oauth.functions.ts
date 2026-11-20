@@ -22,6 +22,7 @@ import { and, eq } from "drizzle-orm";
 import { findUserById, getOAuthAccount, upsertOAuthAccount } from "@/server/auth/users";
 import { getFreshOAuthAccount } from "@/server/auth/token-refresh";
 import { verifySessionToken } from "@/server/auth/crypto";
+import { decryptSecretLenient } from "@/server/crypto/vault";
 import { upsertHubChannel } from "@/server/red/channels";
 import { findPartnerById } from "@/server/partners/users";
 import { notifyPartnerWebhook } from "@/server/partners/webhooks";
@@ -650,32 +651,98 @@ export const autoConnectInstagramFromFacebook = createServerFn({ method: "POST" 
       return { ok: false as const, error: "Primero conecta tu cuenta de Facebook" };
     }
 
+    const token = decryptSecretLenient(fbAcc.accessToken) || fbAcc.accessToken;
+
     try {
-      const pages = await fetchMetaPages(fbAcc.accessToken);
-      const eligible = pages.filter((p) => p.instagram_business_account?.username);
-      if (!eligible.length) {
+      // 1. Consultar /me directamente con el token (soporta Page Access Token de Fan Page)
+      const pageId = fbAcc.externalAccountId || "me";
+      const meRes = await fetch(
+        `https://graph.facebook.com/v21.0/${pageId}?fields=id,name,picture,instagram_business_account{id,username}&access_token=${token}`,
+      );
+      const meJson = (await meRes.json()) as {
+        id?: string;
+        name?: string;
+        picture?: { data?: { url?: string } };
+        instagram_business_account?: { id: string; username: string };
+        error?: { message: string };
+      };
+
+      if (meJson.instagram_business_account?.username) {
+        const ig = meJson.instagram_business_account;
+        const igResult: OAuthConnectResult = {
+          red: "instagram",
+          nombre_cuenta: `@${ig.username}`,
+          access_token: token,
+          external_account_id: ig.id,
+          avatar: meJson.picture?.data?.url,
+          provider: "meta",
+        };
+
+        await upsertOAuthAccount(data.userId, igResult);
+
+        // Si el usuario es administrador, vincular también a los canales oficiales de la plataforma
+        const user = await findUserById(data.userId);
+        if (user?.isAdmin) {
+          await upsertHubChannel({
+            red: "instagram",
+            externalAccountId: ig.id,
+            nombre: `@${ig.username}`,
+            avatar: meJson.picture?.data?.url,
+            accessToken: token,
+            oauthProvider: "meta",
+          });
+        }
+
         return {
-          ok: false as const,
-          error: "Tu Fan Page de Facebook no tiene un perfil de Instagram Business vinculado en Meta Business Suite.",
+          ok: true as const,
+          account: publicAccount(igResult),
         };
       }
 
-      const page = eligible[0];
-      const ig = page.instagram_business_account!;
-      const igResult: OAuthConnectResult = {
-        red: "instagram",
-        nombre_cuenta: `@${ig.username}`,
-        access_token: page.access_token,
-        external_account_id: ig.id,
-        avatar: page.picture?.data?.url,
-        provider: "meta",
-      };
+      // 2. Si el token fuera un User Token en vez de Page Token, probar /me/accounts
+      try {
+        const pages = await fetchMetaPages(token);
+        const eligible = pages.filter((p) => p.instagram_business_account?.username);
+        if (eligible.length > 0) {
+          const page = eligible[0];
+          const ig = page.instagram_business_account!;
+          const igResult: OAuthConnectResult = {
+            red: "instagram",
+            nombre_cuenta: `@${ig.username}`,
+            access_token: page.access_token,
+            external_account_id: ig.id,
+            avatar: page.picture?.data?.url,
+            provider: "meta",
+          };
 
-      await upsertOAuthAccount(data.userId, igResult);
+          await upsertOAuthAccount(data.userId, igResult);
 
+          const user = await findUserById(data.userId);
+          if (user?.isAdmin) {
+            await upsertHubChannel({
+              red: "instagram",
+              externalAccountId: ig.id,
+              nombre: `@${ig.username}`,
+              avatar: page.picture?.data?.url,
+              accessToken: page.access_token,
+              oauthProvider: "meta",
+            });
+          }
+
+          return {
+            ok: true as const,
+            account: publicAccount(igResult),
+          };
+        }
+      } catch {
+        /* no es user token o no devolvió páginas con IG */
+      }
+
+      const nombrePagina = meJson.name || fbAcc.nombreCuenta || "tu Fan Page";
       return {
-        ok: true as const,
-        account: publicAccount(igResult),
+        ok: false as const,
+        noLinkedInstagram: true as const,
+        error: `La página de Facebook "${nombrePagina}" no tiene una cuenta de Instagram Business vinculada en Meta Business Suite. Para conectarla: entra a Meta Business Suite > Configuración de la página > Cuentas vinculadas > Instagram y vincula tu perfil comercial.`,
       };
     } catch (err) {
       return { ok: false as const, error: err instanceof Error ? err.message : "Error al conectar Instagram" };
