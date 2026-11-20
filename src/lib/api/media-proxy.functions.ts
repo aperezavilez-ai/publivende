@@ -11,6 +11,7 @@ export const proxyExternalMedia = createServerFn({ method: "POST" })
   .inputValidator(z.object({ url: z.string().url() }))
   .handler(async ({ data }) => {
     let lastError = "Error desconocido";
+    const isFacebook = /fbcdn\.net|facebook\.com|instagram\.com/i.test(data.url);
 
     for (const ua of USER_AGENTS) {
       try {
@@ -20,6 +21,7 @@ export const proxyExternalMedia = createServerFn({ method: "POST" })
             "User-Agent": ua,
             Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
             "Accept-Language": "es-MX,es;q=0.9,en;q=0.8",
+            ...(isFacebook ? { Referer: "https://www.facebook.com/" } : {}),
           },
         });
 

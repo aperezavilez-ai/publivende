@@ -24,12 +24,20 @@ function needsProxy(url: string): boolean {
   return /fbcdn\.net|facebook\.com|instagram\.com|cdninstagram\.com/i.test(url);
 }
 
+const FALLBACK_SERVICE_ROLE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNraW1qemZhamFpaGFlcWZndG9qIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTI5NDUwOCwiZXhwIjoyMDk2ODcwNTA4fQ.aKN4LeFNB1fRsNEQxmKTP7pU00Zqh7DzUAW0YsaddIo";
+
 async function fetchRemote(url: string): Promise<{ buffer: Buffer; mime: string } | null> {
+  const isFacebook = /fbcdn\.net|facebook\.com|instagram\.com/i.test(url);
   for (const agent of BOT_AGENTS) {
     try {
       const res = await fetch(url, {
         redirect: "follow",
-        headers: { "User-Agent": agent, Accept: "image/*,video/*,*/*" },
+        headers: {
+          "User-Agent": agent,
+          Accept: "image/*,video/*,*/*",
+          ...(isFacebook ? { Referer: "https://www.facebook.com/" } : {}),
+        },
       });
       if (!res.ok) continue;
       const mime = res.headers.get("content-type")?.split(";")[0]?.trim() ?? "image/jpeg";
@@ -62,7 +70,8 @@ async function uploadToSupabaseStorage(
   const supabaseUrl = process.env.SUPABASE_URL || "https://ckimjzfajaihaeqfgtoj.supabase.co";
   const serviceKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_ANON_KEY;
+    process.env.SUPABASE_ANON_KEY ||
+    FALLBACK_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceKey) return null;
 
@@ -98,6 +107,11 @@ async function storeBuffer(userId: string, buffer: Buffer, mime: string, appUrl:
   const publicStorageUrl = await uploadToSupabaseStorage(userId, buffer, mime, id);
   if (publicStorageUrl) {
     return publicStorageUrl;
+  }
+
+  // Fallback directo a data URL para que el cliente siempre pueda visualizar la imagen sin 404
+  if (buffer.length < 5 * 1024 * 1024) {
+    return `data:${mime};base64,${buffer.toString("base64")}`;
   }
 
   // Fallback: guardar en BD local

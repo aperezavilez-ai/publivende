@@ -305,12 +305,23 @@ export const fetchFacebookPostContent = createServerFn({ method: "POST" })
     }
 
     if (scraped?.caption) {
+      let finalImageUrl = scraped.imageUrl || "";
+      if (finalImageUrl.startsWith("http")) {
+        try {
+          const session = data.token ? await verifySessionToken(data.token) : null;
+          const uid = session?.userId ?? "imported";
+          const hosted = await ensurePublicMediaUrl(uid, finalImageUrl);
+          if (hosted) finalImageUrl = hosted;
+        } catch {
+          /* fallback a URL directa */
+        }
+      }
       return {
         ok: true as const,
         source: "graph_api_partial" as const,
         finalUrl,
         caption: scraped.caption,
-        imageUrl: scraped.imageUrl || "",
+        imageUrl: finalImageUrl,
         title: scraped.title,
         pageName: slugFromUrl ?? data.pageName,
         diag,

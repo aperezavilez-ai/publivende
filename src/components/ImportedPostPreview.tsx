@@ -64,8 +64,8 @@ export function ImportedPostPreview({
   }, [mediaUrl]);
 
   async function handleMediaError() {
-    // Si la imagen directa falló y es de un CDN con protección (fbcdn, etc.), intentar convertir a base64 vía proxy
-    if (!retryingProxy && displayUrl && needsMediaProxy(displayUrl)) {
+    // Si la imagen directa falló en el navegador, intentar convertir a base64 vía proxy en el servidor
+    if (!retryingProxy && displayUrl && displayUrl.startsWith("http")) {
       setRetryingProxy(true);
       try {
         const res = await proxyExternalMedia({ data: { url: displayUrl } });
