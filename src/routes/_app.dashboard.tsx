@@ -30,6 +30,8 @@ import {
 import {
   hashtagsFromVariants, hashtagsFromAlcanceIA, mergeHashtagMaps, pickViralHashtags
 } from "@/lib/hashtags-ai";
+import { analizarConCerebroIA } from "@/lib/api/brain-agent.functions";
+import type { BrainAgentOutput } from "@/server/agent/brain";
 import { publishPostReal } from "@/lib/api/publish.functions";
 import { connectSocialNetwork } from "@/services/social/connectSocial";
 import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
@@ -94,6 +96,7 @@ function CabinaDifusion() {
   // Alcance y segmentación
   const [alcanceNivel, setAlcanceNivel] = useState<AlcanceTipo>("local");
   const [detectedNicho, setDetectedNicho] = useState("");
+  const [brainResult, setBrainResult] = useState<BrainAgentOutput | null>(null);
   const [reachAnalysis, setReachAnalysis] = useState<ReachAIAnalysis | null>(null);
   const [reachPorRed, setReachPorRed] = useState<AlcancePorRedIA[]>([]);
   const [totalAlcance, setTotalAlcance] = useState<{ personas_min: number; personas_max: number }>({ personas_min: 0, personas_max: 0 });
@@ -177,64 +180,104 @@ function CabinaDifusion() {
       const baseCaption = meta.originalCaption || "";
       setCopy(baseCaption);
 
-      // 2. Inferir nicho de mercado con IA
-      const nicho = inferNichoFromText(baseCaption) || user.industria || "General";
-      setDetectedNicho(nicho);
+      // 2. Invocar Cerebro Agéntico con Banco de Nichos y Comunidades
+      let brainActivated = false;
+      try {
+        const brainRes = await analizarConCerebroIA({
+          data: {
+            copy: baseCaption || meta.title || "Promoción especial de negocio",
+            pageName: meta.pageName ?? fbAccount?.nombre_cuenta ?? user.nombre_negocio,
+            mediaUrl: cleanMedia,
+            ciudad: user.ciudad || undefined,
+            estado: "México",
+            alcanceNivel,
+          },
+        });
 
-      // 3. Adaptar contenido automáticamente para cada red
-      const targetRedes = selectedRedes.length > 0 ? selectedRedes : ALL_REDES;
-      const sourceForAdapt: SourceMetadata = {
-        platform: meta.platform,
-        url: meta.url,
-        originalCaption: baseCaption,
-        mediaUrl: cleanMedia,
-        mediaType: meta.mediaType ?? "imagen",
-        title: meta.title,
-        fetchedFromLink: meta.fetchedFromLink,
-        pageName: meta.pageName ?? fbAccount?.nombre_cuenta,
-      };
+        if (brainRes.ok && brainRes.brain) {
+          const b = brainRes.brain;
+          setBrainResult(b);
+          setDetectedNicho(b.nichoAsignado.nombre);
 
-      const repurposed = await repurposeFromLink(url, targetRedes, nicho, "casual", sourceForAdapt);
-      setVariants(repurposed.variants);
-      const newCopyPorRed: Partial<Record<Red, string>> = {};
-      for (const r of targetRedes) {
-        if (repurposed.variants[r]?.text) {
-          newCopyPorRed[r] = repurposed.variants[r]!.text;
+          // Sincronizar copies para cada red desde el Cerebro Agéntico
+          const newCopyPorRed: Partial<Record<Red, string>> = {};
+          for (const r of ALL_REDES) {
+            if (b.copyPorRed[r]) {
+              newCopyPorRed[r] = b.copyPorRed[r]!;
+            }
+          }
+          if (newCopyPorRed[activeTabRed]) {
+            setCopy(newCopyPorRed[activeTabRed]!);
+          } else if (newCopyPorRed.facebook) {
+            setCopy(newCopyPorRed.facebook);
+          }
+          setCopyPorRed(newCopyPorRed);
+
+          setTotalAlcance({
+            personas_min: b.alcanceEstimado.personasMin,
+            personas_max: b.alcanceEstimado.personasMax,
+          });
+
+          toast.success("🧠 ¡Cerebro Agéntico activó la distribución!", {
+            description: `Giro: ${b.diagnostico.giroComercial} · ${b.comunidadesObjetivo.length} comunidades asignadas (${formatAlcanceNumero(b.alcanceEstimado.personasMin)} a ${formatAlcanceNumero(b.alcanceEstimado.personasMax)} personas).`,
+          });
+          brainActivated = true;
         }
+      } catch (agentErr) {
+        console.warn("Fallo al conectar con Cerebro Agéntico, usando fallback adaptativo:", agentErr);
       }
-      setCopyPorRed(newCopyPorRed);
 
-      // 4. Calcular análisis de impacto y alcance proyectado
-      const alcanceGeo = {
-        tipo: (alcanceNivel === "global" ? "global" : "local") as "global" | "local",
-        nivel: (alcanceNivel === "global" ? "global" : alcanceNivel === "nacional" ? "nacional" : alcanceNivel === "estatal" ? "estado" : "municipios") as "global" | "nacional" | "estado" | "municipios",
-        pais: "México",
-        estado: user.ciudad ? undefined : "General",
-        ciudad: user.ciudad || undefined,
-      };
+      // 3. Fallback en caso de que no responda el agente
+      if (!brainActivated) {
+        const nicho = inferNichoFromText(baseCaption) || user.industria || "General";
+        setDetectedNicho(nicho);
 
-      const reachRes = analizarAlcanceIA({
-        alcance: alcanceGeo,
-        redes: targetRedes,
-        industria: nicho,
-        source: meta,
-        copyPorRed: newCopyPorRed,
-        fuente: "link_ia",
-      });
+        const targetRedes = selectedRedes.length > 0 ? selectedRedes : ALL_REDES;
+        const sourceForAdapt: SourceMetadata = {
+          platform: meta.platform,
+          url: meta.url,
+          originalCaption: baseCaption,
+          mediaUrl: cleanMedia,
+          mediaType: meta.mediaType ?? "imagen",
+          title: meta.title,
+          fetchedFromLink: meta.fetchedFromLink,
+          pageName: meta.pageName ?? fbAccount?.nombre_cuenta,
+        };
 
-      if (reachRes) {
-        setReachAnalysis(reachRes.analysis);
-        setReachPorRed(reachRes.por_red);
-        const total = totalAlcanceIA(reachRes.por_red);
-        setTotalAlcance(total);
+        const repurposed = await repurposeFromLink(url, targetRedes, nicho, "casual", sourceForAdapt);
+        setVariants(repurposed.variants);
+        const newCopyPorRed: Partial<Record<Red, string>> = {};
+        for (const r of targetRedes) {
+          if (repurposed.variants[r]?.text) {
+            newCopyPorRed[r] = repurposed.variants[r]!.text;
+          }
+        }
+        setCopyPorRed(newCopyPorRed);
 
-        toast.success("¡Enlace importado y adaptado automáticamente con IA!", {
-          description: `Nicho: ${reachRes.analysis.nicho_label} · Alcance estimado: ${formatAlcanceNumero(total.personas_min)} a ${formatAlcanceNumero(total.personas_max)} personas.`,
+        const alcanceGeo = {
+          tipo: (alcanceNivel === "global" ? "global" : "local") as "global" | "local",
+          nivel: (alcanceNivel === "global" ? "global" : alcanceNivel === "nacional" ? "nacional" : alcanceNivel === "estatal" ? "estado" : "municipios") as "global" | "nacional" | "estado" | "municipios",
+          pais: "México",
+          estado: user.ciudad ? undefined : "General",
+          ciudad: user.ciudad || undefined,
+        };
+
+        const reachRes = analizarAlcanceIA({
+          alcance: alcanceGeo,
+          redes: targetRedes,
+          industria: nicho,
+          source: meta,
+          copyPorRed: newCopyPorRed,
+          fuente: "link_ia",
         });
-      } else {
-        toast.success("¡Enlace importado y adaptado automáticamente con IA!", {
-          description: `Nicho: ${nicho}`,
-        });
+
+        if (reachRes) {
+          setReachAnalysis(reachRes.analysis);
+          setReachPorRed(reachRes.por_red);
+          const total = totalAlcanceIA(reachRes.por_red);
+          setTotalAlcance(total);
+        }
+        toast.success("¡Enlace importado y adaptado automáticamente con IA!");
       }
     } catch (err) {
       toast.error((err as Error).message || "Error al procesar el enlace");
@@ -302,6 +345,9 @@ function CabinaDifusion() {
               source_url: sourceUrl || undefined,
               alcance: alcanceGeo,
               redes: selectedRedes,
+              nicho_label: brainResult?.nichoAsignado?.nombre ?? detectedNicho,
+              canales_distribucion: brainResult?.comunidadesObjetivo ?? [],
+              hashtags_virales: brainResult?.hashtagsVirales ?? viralHashtags,
             },
             notifyWhatsApp: whatsappSelected,
           },
@@ -309,7 +355,7 @@ function CabinaDifusion() {
 
         if (!res.ok) {
           toast.error(res.error ?? "No se pudo completar la difusión", {
-            description: "Revisa el estado de tus cuentas conectadas.",
+            description: "Revisa el estado de la Red PubliVende o tus cuentas.",
           });
           return;
         }
@@ -321,13 +367,9 @@ function CabinaDifusion() {
         else db.posts.push(serverPost);
         saveDB(db);
 
-        const firstResult = Object.values(res.results || {})[0];
-        if (firstResult && typeof firstResult === "object" && "post_url" in firstResult) {
-          setPublishedUrl((firstResult as { post_url?: string }).post_url ?? null);
-        }
-
+        const commCount = brainResult?.comunidadesObjetivo?.length || 0;
         toast.success("🚀 ¡Publicación difundida con éxito!", {
-          description: `Se distribuyó en ${selectedRedes.length} redes sociales${whatsappSelected ? " y WhatsApp" : ""}.`,
+          description: `Se distribuyó en la Red Oficial PubliVende (${selectedRedes.length} redes${commCount > 0 ? ` + ${commCount} comunidades del Banco de Cerebro` : ""}${whatsappSelected ? " y WhatsApp" : ""}).`,
           duration: 9000,
         });
       } else {
@@ -384,10 +426,10 @@ function CabinaDifusion() {
               </span>
             </div>
             <h1 className="text-2xl font-bold text-white mt-1">
-              Cabina de Difusión
+              Cabina de Difusión Multicanal
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              {user.nombre_negocio ? `${user.nombre_negocio} · ` : ""}Pega un enlace y difunde en todas tus redes con 1 clic.
+              {user.nombre_negocio ? `${user.nombre_negocio} · ` : ""}Pega tu link y PubliVende lo difunde con IA en sus comunidades oficiales y redes.
             </p>
           </div>
 
@@ -410,8 +452,11 @@ function CabinaDifusion() {
 
         {/* Estado y Conexión Rápida de Redes */}
         <div className="pt-4">
-          <div className="text-xs font-medium text-slate-400 mb-2.5">
-            Tus Redes Sociales Conectadas:
+          <div className="flex items-center justify-between text-xs font-medium text-slate-400 mb-2.5">
+            <span>Tus Redes Personales (Opcional - sincroniza en tus propios perfiles):</span>
+            <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Red PubliVende Activa
+            </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {ALL_REDES.map((red) => {
@@ -582,8 +627,117 @@ function CabinaDifusion() {
             )}
           </Card>
 
-          {/* Impacto y Alcance Estimado por IA */}
-          {reachAnalysis && (
+          {/* 1. Diagnóstico y Comunidades del Cerebro Agéntico */}
+          {brainResult ? (
+            <Card className="p-5 border-blue-200 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl space-y-4">
+              <div className="flex items-center justify-between border-b border-indigo-800/60 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-emerald-400" /> Cerebro Agéntico PubliVende
+                  </span>
+                </div>
+                <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[11px] font-bold">
+                  {brainResult.nichoAsignado.afinidadScore}% Afinidad
+                </Badge>
+              </div>
+
+              {/* Métricas Principales */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+                  <div className="text-[10px] text-slate-300 font-medium flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5 text-blue-400" /> Personas Alcanzadas
+                  </div>
+                  <div className="text-base font-black text-white mt-1">
+                    {formatAlcanceNumero(brainResult.alcanceEstimado.personasMin)} – {formatAlcanceNumero(brainResult.alcanceEstimado.personasMax)}
+                  </div>
+                </div>
+
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+                  <div className="text-[10px] text-slate-300 font-medium flex items-center gap-1">
+                    <Globe className="w-3.5 h-3.5 text-emerald-400" /> Comunidades del Banco
+                  </div>
+                  <div className="text-base font-black text-emerald-300 mt-1">
+                    {brainResult.comunidadesObjetivo.length} Oficiales
+                  </div>
+                </div>
+              </div>
+
+              {/* Diagnóstico Estratégico de la Oferta */}
+              <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-3.5 space-y-2 text-xs">
+                <div>
+                  <span className="text-slate-400 font-semibold block text-[10px] uppercase">Giro Comercial:</span>
+                  <span className="text-slate-100 font-bold">{brainResult.diagnostico.giroComercial}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-semibold block text-[10px] uppercase">Oferta Detectada:</span>
+                  <span className="text-slate-200">{brainResult.diagnostico.ofertaDetectada}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-semibold block text-[10px] uppercase">Gancho Psicológico:</span>
+                  <span className="text-amber-300 font-medium">{brainResult.diagnostico.ganchoPsicologico}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-semibold block text-[10px] uppercase">Público Objetivo:</span>
+                  <span className="text-slate-300">{brainResult.diagnostico.publicoObjetivo}</span>
+                </div>
+              </div>
+
+              {/* Comunidades Oficiales Asignadas por el Banco */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-200 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-blue-400" /> Comunidades Oficiales Asignadas:
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {brainResult.nichoAsignado.nombre}
+                  </span>
+                </div>
+
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {brainResult.comunidadesObjetivo.map((c, i) => (
+                    <div
+                      key={c.id || i}
+                      className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-2.5 text-xs hover:border-blue-500/40 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="font-semibold text-slate-100 text-[11px] leading-tight">
+                          {c.nombre}
+                        </div>
+                        <Badge variant="outline" className="text-[9px] bg-blue-950/60 border-blue-700/60 text-blue-300 shrink-0">
+                          {c.miembros.toLocaleString()} miembros
+                        </Badge>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-2">
+                        <span className="text-emerald-400 font-medium capitalize">[{c.plataforma}]</span>
+                        <span>Alcance {c.alcance}</span>
+                        {c.ciudad && <span>· {c.ciudad}</span>}
+                      </div>
+                      <div className="text-[10px] text-slate-400/90 mt-1 italic">
+                        &quot;{c.razonSeleccionada}&quot;
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hashtags Virales del Banco */}
+              {brainResult.hashtagsVirales?.length > 0 && (
+                <div className="pt-2 border-t border-slate-800">
+                  <div className="text-[11px] font-semibold text-slate-300 mb-1.5 flex items-center gap-1">
+                    <Hash className="w-3 h-3 text-pink-400" /> Hashtags Virales Asignados:
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {brainResult.hashtagsVirales.slice(0, 8).map((h) => (
+                      <span key={h} className="text-[10px] bg-pink-950/60 text-pink-300 border border-pink-800/40 px-2 py-0.5 rounded-md font-mono">
+                        {h}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          ) : reachAnalysis ? (
             <Card className="p-5 border-blue-200 bg-gradient-to-br from-blue-50/70 to-indigo-50/40 shadow-sm">
               <div className="flex items-center gap-2 text-blue-900 font-bold text-xs uppercase tracking-wider mb-2">
                 <Sparkles className="w-4 h-4 text-blue-600" />
@@ -638,7 +792,7 @@ function CabinaDifusion() {
                 </div>
               )}
             </Card>
-          )}
+          ) : null}
         </div>
 
         {/* Columna Derecha: Copys adaptados por Red + Cobertura + Difusión */}
@@ -806,11 +960,11 @@ function CabinaDifusion() {
             >
               {publishing ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" /> Compartiendo en tus redes…
+                  <Loader2 className="w-5 h-5 animate-spin" /> Compartiendo en la Red PubliVende…
                 </>
               ) : (
                 <>
-                  <Share2 className="w-5 h-5" /> COMPARTIR PUBLICACIÓN EN {selectedRedes.length} REDES
+                  <Share2 className="w-5 h-5" /> COMPARTIR PUBLICACIÓN EN LA RED PUBLIVENDE {brainResult ? `(${selectedRedes.length} Redes + ${brainResult.comunidadesObjetivo.length} Comunidades)` : `(${selectedRedes.length} REDES)`}
                 </>
               )}
             </Button>
@@ -820,6 +974,9 @@ function CabinaDifusion() {
                 {esIlimitado ? "Saldo ilimitado" : `Saldo restante tras publicar: ${Math.max(0, creditosRestantes - 1)}`}
               </span>
             </div>
+            <p className="text-[11px] text-slate-400 text-center mt-1">
+              Difusión multicanal centralizada: se distribuye a través de la infraestructura y comunidades oficiales de PubliVende.
+            </p>
 
             {publishedUrl && (
               <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">

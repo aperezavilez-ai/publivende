@@ -430,9 +430,43 @@ export const userDataSnapshots = pgTable("user_data_snapshots", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Banco de Cerebro: Catálogo de Nichos de Mercado con afinidades e inteligencia semántica */
+export const marketNiches = pgTable("market_niches", {
+  id: text("id").primaryKey(), // slug único: automotriz, belleza_tatuajes, etc.
+  nombre: text("nombre").notNull(),
+  descripcion: text("descripcion").notNull(),
+  keywords: jsonb("keywords").$type<string[]>().notNull().default([]),
+  hashtags: jsonb("hashtags").$type<string[]>().notNull().default([]),
+  audienciaObjetivo: text("audiencia_objetivo"),
+  anguloGancho: text("angulo_gancho"),
+  activo: boolean("activo").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Banco de Cerebro: Directorio masivo de comunidades, grupos y destinos de difusión */
+export const brainCommunities = pgTable("brain_communities", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  nicheId: text("niche_id")
+    .notNull()
+    .references(() => marketNiches.id, { onDelete: "cascade" }),
+  plataforma: text("plataforma").notNull(), // facebook_group, facebook_page, whatsapp_channel, telegram_group, instagram_network
+  nombre: text("nombre").notNull(),
+  url: text("url"),
+  pais: text("pais").notNull().default("México"),
+  estado: text("estado").notNull().default("General"),
+  ciudad: text("ciudad"),
+  tipoAlcance: text("tipo_alcance").notNull().default("local"), // local, estatal, nacional, global
+  miembrosEstimados: integer("miembros_estimados").notNull().default(10000),
+  nivelInteraccion: text("nivel_interaccion").notNull().default("alta"), // alta, media, muy_alta
+  activo: boolean("activo").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type DbUser = typeof users.$inferSelect;
 export type DbPost = typeof posts.$inferSelect;
 export type DbOAuthAccount = typeof oauthAccounts.$inferSelect;
 export type DbWhatsAppAccount = typeof whatsappAccounts.$inferSelect;
 export type DbPartner = typeof partners.$inferSelect;
 export type DbPartnerUser = typeof partnerUsers.$inferSelect;
+export type DbMarketNiche = typeof marketNiches.$inferSelect;
+export type DbBrainCommunity = typeof brainCommunities.$inferSelect;

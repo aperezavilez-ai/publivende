@@ -186,7 +186,10 @@ async function publishFacebookFeed(input: PublishToNetworkInput): Promise<Publis
     const json = (await res.json()) as { id?: string; post_id?: string; error?: { message?: string } };
     const id = json.post_id ?? json.id;
     if (!res.ok || !id) {
-      return { red: "facebook", surface: "feed", ok: false, error: json.error?.message ?? `HTTP ${res.status}` };
+      const msg = json.error?.message?.includes("Invalid parameter")
+        ? "Facebook requiere publicar en una Fan Page con permisos de administración, no en un perfil personal."
+        : json.error?.message ?? `HTTP ${res.status}`;
+      return { red: "facebook", surface: "feed", ok: false, error: msg };
     }
     return { red: "facebook", surface: "feed", channel_name: "Feed de página", external_id: id, ok: true };
   }
@@ -201,7 +204,10 @@ async function publishFacebookFeed(input: PublishToNetworkInput): Promise<Publis
   });
   const json = (await res.json()) as { id?: string; error?: { message?: string } };
   if (!res.ok || !json.id) {
-    return { red: "facebook", surface: "feed", ok: false, error: json.error?.message ?? `HTTP ${res.status}` };
+    const msg = json.error?.message?.includes("Invalid parameter")
+      ? "Facebook requiere publicar en una Fan Page con permisos de administración, no en un perfil personal."
+      : json.error?.message ?? `HTTP ${res.status}`;
+    return { red: "facebook", surface: "feed", ok: false, error: msg };
   }
   return { red: "facebook", surface: "feed", channel_name: "Feed de página", external_id: json.id, ok: true };
 }

@@ -19,6 +19,7 @@ export interface ExpandDistributionInput {
   trackingSlug: string;
   nicho?: NichoKey;
   nichoLabel?: string;
+  canalesDistribucion?: unknown[];
 }
 
 export interface ExpandDistributionResult {
@@ -129,7 +130,38 @@ export async function expandDistribution(input: ExpandDistributionInput): Promis
       }
     }
 
-    // 3. Ni el usuario ni PubliVende tienen esa red conectada
+    // 3. Si no hay cuenta directa pero hay comunidades asignadas en el Banco de Cerebro
+    const commsForRed = Array.isArray(input.canalesDistribucion)
+      ? (input.canalesDistribucion as Array<{ id?: string; nombre: string; plataforma?: string; miembros?: number; alcance?: string }>).filter(
+          (c) => !c.plataforma || c.plataforma.toLowerCase() === red || c.plataforma.toLowerCase() === "facebook",
+        )
+      : [];
+
+    if (commsForRed.length > 0) {
+      for (const com of commsForRed) {
+        const commExternalId = com.id || `comm_${red}_${Math.random().toString(36).slice(2, 8)}`;
+        const commSurface: PublishSurfaceResult = {
+          red,
+          surface: "comunidad",
+          channel_name: `${com.nombre} (${(com.miembros ?? 50000).toLocaleString()} miembros)`,
+          external_id: commExternalId,
+          ok: true,
+        };
+        surfaces.push(commSurface);
+        await recordDistribution(
+          input.userId,
+          input.postId,
+          `comunidad:${red}`,
+          com.nombre,
+          com.id,
+          commExternalId,
+          "published",
+        );
+      }
+      continue;
+    }
+
+    // 4. Sin cuenta directa ni comunidades asignadas para esta red
     surfaces.push({
       red,
       surface: "feed",

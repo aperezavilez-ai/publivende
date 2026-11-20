@@ -152,6 +152,7 @@ export async function publishForUser(input: PublishForUserInput): Promise<Publis
       mediaType: input.post.tipo,
       trackingSlug,
       nichoLabel: input.post.nicho_label,
+      canalesDistribucion: input.post.canales_distribucion,
     });
     surfaces = expanded.surfaces;
 
