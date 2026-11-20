@@ -462,7 +462,7 @@ async function connectHubChannels(
       });
       names.push(page.name);
       const ig = page.instagram_business_account;
-      if (payload.red === "instagram" && ig?.username) {
+      if (ig?.username) {
         await upsertHubChannel({
           red: "instagram",
           externalAccountId: ig.id,
