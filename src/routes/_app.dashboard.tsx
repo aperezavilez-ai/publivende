@@ -38,6 +38,7 @@ import { getSessionToken, isProductionModeClient } from "@/lib/production/sessio
 import { RED_LABELS, RED_LIMITS, RED_COLORS, REDES_ORDEN } from "@/lib/redes";
 import { PLAN_LIMITS, type Red, type Post, type PostAlcance } from "@/lib/mock/types";
 import { resolveMediaForPublish } from "@/lib/publish-status";
+import { getDashboardDraft, saveDashboardDraft, clearDashboardDraft } from "@/lib/draft";
 
 export const Route = createFileRoute("/_app/dashboard")({
   validateSearch: (s: Record<string, unknown>): { link?: string } => ({
@@ -79,32 +80,100 @@ function CabinaDifusion() {
   const esIlimitado = user?.plan === "pro" || user?.plan === "business";
   const creditosRestantes = esIlimitado ? 9999 : Math.max(0, maxPostsMes - postsEsteMes);
 
+  // Recuperar borrador automático persistente de localStorage (evita perder trabajo al recargar)
+  const initialDraft = useMemo(() => getDashboardDraft(), []);
+
   // Estados del flujo unificado
-  const [sourceUrl, setSourceUrl] = useState(linkSearch ?? "");
+  const [sourceUrl, setSourceUrl] = useState(linkSearch ?? initialDraft?.sourceUrl ?? "");
   const [importing, setImporting] = useState(false);
-  const [sourceMeta, setSourceMeta] = useState<SourceMetadata | null>(null);
-  const [media, setMedia] = useState("");
-  const [copy, setCopy] = useState("");
-  const [copyPorRed, setCopyPorRed] = useState<Partial<Record<Red, string>>>({});
-  const [variants, setVariants] = useState<Partial<Record<Red, NetworkVariant>>>({});
-  const [activeTabRed, setActiveTabRed] = useState<Red>("facebook");
+  const [sourceMeta, setSourceMeta] = useState<SourceMetadata | null>(initialDraft?.sourceMeta ?? null);
+  const [media, setMedia] = useState(initialDraft?.media ?? "");
+  const [copy, setCopy] = useState(initialDraft?.copy ?? "");
+  const [copyPorRed, setCopyPorRed] = useState<Partial<Record<Red, string>>>(initialDraft?.copyPorRed ?? {});
+  const [variants, setVariants] = useState<Partial<Record<Red, NetworkVariant>>>(initialDraft?.variants ?? {});
+  const [activeTabRed, setActiveTabRed] = useState<Red>((initialDraft?.activeTabRed as Red) || "facebook");
 
   // Redes seleccionadas
-  const [selectedRedes, setSelectedRedes] = useState<Red[]>(["facebook", "instagram"]);
-  const [whatsappSelected, setWhatsappSelected] = useState(true);
+  const [selectedRedes, setSelectedRedes] = useState<Red[]>((initialDraft?.selectedRedes as Red[]) || ["facebook", "instagram"]);
+  const [whatsappSelected, setWhatsappSelected] = useState(initialDraft?.whatsappSelected ?? true);
 
   // Alcance y segmentación
-  const [alcanceNivel, setAlcanceNivel] = useState<AlcanceTipo>("local");
-  const [detectedNicho, setDetectedNicho] = useState("");
-  const [brainResult, setBrainResult] = useState<BrainAgentOutput | null>(null);
-  const [reachAnalysis, setReachAnalysis] = useState<ReachAIAnalysis | null>(null);
-  const [reachPorRed, setReachPorRed] = useState<AlcancePorRedIA[]>([]);
-  const [totalAlcance, setTotalAlcance] = useState<{ personas_min: number; personas_max: number }>({ personas_min: 0, personas_max: 0 });
+  const [alcanceNivel, setAlcanceNivel] = useState<AlcanceTipo>((initialDraft?.alcanceNivel as AlcanceTipo) || "local");
+  const [detectedNicho, setDetectedNicho] = useState(initialDraft?.detectedNicho ?? "");
+  const [brainResult, setBrainResult] = useState<BrainAgentOutput | null>(initialDraft?.brainResult ?? null);
+  const [reachAnalysis, setReachAnalysis] = useState<ReachAIAnalysis | null>(initialDraft?.reachAnalysis ?? null);
+  const [reachPorRed, setReachPorRed] = useState<AlcancePorRedIA[]>(initialDraft?.reachPorRed ?? []);
+  const [totalAlcance, setTotalAlcance] = useState<{ personas_min: number; personas_max: number }>(initialDraft?.totalAlcance ?? { personas_min: 0, personas_max: 0 });
+
+  // Indicador de borrador activo restaurado
+  const [hasDraftRestored, setHasDraftRestored] = useState(
+    Boolean(initialDraft?.sourceUrl || initialDraft?.copy || initialDraft?.media || initialDraft?.brainResult)
+  );
 
   // Publicación
   const [publishing, setPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const [connectingRed, setConnectingRed] = useState<string | null>(null);
+
+  // Auto-guardado en localStorage en tiempo real (anti-pérdida por F5 o navegación)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      saveDashboardDraft({
+        sourceUrl,
+        sourceMeta,
+        media,
+        copy,
+        copyPorRed,
+        variants,
+        activeTabRed,
+        selectedRedes,
+        whatsappSelected,
+        alcanceNivel,
+        detectedNicho,
+        brainResult,
+        reachAnalysis,
+        reachPorRed,
+        totalAlcance,
+      });
+      if (sourceUrl || copy || media || brainResult) {
+        setHasDraftRestored(true);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [
+    sourceUrl,
+    sourceMeta,
+    media,
+    copy,
+    copyPorRed,
+    variants,
+    activeTabRed,
+    selectedRedes,
+    whatsappSelected,
+    alcanceNivel,
+    detectedNicho,
+    brainResult,
+    reachAnalysis,
+    reachPorRed,
+    totalAlcance,
+  ]);
+
+  function handleDescartarBorrador() {
+    clearDashboardDraft();
+    setSourceUrl("");
+    setSourceMeta(null);
+    setMedia("");
+    setCopy("");
+    setCopyPorRed({});
+    setVariants({});
+    setDetectedNicho("");
+    setBrainResult(null);
+    setReachAnalysis(null);
+    setReachPorRed([]);
+    setTotalAlcance({ personas_min: 0, personas_max: 0 });
+    setHasDraftRestored(false);
+    toast.info("Borrador limpiado. Listo para empezar una nueva difusión.");
+  }
 
   // Auto-importar si viene en URL search
   useEffect(() => {
@@ -504,6 +573,27 @@ function CabinaDifusion() {
           </div>
         </div>
       </div>
+
+      {/* Indicador de Borrador Guardado Automáticamente */}
+      {hasDraftRestored && Boolean(sourceUrl || copy || media || brainResult) && (
+        <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-200 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <div>
+              <span className="font-semibold text-emerald-300">Borrador activo protegido:</span>{" "}
+              <span>Tu contenido y adaptaciones se guardan en tiempo real. Aunque recargues la página (F5) o salgas del navegador, tus avances no se perderán.</span>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDescartarBorrador}
+            className="text-xs shrink-0 border-emerald-700/60 bg-emerald-900/40 hover:bg-emerald-900/70 text-emerald-200 hover:text-white font-medium"
+          >
+            Limpiar y empezar nuevo
+          </Button>
+        </div>
+      )}
 
       {/* 2. Paso 1: Pega tu Enlace a Difundir */}
       <Card className="p-6 border-slate-200 shadow-sm bg-white">

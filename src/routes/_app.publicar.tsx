@@ -48,7 +48,7 @@ import {
   Hash, Radio, MessageCircle, Palette, CheckCircle2, Download, RefreshCw, Zap, ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
-import { consumePublishDraft } from "@/lib/draft";
+import { consumePublishDraft, getPublicarDraft, savePublicarDraft, clearPublicarDraft } from "@/lib/draft";
 import { MunicipioCombobox } from "@/components/MunicipioCombobox";
 import { ImportedPostPreview } from "@/components/ImportedPostPreview";
 import { sanitizeMediaUrl } from "@/services/import/mediaUrl";
@@ -98,14 +98,17 @@ function Publicar() {
   const assets = useDB((db) => db.media_assets.filter((a) => a.user_id === user?.id));
   const db = useDB((d) => d);
 
-  const [publishMode, setPublishMode] = useState<PublishMode>("link");
-  const [campaignPrompt, setCampaignPrompt] = useState("");
-  const [campaignTheme, setCampaignTheme] = useState<"food" | "fashion" | "service" | "tech" | "vibrant">("vibrant");
+  const initialPubDraft = useMemo(() => getPublicarDraft(), []);
+  const [publishMode, setPublishMode] = useState<PublishMode>(initialPubDraft?.publishMode || "link");
+  const [campaignPrompt, setCampaignPrompt] = useState(initialPubDraft?.campaignPrompt ?? "");
+  const [campaignTheme, setCampaignTheme] = useState<"food" | "fashion" | "service" | "tech" | "vibrant">(
+    (initialPubDraft?.campaignTheme as any) || "vibrant"
+  );
   const [campaignLoading, setCampaignLoading] = useState(false);
   const [campaignStep, setCampaignStep] = useState<0 | 1 | 2 | 3>(0);
   const [flyerData, setFlyerData] = useState<FlyerDesignData | null>(null);
   const [flyerSvg, setFlyerSvg] = useState<string>("");
-  const [detectedNicho, setDetectedNicho] = useState<string>("");
+  const [detectedNicho, setDetectedNicho] = useState<string>(initialPubDraft?.detectedNicho ?? "");
   const [redChannels, setRedChannels] = useState<{ red: string; nombre: string; nichos: string[] }[]>([]);
 
   useEffect(() => {
@@ -115,14 +118,14 @@ function Publicar() {
       .then((r) => { if (r.ok) setRedChannels(r.channels); })
       .catch(() => { /* el mapa simplemente no muestra canales */ });
   }, []);
-  const [media, setMedia] = useState("");
-  const [copy, setCopy] = useState("");
-  const [copyPorRed, setCopyPorRed] = useState<Partial<Record<Red, string>>>({});
-  const [variants, setVariants] = useState<Partial<Record<Red, NetworkVariant>>>({});
-  const [sourceMeta, setSourceMeta] = useState<SourceMetadata | null>(null);
-  const [sourceUrl, setSourceUrl] = useState("");
+  const [media, setMedia] = useState(initialPubDraft?.media ?? "");
+  const [copy, setCopy] = useState(initialPubDraft?.copy ?? "");
+  const [copyPorRed, setCopyPorRed] = useState<Partial<Record<Red, string>>>(initialPubDraft?.copyPorRed ?? {});
+  const [variants, setVariants] = useState<Partial<Record<Red, NetworkVariant>>>(initialPubDraft?.variants ?? {});
+  const [sourceMeta, setSourceMeta] = useState<SourceMetadata | null>(initialPubDraft?.sourceMeta ?? null);
+  const [sourceUrl, setSourceUrl] = useState(initialPubDraft?.sourceUrl ?? "");
   const [activeRedTab, setActiveRedTab] = useState<Red>("instagram");
-  const [redes, setRedes] = useState<Red[]>([]);
+  const [redes, setRedes] = useState<Red[]>((initialPubDraft?.redes as Red[]) || []);
   const [programar, setProgramar] = useState(false);
   const [fecha, setFecha] = useState("");
   const [iaOpen, setIaOpen] = useState(false);
@@ -154,6 +157,54 @@ function Publicar() {
     () => (user ? disconnectedRedes(redes, accounts) : []),
     [redes, accounts, user],
   );
+
+  // Auto-guardar borrador persistente en localStorage para evitar pérdida al recargar
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      savePublicarDraft({
+        publishMode,
+        sourceUrl,
+        sourceMeta,
+        media,
+        copy,
+        copyPorRed,
+        variants,
+        redes,
+        alcanceNivel,
+        campaignPrompt,
+        campaignTheme,
+        detectedNicho,
+        whatsappSelected,
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [
+    publishMode,
+    sourceUrl,
+    sourceMeta,
+    media,
+    copy,
+    copyPorRed,
+    variants,
+    redes,
+    alcanceNivel,
+    campaignPrompt,
+    campaignTheme,
+    detectedNicho,
+    whatsappSelected,
+  ]);
+
+  function handleDescartarPublicarDraft() {
+    clearPublicarDraft();
+    setSourceUrl("");
+    setSourceMeta(null);
+    setMedia("");
+    setCopy("");
+    setCopyPorRed({});
+    setVariants({});
+    setCampaignPrompt("");
+    toast.info("Borrador limpiado");
+  }
 
   useEffect(() => {
     if (linkFromCalendar) {
@@ -707,6 +758,7 @@ function Publicar() {
         db.posts = db.posts.filter((p) => p.id !== draftPostId);
       }
       saveDB(db);
+      clearPublicarDraft();
 
       const apiExternalIds = (res.externalIds ?? {}) as Partial<Record<Red, string>>;
       const surfacesOk = res.surfaces?.filter((s) => s.ok).length ?? 0;
@@ -770,6 +822,24 @@ function Publicar() {
           </p>
         </div>
       </div>
+
+      {/* Indicador de Borrador Seguro */}
+      {Boolean(sourceUrl || copy || media || campaignPrompt) && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 px-4 flex items-center justify-between text-xs text-emerald-800 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span><strong>Borrador protegido:</strong> Tu contenido se guarda automáticamente en tiempo real. No se pierde si recargas o sales de la página.</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDescartarPublicarDraft}
+            className="text-xs h-7 text-emerald-700 hover:text-emerald-950 hover:bg-emerald-100"
+          >
+            Limpiar
+          </Button>
+        </div>
+      )}
 
       {postsEsteMes === 0 && (
         <Card className="p-4 border-primary/30 bg-primary/5">
