@@ -272,7 +272,7 @@ export const generateAIReplyServer = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     if (!isRealAIEnabled()) {
-      return { ok: false as const, error: "MEAI_API_KEY no configurada", useLocal: true };
+      return { ok: false as const, error: "Motor de IA no configurado", useLocal: true };
     }
     const session = await verifySessionToken(data.token);
     if (!session) return { ok: false as const, error: "Sesión inválida" };

@@ -279,24 +279,41 @@ function Conf() {
       </Card>
 
       <Card className="p-5">
-        <h2 className="font-semibold mb-1">Conecta tus redes sociales</h2>
+        {isAdmin && (
+          <div className="mb-4 rounded-xl border border-blue-300 bg-blue-50/90 p-4 text-xs space-y-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="font-bold text-blue-950 flex items-center gap-1.5 text-sm">
+                👑 Cuentas Oficiales de Difusión PubliVende
+              </span>
+              <Button
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs h-8 shadow-sm"
+                onClick={() => navigate({ to: "/red" })}
+              >
+                Ir a Conectar PubliVende →
+              </Button>
+            </div>
+            <p className="text-blue-900 leading-relaxed">
+              Las 4 cuentas oficiales maestras de PubliVende (desde donde se difunden las publicaciones de todos los clientes hacia el mundo) se configuran en el <b>Panel Super Admin</b>. Las opciones de abajo son únicamente para conectar tus cuentas personales opcionales de negocio.
+            </p>
+          </div>
+        )}
+
+        <h2 className="font-semibold mb-1">Redes de tu Negocio (Opcional)</h2>
         <p className="text-xs text-muted-foreground mb-3">
-          PubliVende publica directamente en <b>tu</b> Fan Page, Instagram, TikTok o canal de YouTube.
-          Conecta cada red que quieras usar en <b>Publicar</b> — no necesitas ser desarrollador ni entrar a Meta for Developers.
+          <b>PubliVende difunde tus publicaciones automáticamente a través de la Red Central Oficial PubliVende y comunidades aliadas.</b>{" "}
+          Si deseas que tu publicación aparezca también en tus cuentas personales de tu negocio (tu Fan Page o perfiles de redes), puedes vincularlas aquí.
         </p>
 
         {!isAdmin && (
           <div className="mb-4 rounded-lg border bg-muted/40 p-3 text-xs space-y-2">
-            <p className="font-semibold">¿Cómo funciona?</p>
+            <p className="font-semibold">¿Cómo funciona la sincronización con tu Fan Page?</p>
             <ol className="list-decimal pl-4 text-muted-foreground space-y-1">
               <li>Pulsa <b>Conectar</b> en Facebook, Instagram, TikTok o YouTube</li>
               <li>Inicia sesión con la cuenta que administra tu negocio</li>
-              <li>Autoriza a PubliVende y elige tu Fan Page o perfil correcto</li>
-              <li>En <b>Publicar</b>, pega tu link y pulsa <b>Publicar en tus redes</b></li>
+              <li>Autoriza a PubliVende y elige tu Fan Page o perfil</li>
+              <li>Al difundir en la Cabina, se publicará en la Red PubliVende y opcionalmente en tu página</li>
             </ol>
-            <p className="text-muted-foreground">
-              Es el mismo modelo que Buffer o Metricool: una app de PubliVende, tus cuentas conectadas por OAuth.
-            </p>
           </div>
         )}
 
@@ -309,13 +326,13 @@ function Conf() {
 
         {!isAdmin && oauthReady && !oauthConfigured && (
           <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50/80 p-3 text-xs text-amber-900">
-            La publicación en redes no está disponible temporalmente. Contacta soporte si el problema persiste.
+            La sincronización con redes personales no está disponible temporalmente. La difusión central de PubliVende sigue activa.
           </div>
         )}
 
         {metaHealth?.needs_reconnect && (
           <div className="mb-4 rounded-lg border border-red-300 bg-red-50/90 p-3 text-xs text-red-900 space-y-2">
-            <p className="font-semibold">Acción requerida para publicar</p>
+            <p className="font-semibold">Acción requerida para tu página personal</p>
             {metaHealth.page_name && (
               <p>Conectado a: <b>{metaHealth.page_name}</b></p>
             )}
@@ -331,12 +348,12 @@ function Conf() {
 
         {metaHealth?.can_publish && !metaHealth.needs_reconnect && (
           <div className="mb-4 rounded-lg border border-green-300 bg-green-50/80 p-3 text-xs text-green-900">
-            Listo para publicar en <b>{metaHealth.page_name}</b> ✓
+            Listo para sincronizar en <b>{metaHealth.page_name}</b> ✓
           </div>
         )}
 
         <div className="mb-4 rounded-lg border p-3 space-y-2">
-          <Label className="text-xs font-semibold">Nombre de tu Fan Page en Facebook</Label>
+          <Label className="text-xs font-semibold">Nombre de tu Fan Page en Facebook (Personal de tu Negocio)</Label>
           <Input
             value={fanPageHint}
             onChange={(e) => setFanPageHint(e.target.value)}
@@ -344,9 +361,7 @@ function Conf() {
             className="h-9"
           />
           <p className="text-[10px] text-muted-foreground">
-            {isAdmin
-              ? "Como administrador puedes conectar la página oficial «Publivende» para manejar la cuenta de la plataforma."
-              : "Al conectar Facebook, PubliVende sugerirá esta página. Elige la Fan Page de tu negocio."}
+            Al conectar Facebook, PubliVende sugerirá esta página para tu negocio personal.
           </p>
         </div>
 

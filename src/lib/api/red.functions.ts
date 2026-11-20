@@ -14,8 +14,10 @@ import {
   getFreshHubToken,
   listHubChannels,
   updateHubChannel,
+  upsertHubChannel,
   type DbHubChannel,
 } from "@/server/red/channels";
+import { decryptSecretLenient } from "@/server/crypto/vault";
 import {
   boostQuota,
   createBoostRequest,
@@ -251,6 +253,93 @@ export const redDeleteChannel = createServerFn({ method: "POST" })
     }
   });
 
+export const redSyncAdminAccountsToHub = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string() }))
+  .handler(async ({ data }) => {
+    if (!isProductionMode()) return { ok: false as const, error: "Requiere producción" };
+    try {
+      const admin = await requireAdmin(data.token);
+      const db = getDb();
+      const accounts = await db
+        .select()
+        .from(schema.oauthAccounts)
+        .where(eq(schema.oauthAccounts.userId, admin.id));
+
+      if (accounts.length === 0) {
+        return { ok: false as const, error: "No se encontraron cuentas vinculadas en tu perfil de administrador para sincronizar." };
+      }
+
+      const synced: string[] = [];
+      for (const acc of accounts) {
+        if (!acc.accessToken || acc.estadoConexion !== "conectada") continue;
+        const decryptedToken = decryptSecretLenient(acc.accessToken);
+        if (!decryptedToken) continue;
+
+        if (acc.oauthProvider === "meta") {
+          try {
+            const pagesRes = await fetch(
+              `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,picture,instagram_business_account{id,username}&access_token=${decryptedToken}`,
+            );
+            const pagesJson = (await pagesRes.json()) as {
+              data?: Array<{
+                id: string;
+                name: string;
+                access_token: string;
+                picture?: { data?: { url?: string } };
+                instagram_business_account?: { id: string; username: string };
+              }>;
+            };
+            const pages = pagesJson.data ?? [];
+            for (const p of pages) {
+              await upsertHubChannel({
+                red: "facebook",
+                externalAccountId: p.id,
+                nombre: p.name,
+                avatar: p.picture?.data?.url,
+                accessToken: p.access_token,
+                oauthProvider: "meta",
+              });
+              synced.push(`Facebook: ${p.name}`);
+
+              const ig = p.instagram_business_account;
+              if (ig?.username) {
+                await upsertHubChannel({
+                  red: "instagram",
+                  externalAccountId: ig.id,
+                  nombre: `@${ig.username}`,
+                  avatar: p.picture?.data?.url,
+                  accessToken: p.access_token,
+                  oauthProvider: "meta",
+                });
+                synced.push(`Instagram: @${ig.username}`);
+              }
+            }
+          } catch {
+            // fallback if me/accounts is not accessible with current token
+          }
+        }
+
+        if (acc.externalAccountId) {
+          await upsertHubChannel({
+            red: acc.red,
+            externalAccountId: acc.externalAccountId,
+            nombre: acc.nombreCuenta,
+            avatar: acc.avatar ?? undefined,
+            accessToken: decryptedToken,
+            refreshToken: acc.refreshToken ? decryptSecretLenient(acc.refreshToken) ?? undefined : undefined,
+            tokenExpiresAt: acc.tokenExpiresAt ?? undefined,
+            oauthProvider: acc.oauthProvider as "meta" | "google" | "tiktok",
+          });
+          synced.push(`${acc.red}: ${acc.nombreCuenta}`);
+        }
+      }
+
+      return { ok: true as const, synced: [...new Set(synced)] };
+    } catch (err) {
+      return { ok: false as const, error: errorMessage(err) };
+    }
+  });
+
 export const redReviewBoost = createServerFn({ method: "POST" })
   .inputValidator(z.object({ token: z.string(), id: z.string().uuid() }))
   .handler(async ({ data }) => {
@@ -302,7 +391,7 @@ export const redGenerateHubPost = createServerFn({ method: "POST" })
     if (!isProductionMode()) return { ok: false as const, error: "Requiere producción" };
     try {
       await requireAdmin(data.token);
-      if (!isRealAIEnabled()) return { ok: false as const, error: "Configura MEAI_API_KEY para generar contenido con IA." };
+      if (!isRealAIEnabled()) return { ok: false as const, error: "El motor de IA no está disponible en este momento." };
       const channel = (await listHubChannels()).find((c) => c.id === data.channelId);
       if (!channel) return { ok: false as const, error: "Cuenta no encontrada" };
       const copy = await generateHubPostOpenAI({

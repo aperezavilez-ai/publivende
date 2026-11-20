@@ -37,6 +37,7 @@ export async function upsertHubChannel(input: HubChannelInput): Promise<DbHubCha
     tokenExpiresAt: input.tokenExpiresAt ?? null,
     oauthProvider: input.oauthProvider,
     estadoConexion: "conectada",
+    activo: existing[0]?.activo ?? true,
     error: null,
     updatedAt: new Date(),
   };
@@ -52,7 +53,7 @@ export async function upsertHubChannel(input: HubChannelInput): Promise<DbHubCha
 
   const rows = await db
     .insert(schema.hubChannels)
-    .values({ ...values, red: input.red, externalAccountId: input.externalAccountId })
+    .values({ ...values, red: input.red, externalAccountId: input.externalAccountId, activo: true })
     .returning();
   return rows[0]!;
 }

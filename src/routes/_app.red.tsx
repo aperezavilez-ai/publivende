@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Rocket, Facebook, Instagram, Youtube, Music2, Trash2, Sparkles, CheckCircle2, XCircle, Clock, RefreshCw, Send,
+  Zap, ShieldCheck, ArrowRight, Layers,
 } from "lucide-react";
 import { useAuth } from "@/lib/mock/auth";
 import { requirePlatformAdmin } from "@/lib/auth/require-platform-admin";
@@ -16,6 +17,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { buildOAuthStartUrl } from "@/lib/api/oauth.functions";
 import {
   redAdminOverview,
@@ -25,6 +28,7 @@ import {
   redPublishHubPost,
   redRejectBoost,
   redReviewBoost,
+  redSyncAdminAccountsToHub,
   redUpdateChannel,
 } from "@/lib/api/red.functions";
 import type { Red } from "@/lib/mock/types";
@@ -57,6 +61,8 @@ function RedPage() {
   const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<"pendiente" | "publicado" | "rechazado" | "todos">("pendiente");
+  const [modalConectarOpen, setModalConectarOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   async function load() {
     const token = getSessionToken();
@@ -79,6 +85,27 @@ function RedPage() {
     window.location.href = res.url;
   }
 
+  async function handleSyncAccounts() {
+    const token = getSessionToken();
+    if (!token) return;
+    setSyncing(true);
+    try {
+      const res = await redSyncAdminAccountsToHub({ data: { token } });
+      if (res.ok) {
+        toast.success(`¡${res.synced.length} cuenta(s) vinculadas a la Red PubliVende!`, {
+          description: res.synced.join(", "),
+        });
+        await load();
+      } else {
+        toast.error(res.error);
+      }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   if (!user?.is_admin) return null;
   if (loading) return <div className="p-8 text-center text-muted-foreground">Cargando red…</div>;
   if (!data) return <div className="p-8 text-center text-muted-foreground">No se pudo cargar la red.</div>;
@@ -88,48 +115,251 @@ function RedPage() {
     filtro === "todos" ? true : filtro === "pendiente" ? q.estado === "pendiente" || q.estado === "error" : q.estado === filtro,
   );
 
+  const fbCount = data.channels.filter((c) => c.red === "facebook" && c.activo).length;
+  const igCount = data.channels.filter((c) => c.red === "instagram" && c.activo).length;
+  const ytCount = data.channels.filter((c) => c.red === "youtube" && c.activo).length;
+  const ttCount = data.channels.filter((c) => c.red === "tiktok" && c.activo).length;
+
   return (
-    <div className="max-w-5xl mx-auto space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Rocket className="w-6 h-6" /> Red PubliVende
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
-          Las cuentas oficiales de PubliVende por nicho. Crecen con contenido propio y presentan el contenido de los
-          usuarios que piden impulso. La IA clasifica el nicho de cada solicitud (cualquier nicho), la califica y
-          escribe el texto; tú apruebas y se publica con el link al WhatsApp del usuario.
-        </p>
-        {!data.ia_activa && (
-          <p className="text-xs text-amber-700 mt-2">
-            La IA no está configurada (falta MEAI_API_KEY): las solicitudes se revisan con reglas básicas.
+    <div className="max-w-5xl mx-auto space-y-6">
+      {/* Encabezado Principal Super Admin */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-bold flex items-center gap-2 text-slate-900">
+              <Rocket className="w-6 h-6 text-blue-600" /> Cuentas Maestras · Red PubliVende
+            </h1>
+            <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 font-semibold text-[10px]">
+              SOLO SUPER ADMIN
+            </Badge>
+          </div>
+          <p className="text-sm text-slate-600 max-w-3xl">
+            Desde estas 4 cuentas oficiales se realiza la difusión masiva para todos los clientes de PubliVende.
+            Cualquier post compartido desde la Cabina se distribuye a través de estas redes y las comunidades del Cerebro.
           </p>
-        )}
+          {!data.ia_activa && (
+            <p className="text-xs text-amber-700 mt-2">
+              El motor de IA está operando en modo heurístico base.
+            </p>
+          )}
+        </div>
+
+        {/* Botón Maestro Destacado: CONECTAR PUBLIVENDE */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            size="lg"
+            onClick={() => setModalConectarOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm h-11 px-5 shadow-md flex items-center gap-2"
+          >
+            <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+            CONECTAR PUBLIVENDE
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => void handleSyncAccounts()}
+            disabled={syncing}
+            className="text-xs h-11 border-slate-300 bg-white hover:bg-slate-50"
+            title="Importa las páginas de Meta autorizadas previamente en tu perfil de administrador"
+          >
+            <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", syncing && "animate-spin")} />
+            {syncing ? "Sincronizando..." : "Sincronizar Cuentas"}
+          </Button>
+        </div>
       </div>
 
-      <Card className="p-5 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-semibold">Cuentas oficiales ({activas.length} activas de {data.channels.length})</h2>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => void conectar("facebook")}>
-              <Facebook className="w-4 h-4 mr-1" /> Páginas de Facebook
+      {/* Modal Dialog para Conectar las 4 Redes */}
+      <Dialog open={modalConectarOpen} onOpenChange={setModalConectarOpen}>
+        <DialogContent className="max-w-2xl bg-white p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-slate-900">
+              <Zap className="w-5 h-5 text-amber-500 fill-amber-500" />
+              Conectar Cuentas Oficiales de PubliVende
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-600">
+              Selecciona la red oficial que deseas vincular a la plataforma. Toda publicación que los clientes compartan saldrá desde estas cuentas centrales hacia el mundo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 my-3">
+            {/* 1. Facebook */}
+            <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/60 hover:border-blue-400 transition-all flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 font-bold text-sm text-slate-900">
+                    <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
+                      <Facebook className="w-4 h-4 fill-white" />
+                    </div>
+                    <span>Facebook Oficial</span>
+                  </div>
+                  <Badge variant={fbCount > 0 ? "default" : "secondary"} className={fbCount > 0 ? "bg-emerald-600 text-white" : ""}>
+                    {fbCount > 0 ? `${fbCount} activa(s)` : "Sin conectar"}
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-600 leading-snug">
+                  Conecta la Fan Page oficial "Publivende" para difundir promociones, enlaces e imágenes de los clientes.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs h-9"
+                onClick={() => void conectar("facebook")}
+              >
+                <Facebook className="w-3.5 h-3.5 mr-1.5" />
+                {fbCount > 0 ? "Reconectar / Cambiar Facebook" : "Conectar Facebook Oficial"}
+              </Button>
+            </div>
+
+            {/* 2. Instagram */}
+            <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/60 hover:border-pink-400 transition-all flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 font-bold text-sm text-slate-900">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 via-pink-600 to-purple-600 text-white flex items-center justify-center shrink-0">
+                      <Instagram className="w-4 h-4" />
+                    </div>
+                    <span>Instagram Comercial</span>
+                  </div>
+                  <Badge variant={igCount > 0 ? "default" : "secondary"} className={igCount > 0 ? "bg-emerald-600 text-white" : ""}>
+                    {igCount > 0 ? `${igCount} activa(s)` : "Sin conectar"}
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-600 leading-snug">
+                  Conecta el Instagram Business oficial de PubliVende (asociado a la Fan Page) para posts y reels.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-semibold text-xs h-9"
+                onClick={() => void conectar("instagram")}
+              >
+                <Instagram className="w-3.5 h-3.5 mr-1.5" />
+                {igCount > 0 ? "Reconectar / Cambiar Instagram" : "Conectar Instagram Oficial"}
+              </Button>
+            </div>
+
+            {/* 3. TikTok */}
+            <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/60 hover:border-slate-800 transition-all flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 font-bold text-sm text-slate-900">
+                    <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
+                      <Music2 className="w-4 h-4" />
+                    </div>
+                    <span>TikTok Oficial</span>
+                  </div>
+                  <Badge variant={ttCount > 0 ? "default" : "secondary"} className={ttCount > 0 ? "bg-emerald-600 text-white" : ""}>
+                    {ttCount > 0 ? `${ttCount} activa(s)` : "Sin conectar"}
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-600 leading-snug">
+                  Conecta la cuenta oficial de TikTok para publicar videos y contenidos virales de la red.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full font-semibold text-xs h-9 border-slate-300"
+                onClick={() => void conectar("tiktok")}
+              >
+                <Music2 className="w-3.5 h-3.5 mr-1.5" />
+                {ttCount > 0 ? "Reconectar TikTok" : "Conectar TikTok Oficial"}
+              </Button>
+            </div>
+
+            {/* 4. YouTube */}
+            <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/60 hover:border-red-400 transition-all flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 font-bold text-sm text-slate-900">
+                    <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0">
+                      <Youtube className="w-4 h-4" />
+                    </div>
+                    <span>YouTube Oficial</span>
+                  </div>
+                  <Badge variant={ytCount > 0 ? "default" : "secondary"} className={ytCount > 0 ? "bg-emerald-600 text-white" : ""}>
+                    {ytCount > 0 ? `${ytCount} activa(s)` : "Sin conectar"}
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-600 leading-snug">
+                  Conecta el canal de YouTube de PubliVende para Shorts y videos promocionales.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full font-semibold text-xs h-9 border-slate-300 text-red-700 hover:text-red-800"
+                onClick={() => void conectar("youtube")}
+              >
+                <Youtube className="w-3.5 h-3.5 mr-1.5" />
+                {ytCount > 0 ? "Reconectar YouTube" : "Conectar YouTube Oficial"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Sincronización Automática con Fan Page autorizada */}
+          <div className="border-t border-slate-200 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-blue-50/60 p-3 rounded-xl border border-blue-200">
+            <div className="text-xs text-blue-950">
+              <span className="font-bold">¿Ya autorizaste tu Fan Page en Meta antes?</span>
+              <p className="text-[11px] text-blue-800">
+                Sincroniza y activa tu página directamente a la Red Oficial sin volver a iniciar sesión.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="default"
+              disabled={syncing}
+              onClick={() => void handleSyncAccounts()}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shrink-0"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", syncing && "animate-spin")} />
+              {syncing ? "Sincronizando..." : "Sincronizar en 1 Clic"}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => void conectar("instagram")}>
-              <Instagram className="w-4 h-4 mr-1" /> Facebook + Instagram
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => void conectar("youtube")}>
-              <Youtube className="w-4 h-4 mr-1" /> YouTube
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => void conectar("tiktok")}>
-              <Music2 className="w-4 h-4 mr-1" /> TikTok
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tarjeta de Resumen de Cuentas Conectadas */}
+      <Card className="p-5 space-y-4 border-slate-200 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div>
+            <h2 className="font-bold text-slate-900 text-base">
+              Cuentas Oficiales Conectadas ({activas.length} activas de {data.channels.length})
+            </h2>
+            <p className="text-xs text-slate-500">
+              Cada cuenta activa recibe y difunde publicaciones de los clientes según los nichos asignados.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setModalConectarOpen(true)}
+              className="font-semibold text-xs text-blue-700 border-blue-200 hover:bg-blue-50"
+            >
+              <Zap className="w-3.5 h-3.5 mr-1 text-amber-500 fill-amber-500" /> Conectar Red
             </Button>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Al conectar Facebook se importan todas tus páginas; actívalas y asígnales nichos. Una cuenta sin nichos es
-          general y recibe contenido de cualquier nicho que no tenga cuenta propia.
-        </p>
+
         {data.channels.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aún no hay cuentas oficiales conectadas.</p>
+          <div className="text-center py-8 px-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/50 space-y-3">
+            <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 mx-auto flex items-center justify-center">
+              <Rocket className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-slate-900 text-sm">Aún no hay cuentas oficiales conectadas</h3>
+            <p className="text-xs text-slate-600 max-w-md mx-auto">
+              Pulsa el botón de abajo para conectar la Fan Page de Facebook, Instagram Comercial, TikTok o YouTube de PubliVende.
+            </p>
+            <Button
+              size="sm"
+              onClick={() => setModalConectarOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs"
+            >
+              <Zap className="w-3.5 h-3.5 mr-1.5 text-amber-300 fill-amber-300" />
+              CONECTAR PUBLIVENDE
+            </Button>
+          </div>
         ) : (
           <div className="space-y-3">
             {data.channels.map((c) => (
