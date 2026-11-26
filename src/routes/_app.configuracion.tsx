@@ -299,7 +299,7 @@ function Conf() {
               </Button>
             </div>
             <p className="text-blue-900 leading-relaxed">
-              Las 4 cuentas oficiales maestras de PubliVende (desde donde se difunden las publicaciones de todos los clientes hacia el mundo) se configuran en el <b>Panel Super Admin</b>. Las opciones de abajo son únicamente para conectar tus cuentas personales opcionales de negocio.
+              Las 4 cuentas oficiales maestras de PubliVende (desde donde se difunden las publicaciones de todos los clientes hacia el mundo) se configuran en <b>Red PubliVende</b>. Las opciones de abajo son únicamente para conectar tus cuentas personales opcionales de negocio.
             </p>
           </div>
         )}

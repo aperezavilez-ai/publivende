@@ -166,7 +166,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 )}
               >
                 <Rocket className="w-4 h-4 shrink-0 text-amber-600" />
-                <span>Panel Super Admin</span>
+                <span>Red PubliVende</span>
               </Link>
             </>
           )}
