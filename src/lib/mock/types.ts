@@ -28,6 +28,16 @@ export interface ScheduleMeta {
     leads_min: number;
     leads_max: number;
   };
+  /** Publicación creada por el Operador IA de Publivende (crecimiento de la casa, 2026-11-26). */
+  operador?: {
+    /** Nicho canónico (id de market_niches) al que va dirigido el post. */
+    nicho: string;
+    /** "ia" = generado con el motor de IA; "reglas" = plantilla por nicho. */
+    fuente: "ia" | "reglas";
+    /** Cuenta oficial (hub_channels) destino del post. */
+    canal_id: string;
+    generado_at: string;
+  };
   /** Publicación creada por el piloto automático. */
   autopilot?: {
     estado: "pendiente" | "aprobado";

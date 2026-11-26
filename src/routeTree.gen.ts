@@ -31,6 +31,7 @@ import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as ApiCronAutopilotRouteImport } from './routes/api.cron.autopilot'
 import { Route as ApiCronBenchmarksRouteImport } from './routes/api.cron.benchmarks'
 import { Route as ApiCronDiscoveryRouteImport } from './routes/api.cron.discovery'
+import { Route as ApiCronOperatorRouteImport } from './routes/api.cron.operator'
 import { Route as ApiCronPublishScheduledRouteImport } from './routes/api.cron.publish-scheduled'
 import { Route as ApiCronSyncMetricsRouteImport } from './routes/api.cron.sync-metrics'
 import { Route as ApiMediaTokenRouteImport } from './routes/api.media.$token'
@@ -152,6 +153,11 @@ const ApiCronDiscoveryRoute = ApiCronDiscoveryRouteImport.update({
   path: '/api/cron/discovery',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronOperatorRoute = ApiCronOperatorRouteImport.update({
+  id: '/api/cron/operator',
+  path: '/api/cron/operator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCronPublishScheduledRoute = ApiCronPublishScheduledRouteImport.update({
   id: '/api/cron/publish-scheduled',
   path: '/api/cron/publish-scheduled',
@@ -231,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/autopilot': typeof ApiCronAutopilotRoute
   '/api/cron/benchmarks': typeof ApiCronBenchmarksRoute
   '/api/cron/discovery': typeof ApiCronDiscoveryRoute
+  '/api/cron/operator': typeof ApiCronOperatorRoute
   '/api/cron/publish-scheduled': typeof ApiCronPublishScheduledRoute
   '/api/cron/sync-metrics': typeof ApiCronSyncMetricsRoute
   '/api/media/$token': typeof ApiMediaTokenRoute
@@ -265,6 +272,7 @@ export interface FileRoutesByTo {
   '/api/cron/autopilot': typeof ApiCronAutopilotRoute
   '/api/cron/benchmarks': typeof ApiCronBenchmarksRoute
   '/api/cron/discovery': typeof ApiCronDiscoveryRoute
+  '/api/cron/operator': typeof ApiCronOperatorRoute
   '/api/cron/publish-scheduled': typeof ApiCronPublishScheduledRoute
   '/api/cron/sync-metrics': typeof ApiCronSyncMetricsRoute
   '/api/media/$token': typeof ApiMediaTokenRoute
@@ -301,6 +309,7 @@ export interface FileRoutesById {
   '/api/cron/autopilot': typeof ApiCronAutopilotRoute
   '/api/cron/benchmarks': typeof ApiCronBenchmarksRoute
   '/api/cron/discovery': typeof ApiCronDiscoveryRoute
+  '/api/cron/operator': typeof ApiCronOperatorRoute
   '/api/cron/publish-scheduled': typeof ApiCronPublishScheduledRoute
   '/api/cron/sync-metrics': typeof ApiCronSyncMetricsRoute
   '/api/media/$token': typeof ApiMediaTokenRoute
@@ -337,6 +346,7 @@ export interface FileRouteTypes {
     | '/api/cron/autopilot'
     | '/api/cron/benchmarks'
     | '/api/cron/discovery'
+    | '/api/cron/operator'
     | '/api/cron/publish-scheduled'
     | '/api/cron/sync-metrics'
     | '/api/media/$token'
@@ -371,6 +381,7 @@ export interface FileRouteTypes {
     | '/api/cron/autopilot'
     | '/api/cron/benchmarks'
     | '/api/cron/discovery'
+    | '/api/cron/operator'
     | '/api/cron/publish-scheduled'
     | '/api/cron/sync-metrics'
     | '/api/media/$token'
@@ -406,6 +417,7 @@ export interface FileRouteTypes {
     | '/api/cron/autopilot'
     | '/api/cron/benchmarks'
     | '/api/cron/discovery'
+    | '/api/cron/operator'
     | '/api/cron/publish-scheduled'
     | '/api/cron/sync-metrics'
     | '/api/media/$token'
@@ -433,6 +445,7 @@ export interface RootRouteChildren {
   ApiCronAutopilotRoute: typeof ApiCronAutopilotRoute
   ApiCronBenchmarksRoute: typeof ApiCronBenchmarksRoute
   ApiCronDiscoveryRoute: typeof ApiCronDiscoveryRoute
+  ApiCronOperatorRoute: typeof ApiCronOperatorRoute
   ApiCronPublishScheduledRoute: typeof ApiCronPublishScheduledRoute
   ApiCronSyncMetricsRoute: typeof ApiCronSyncMetricsRoute
   ApiMediaTokenRoute: typeof ApiMediaTokenRoute
@@ -601,6 +614,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronDiscoveryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/operator': {
+      id: '/api/cron/operator'
+      path: '/api/cron/operator'
+      fullPath: '/api/cron/operator'
+      preLoaderRoute: typeof ApiCronOperatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/cron/publish-scheduled': {
       id: '/api/cron/publish-scheduled'
       path: '/api/cron/publish-scheduled'
@@ -733,6 +753,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronAutopilotRoute: ApiCronAutopilotRoute,
   ApiCronBenchmarksRoute: ApiCronBenchmarksRoute,
   ApiCronDiscoveryRoute: ApiCronDiscoveryRoute,
+  ApiCronOperatorRoute: ApiCronOperatorRoute,
   ApiCronPublishScheduledRoute: ApiCronPublishScheduledRoute,
   ApiCronSyncMetricsRoute: ApiCronSyncMetricsRoute,
   ApiMediaTokenRoute: ApiMediaTokenRoute,

@@ -37,6 +37,7 @@ import {
   getDiscoverySummary,
   runDiscoveryNow,
 } from "@/lib/api/discovery.functions";
+import { OperatorCard } from "@/components/OperatorCard";
 
 export const Route = createFileRoute("/_app/red")({
   beforeLoad: requirePlatformAdmin,
@@ -423,6 +424,9 @@ function RedPage() {
         )}
       </Card>
       </div>
+
+      {/* Operador IA de Publivende: crecimiento de la casa en automático */}
+      <OperatorCard />
     </div>
   );
 }
