@@ -21,6 +21,7 @@ const HOUR = 3600000;
 /** Cada plan con IA cuesta tokens; el plan de suscripción define cada cuánto se puede regenerar. */
 const COOLDOWN_MS: Record<Plan, number> = {
   free: 7 * 24 * HOUR,
+  plus: 24 * HOUR,
   pro: 12 * HOUR,
   business: 1 * HOUR,
 };

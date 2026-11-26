@@ -33,10 +33,11 @@ import {
 import { analizarConCerebroIA } from "@/lib/api/brain-agent.functions";
 import type { BrainAgentOutput } from "@/server/agent/brain";
 import { publishPostReal } from "@/lib/api/publish.functions";
-import { connectSocialNetwork } from "@/services/social/connectSocial";
+import { getMyBoostQuota } from "@/lib/api/red.functions";
 import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
 import { RED_LABELS, RED_LIMITS, RED_COLORS, REDES_ORDEN } from "@/lib/redes";
-import { PLAN_LIMITS, type Red, type Post, type PostAlcance } from "@/lib/mock/types";
+import { BOOST_LIMITS } from "@/lib/red/limits";
+import { type Red, type Post, type PostAlcance } from "@/lib/mock/types";
 import { resolveMediaForPublish } from "@/lib/publish-status";
 import { getDashboardDraft, saveDashboardDraft, clearDashboardDraft } from "@/lib/draft";
 
@@ -76,9 +77,23 @@ function CabinaDifusion() {
   const fbAccount = accounts.find((a) => a.red === "facebook");
   const fbConnected = fbAccount?.estado_conexion === "conectada";
 
-  const maxPostsMes = user ? PLAN_LIMITS[user.plan].posts_mes : 10;
-  const esIlimitado = user?.plan === "pro" || user?.plan === "business";
-  const creditosRestantes = esIlimitado ? 9999 : Math.max(0, maxPostsMes - postsEsteMes);
+  // [PLANES VERDAD — 2026-11-26] El saldo es de COMPARTIDAS (BOOST_LIMITS,
+  // la tabla que el servidor hace cumplir al pedir el impulso). En
+  // producción las usadas vienen de la misma fuente que usa la pantalla de
+  // Red (boostQuota vía getMyBoostQuota); en demo se usa el conteo local de
+  // posts del mes como aproximación visible.
+  const limiteCompartidas = user ? BOOST_LIMITS[user.plan] : 1;
+  const [cuotaServidor, setCuotaServidor] = useState<{ usados: number; limite: number | null } | null>(null);
+  useEffect(() => {
+    const token = getSessionToken();
+    if (!token || !isProductionModeClient()) return;
+    getMyBoostQuota({ data: { token } })
+      .then((r) => { if (r.ok) setCuotaServidor(r.quota); })
+      .catch(() => { /* sin cuota del servidor se muestra el límite del plan */ });
+  }, []);
+  const compartidasUsadas = cuotaServidor?.usados ?? postsEsteMes;
+  const esIlimitado = limiteCompartidas >= 9999 || (cuotaServidor != null && cuotaServidor.limite === null);
+  const creditosRestantes = esIlimitado ? 9999 : Math.max(0, limiteCompartidas - compartidasUsadas);
 
   // Recuperar borrador automático persistente de localStorage (evita perder trabajo al recargar)
   const initialDraft = useMemo(() => getDashboardDraft(), []);
@@ -113,7 +128,7 @@ function CabinaDifusion() {
   // Publicación
   const [publishing, setPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
-  const [connectingRed, setConnectingRed] = useState<string | null>(null);
+
 
   // Auto-guardado en localStorage en tiempo real (anti-pérdida por F5 o navegación)
   useEffect(() => {
@@ -184,33 +199,9 @@ function CabinaDifusion() {
 
   if (!user) return null;
 
-  // Estado de conexión por red
-  function estadoRed(red: Red) {
-    const acc = accounts.find((a) => a.red === red);
-    return {
-      conectada: acc?.estado_conexion === "conectada",
-      nombre: acc?.nombre_cuenta ?? null,
-    };
-  }
-
-  // Conectar red mediante popup seguro de Fase B
-  async function handleConnect(red: Red) {
-    if (!user?.id) {
-      toast.error("Debes iniciar sesión para conectar redes");
-      return;
-    }
-    setConnectingRed(red);
-    try {
-      const ok = await connectSocialNetwork(user.id, red, "/dashboard");
-      if (ok) {
-        toast.success(`¡${RED_LABELS[red]} conectada con éxito!`);
-      }
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setConnectingRed(null);
-    }
-  }
+  // [FLUJO SIN REDES DEL CLIENTE — 2026-11-26] Se retiraron estadoRed y
+  // handleConnect (conexión de redes del cliente por popup): el cliente
+  // nunca conecta sus cuentas; la difusión sale por la Red PubliVende.
 
   // Flujo integral: Leer link + Extraer foto + Adaptar IA + Calcular Nicho y Alcance
   async function procesarEnlace(urlOverride?: string) {
@@ -424,7 +415,7 @@ function CabinaDifusion() {
 
         if (!res.ok) {
           toast.error(res.error ?? "No se pudo completar la difusión", {
-            description: "Revisa el estado de la Red PubliVende o tus cuentas.",
+            description: "Revisa el estado de la Red PubliVende.",
           });
           return;
         }
@@ -508,7 +499,7 @@ function CabinaDifusion() {
             <div>
               <div className="text-[11px] text-slate-400 font-medium">Saldo de Compartidas</div>
               <div className="text-sm font-bold text-white">
-                {esIlimitado ? "Ilimitadas (Plan Pro)" : `${creditosRestantes} restantes`}
+                {esIlimitado ? "Ilimitadas" : `${creditosRestantes} de ${limiteCompartidas} restantes`}
               </div>
             </div>
             <Link to="/configuracion">
@@ -519,57 +510,24 @@ function CabinaDifusion() {
           </div>
         </div>
 
-        {/* Estado y Conexión Rápida de Redes */}
+        {/* [FLUJO SIN REDES DEL CLIENTE — 2026-11-26] Se retiraron las
+            tarjetas de estado/conexión de redes DEL CLIENTE (con su botón
+            «+ Conectar» por popup): el cliente nunca conecta sus cuentas.
+            En su lugar, el estado de la Red PubliVende y su saldo de
+            compartidas del plan. */}
         <div className="pt-4">
           <div className="flex items-center justify-between text-xs font-medium text-slate-400 mb-2.5">
-            <span>Tus Redes Personales (Opcional - sincroniza en tus propios perfiles):</span>
+            <span>Difusión centralizada: tu link sale por las cuentas oficiales de tu nicho. No necesitas conectar tus cuentas.</span>
             <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Red PubliVende Activa
             </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {ALL_REDES.map((red) => {
-              const st = estadoRed(red);
-              const Icon = ICONS[red];
-              const isConnecting = connectingRed === red;
-
-              return (
-                <div
-                  key={red}
-                  className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
-                    st.conectada
-                      ? "bg-slate-800/90 border-emerald-500/30 text-white"
-                      : "bg-slate-800/40 border-slate-700/60 text-slate-400"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Icon className="w-4 h-4 shrink-0" style={{ color: st.conectada ? RED_COLORS[red] : "#94a3b8" }} />
-                    <div className="truncate text-xs">
-                      <div className="font-semibold text-slate-200">{RED_LABELS[red]}</div>
-                      <div className="text-[10px] text-slate-400 truncate">
-                        {st.conectada ? st.nombre ?? "Conectada" : "Sin conectar"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {st.conectada ? (
-                    <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-2 py-0.5 rounded-full shrink-0">
-                      <Check className="w-3 h-3" /> Lista
-                    </span>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={isConnecting}
-                      onClick={() => handleConnect(red)}
-                      className="h-6 text-[11px] px-2 text-blue-400 hover:text-blue-300 hover:bg-blue-950/50 shrink-0 font-medium cursor-pointer"
-                    >
-                      {isConnecting ? <Loader2 className="w-3 h-3 animate-spin" /> : "+ Conectar"}
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
+          <div className="text-xs text-slate-400">
+            {esIlimitado
+              ? "Compartidas ilimitadas en tu plan."
+              : user?.plan === "free"
+                ? `Compartida gratuita: ${compartidasUsadas} de ${limiteCompartidas} usada (es de por vida, no se renueva cada mes).`
+                : `Compartidas de este mes: ${compartidasUsadas} de ${limiteCompartidas} usadas.`}
           </div>
         </div>
       </div>
@@ -992,7 +950,6 @@ function CabinaDifusion() {
               {ALL_REDES.map((r) => {
                 const Icon = ICONS[r];
                 const sel = selectedRedes.includes(r);
-                const st = estadoRed(r);
 
                 return (
                   <button
@@ -1012,7 +969,7 @@ function CabinaDifusion() {
                     <div className="truncate text-xs">
                       <div>{RED_LABELS[r]}</div>
                       <div className="text-[9px] text-slate-400 truncate">
-                        {st.conectada ? st.nombre ?? "Conectada" : "Sin conectar"}
+                        Red PubliVende
                       </div>
                     </div>
                   </button>
@@ -1072,7 +1029,7 @@ function CabinaDifusion() {
               <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Tu publicación ya está en vivo en tus redes.</span>
+                  <span>Tu publicación ya está en vivo en la Red PubliVende.</span>
                 </div>
                 <a
                   href={publishedUrl}

@@ -10,12 +10,12 @@ import { Upload, Share2, MessageCircle, Instagram, Facebook, Youtube, Music2, Ar
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "PubliVende — Publica en Instagram, TikTok, Facebook y YouTube y vende por WhatsApp" },
-      { name: "description", content: "Publica contenido en todas tus redes desde un solo panel, conecta tu WhatsApp y convierte seguidores en ventas. Hecho para creadores y pymes de LATAM." },
+      { title: "PubliVende — Pega tu link y difúndelo en tu nicho de mercado" },
+      { name: "description", content: "Pega el link de tu publicación y PubliVende la difunde, con IA, en las cuentas oficiales de tu nicho de mercado. Sin conectar tus cuentas. Sigue los clics y vende por WhatsApp." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://publivende.mx/" },
-      { property: "og:title", content: "PubliVende — De contenido a ventas en un solo panel" },
-      { property: "og:description", content: "Publica en Instagram, TikTok, Facebook y YouTube, y vende por WhatsApp. Planes desde $0 MXN/mes." },
+      { property: "og:title", content: "PubliVende — De tu link a ventas: difusión por nichos con IA" },
+      { property: "og:description", content: "Pega tu link y PubliVende lo difunde en su red de nichos de mercado. Planes desde $0 MXN/mes." },
       { property: "og:image", content: "https://publivende.mx/logo-publivende.png" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -68,12 +68,12 @@ function Landing() {
       {/* HERO */}
       <section className="py-16 md:py-24 bg-white">
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <p className="text-sm font-semibold text-blue-700 mb-4">Publicación multi-red + WhatsApp</p>
+          <p className="text-sm font-semibold text-blue-700 mb-4">Difusión por nichos con IA + WhatsApp</p>
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight max-w-3xl mx-auto">
-            Publica en todas tus redes desde un solo panel
+            Pega tu link. PubliVende lo difunde en tu nicho de mercado
           </h1>
           <p className="mt-5 text-lg text-slate-600 max-w-2xl mx-auto">
-            Crea, programa y publica en Instagram, TikTok, Facebook y YouTube, y atiende a tus clientes por WhatsApp desde el mismo lugar.
+            Sin conectar tus cuentas: copias el link de tu publicación y la IA la comparte en las cuentas oficiales de tu nicho (hasta 4 redes). Tú sigues los clics y atiendes a tus clientes por WhatsApp.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link to="/auth" search={{ mode: "signup", plan: "free" }}>
@@ -104,9 +104,9 @@ function Landing() {
       <section id="como-funciona" className="py-20 bg-slate-50 border-y border-slate-200">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold">En 3 pasos, contenido a ventas</h2>
+            <h2 className="text-3xl md:text-4xl font-bold">En 3 pasos, de tu link a ventas</h2>
             <p className="mt-3 text-slate-600 max-w-2xl mx-auto">
-              Conectas tus redes, importas un link o subes tu contenido y publicas desde el panel.
+              Te registras, pegas el link de tu publicación y PubliVende la difunde en su red de nichos de mercado.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -114,22 +114,22 @@ function Landing() {
               <div className="w-12 h-12 rounded-lg bg-blue-700 flex items-center justify-center mb-4">
                 <Upload className="w-6 h-6 text-white" />
               </div>
-              <h3 className="font-bold text-lg mb-2">1. Importa o crea</h3>
-              <p className="text-sm text-slate-600">Pega el link de un post o sube tu imagen o video. Puedes adaptar el texto para cada red.</p>
+              <h3 className="font-bold text-lg mb-2">1. Pega tu link</h3>
+              <p className="text-sm text-slate-600">Copia el link de tu publicación en tu página o perfil y pégalo en PubliVende. La IA lee su contenido y detecta tu nicho de mercado.</p>
             </Card>
             <Card className="p-6 bg-white">
               <div className="w-12 h-12 rounded-lg bg-blue-700 flex items-center justify-center mb-4">
                 <Share2 className="w-6 h-6 text-white" />
               </div>
-              <h3 className="font-bold text-lg mb-2">2. Publica o programa</h3>
-              <p className="text-sm text-slate-600">Instagram, TikTok, Facebook y YouTube desde un solo panel, al momento o en la fecha que elijas.</p>
+              <h3 className="font-bold text-lg mb-2">2. PubliVende difunde</h3>
+              <p className="text-sm text-slate-600">Tu compartida sale en las cuentas oficiales de tu nicho — Facebook, Instagram, TikTok y YouTube — con textos adaptados por IA para cada red.</p>
             </Card>
             <Card className="p-6 bg-white">
               <div className="w-12 h-12 rounded-lg bg-blue-700 flex items-center justify-center mb-4">
                 <MessageCircle className="w-6 h-6 text-white" />
               </div>
-              <h3 className="font-bold text-lg mb-2">3. Vende por WhatsApp</h3>
-              <p className="text-sm text-slate-600">CRM, automatizaciones y catálogo para atender a tus clientes por WhatsApp.</p>
+              <h3 className="font-bold text-lg mb-2">3. Mide y vende por WhatsApp</h3>
+              <p className="text-sm text-slate-600">Sigue los clics de cada compartida en tu panel y atiende por WhatsApp a los clientes que lleguen.</p>
             </Card>
           </div>
         </div>
@@ -149,18 +149,18 @@ function Landing() {
               <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center mb-4">
                 <CalendarClock className="w-6 h-6 text-blue-700" />
               </div>
-              <h3 className="font-bold mb-2">Publicación y programación</h3>
+              <h3 className="font-bold mb-2">Difusión en la Red PubliVende</h3>
               <p className="text-sm text-slate-600">
-                Publica al momento o programa en Facebook, Instagram, TikTok y YouTube conectando tus propias cuentas.
+                Cada compartida se publica en las cuentas oficiales de tu nicho en hasta 4 redes, sin que conectes ninguna cuenta tuya.
               </p>
             </div>
             <div className="border border-slate-200 rounded-lg p-6">
               <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center mb-4">
                 <Link2 className="w-6 h-6 text-blue-700" />
               </div>
-              <h3 className="font-bold mb-2">Enlace rastreable por publicación</h3>
+              <h3 className="font-bold mb-2">Enlace rastreable por compartida</h3>
               <p className="text-sm text-slate-600">
-                Cada post genera un enlace único de WhatsApp, para saber qué contenido trae conversaciones.
+                Cada compartida genera un enlace único, para saber qué contenido trae clics y conversaciones a tu WhatsApp.
               </p>
             </div>
             <div className="border border-slate-200 rounded-lg p-6">
@@ -174,15 +174,15 @@ function Landing() {
               <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center mb-4">
                 <BarChart3 className="w-6 h-6 text-blue-700" />
               </div>
-              <h3 className="font-bold mb-2">Analíticas de tus publicaciones</h3>
-              <p className="text-sm text-slate-600">Consulta el rendimiento de lo que publicaste desde el mismo panel.</p>
+              <h3 className="font-bold mb-2">Resultados de tus compartidas</h3>
+              <p className="text-sm text-slate-600">Consulta los clics y el rendimiento de cada compartida desde tu panel.</p>
             </div>
             <div className="border border-slate-200 rounded-lg p-6">
               <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center mb-4">
                 <Share2 className="w-6 h-6 text-blue-700" />
               </div>
-              <h3 className="font-bold mb-2">Tus cuentas, tus conexiones</h3>
-              <p className="text-sm text-slate-600">Conectas tus redes con el acceso oficial de cada plataforma y puedes desconectarlas cuando quieras.</p>
+              <h3 className="font-bold mb-2">Sin conectar tus cuentas</h3>
+              <p className="text-sm text-slate-600">No te pedimos acceso a tus redes sociales: trabajas solo con el link de tu publicación.</p>
             </div>
             <div className="border border-slate-200 rounded-lg p-6">
               <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center mb-4">
@@ -201,7 +201,7 @@ function Landing() {
           <div className="text-center mb-10">
             <h2 className="text-3xl md:text-4xl font-bold">Planes que crecen contigo</h2>
             <p className="mt-3 text-slate-600 max-w-2xl mx-auto">
-              Empieza gratis, actualiza cuando necesites más redes, conversaciones y automatización.
+              Empieza gratis con 1 compartida y actualiza cuando necesites más compartidas al mes.
             </p>
           </div>
           <PricingPlans signupLinks />
@@ -219,8 +219,9 @@ function Landing() {
           </div>
           <div className="space-y-3">
             {[
-              { q: "¿Necesito tarjeta para empezar?", a: "No. El plan Free no requiere tarjeta y puedes probar la plataforma completa antes de decidir un plan de pago." },
-              { q: "¿En qué redes puedo publicar?", a: "Instagram, TikTok, Facebook y YouTube desde un solo panel. El plan Free incluye 1 red; Pro y Business incluyen las 4." },
+              { q: "¿Necesito tarjeta para empezar?", a: "No. El plan Free no requiere tarjeta e incluye 1 compartida de prueba para que veas cómo funciona la difusión." },
+              { q: "¿Qué es una compartida?", a: "Es un impulso de tu publicación en la Red PubliVende: la IA detecta tu nicho y la comparte en las cuentas oficiales que casan con ese nicho, en hasta 4 redes." },
+              { q: "¿En qué redes se difunde mi publicación?", a: "En las cuentas oficiales de la Red PubliVende en Facebook, Instagram, TikTok y YouTube, según tu nicho. No necesitas conectar tus cuentas: solo pegas tu link." },
               { q: "¿Cómo funciona el vendedor IA de WhatsApp?", a: "Conectas tu número de WhatsApp (Embedded Signup de Meta), subes tu catálogo y la IA responde a tus clientes, recomienda productos y envía links de pago automáticamente." },
               { q: "¿Puedo cancelar cuando quiera?", a: "Sí, todos los planes son de suscripción mensual sin permanencia. Cancelas desde tu panel en segundos." },
             ].map((f) => (
@@ -241,7 +242,7 @@ function Landing() {
         <div className="max-w-3xl mx-auto px-4 text-center">
           <CheckCircle2 className="w-10 h-10 text-blue-700 mx-auto mb-4" />
           <h2 className="text-2xl md:text-3xl font-bold mb-2">¿Listo para empezar?</h2>
-          <p className="text-slate-600 mb-6">Crea tu cuenta y publica tu primer post hoy.</p>
+          <p className="text-slate-600 mb-6">Crea tu cuenta y comparte tu primer link hoy.</p>
           <Link to="/auth" search={{ mode: "signup", plan: "free" }}>
             <Button size="lg">
               Crear cuenta gratis <ArrowRight className="w-4 h-4 ml-1" />

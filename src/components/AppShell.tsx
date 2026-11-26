@@ -15,12 +15,12 @@ import { isProductionModeClient } from "@/lib/production/session";
 // Menú simplificado: Cabina única de difusión y gestión de redes/saldo
 const CLIENT_NAV = [
   { to: "/dashboard", label: "Cabina de Difusión", icon: Radio, color: "#1d4ed8", tint: "#DBEAFE" },
-  { to: "/configuracion", label: "Mis Redes & Saldo", icon: Settings, color: "#059669", tint: "#D1FAE5" },
+  { to: "/configuracion", label: "Mi Plan & Saldo", icon: Settings, color: "#059669", tint: "#D1FAE5" },
 ] as const;
 
 const MOBILE_TABS = [
   { to: "/dashboard", label: "Cabina", icon: Radio, color: "#1d4ed8", tint: "#DBEAFE" },
-  { to: "/configuracion", label: "Redes & Saldo", icon: Settings, color: "#059669", tint: "#D1FAE5" },
+  { to: "/configuracion", label: "Plan & Saldo", icon: Settings, color: "#059669", tint: "#D1FAE5" },
 ] as const;
 
 function NavLink({

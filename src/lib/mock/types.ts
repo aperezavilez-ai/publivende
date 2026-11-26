@@ -1,6 +1,6 @@
 // Tipos compartidos para toda la app PubliVende
 export type Red = "facebook" | "instagram" | "tiktok" | "youtube";
-export type Plan = "free" | "pro" | "business";
+export type Plan = "free" | "plus" | "pro" | "business";
 export type EtapaLead = "nuevo" | "contactado" | "negociando" | "ganado" | "perdido";
 export type EstadoPost = "borrador" | "programado" | "publicado" | "error";
 
@@ -401,8 +401,14 @@ export interface DB {
   session_user_id: string | null;
 }
 
-export const PLAN_LIMITS: Record<Plan, { redes: number; posts_mes: number; conversaciones: number; reglas: number; productos: number; campañas: number }> = {
-  free: { redes: 1, posts_mes: 10, conversaciones: 50, reglas: 2, productos: 5, campañas: 1 },
-  pro: { redes: 4, posts_mes: 999, conversaciones: 500, reglas: 10, productos: 50, campañas: 10 },
-  business: { redes: 4, posts_mes: 9999, conversaciones: 9999, reglas: 99, productos: 999, campañas: 99 },
+// [PLANES VERDAD — 2026-11-26] La única unidad que el servidor hace cumplir
+// es la COMPARTIDA (impulso difundido por la Red PubliVende): ver BOOST_LIMITS
+// en src/lib/red/limits.ts. Se eliminaron las claves que ningún límite real
+// aplicaba (redes/posts_mes/conversaciones/reglas/productos/campañas): la
+// pantalla ya no muestra contadores que el servidor no haga cumplir.
+export const PLAN_LIMITS: Record<Plan, { compartidas: number }> = {
+  free: { compartidas: 1 },
+  plus: { compartidas: 10 },
+  pro: { compartidas: 40 },
+  business: { compartidas: 9999 },
 };

@@ -11,6 +11,11 @@ export interface PlanOffer {
   highlight?: boolean;
 }
 
+// [PLANES VERDAD — 2026-11-26] Textos = lo que el sistema sí hace: el cliente
+// pega su link y PubliVende lo difunde en las cuentas oficiales de su nicho
+// (la «compartida»). Nada de redes del usuario, publicaciones ilimitadas,
+// conversaciones contadas ni white-label. La cuota real vive en BOOST_LIMITS
+// (src/lib/red/limits.ts) y debe coincidir con estos textos.
 export const PLAN_OFFERS: PlanOffer[] = [
   {
     id: "free",
@@ -18,8 +23,27 @@ export const PLAN_OFFERS: PlanOffer[] = [
     precio: "$0",
     precioNum: 0,
     desc: "Para probar la plataforma",
-    features: ["1 red social", "10 publicaciones/mes", "50 conversaciones WhatsApp", "2 reglas automáticas"],
+    features: [
+      "1 compartida de prueba",
+      "Análisis de tu link y nicho con IA",
+      "Difusión en las cuentas oficiales de tu nicho (hasta 4 redes)",
+      "Seguimiento de clics en tu panel",
+    ],
     cta: "Empezar gratis",
+  },
+  {
+    id: "plus",
+    nombre: "Plus",
+    precio: "$149",
+    precioNum: 149,
+    desc: "Para negocios que empiezan a difundir",
+    features: [
+      "Todo lo de Free",
+      "10 compartidas al mes",
+      "Textos adaptados con IA para cada red",
+      "≈ $15 por compartida",
+    ],
+    cta: "Elegir Plus",
   },
   {
     id: "pro",
@@ -28,12 +52,11 @@ export const PLAN_OFFERS: PlanOffer[] = [
     precioNum: 399,
     desc: "Para creadores y pymes",
     features: [
-      "4 redes sociales",
-      "Publicaciones ilimitadas",
-      "500 conversaciones WhatsApp",
-      "10 reglas automáticas",
-      "IA para captions",
-      "Atribución a ventas",
+      "Todo lo de Plus",
+      "40 compartidas al mes",
+      "Atribución de leads y ventas en Resultados",
+      "Reporte PDF de resultados",
+      "≈ $10 por compartida",
     ],
     cta: "Elegir Pro",
     highlight: true,
@@ -46,10 +69,9 @@ export const PLAN_OFFERS: PlanOffer[] = [
     desc: "Equipos y agencias",
     features: [
       "Todo lo de Pro",
-      "Conversaciones ilimitadas",
-      "Vendedor IA 24/7",
-      "Automatizaciones avanzadas",
-      "Reportes white-label",
+      "Compartidas ilimitadas",
+      "Vendedor IA de WhatsApp 24/7",
+      "Prioridad en revisión de compartidas",
     ],
     cta: "Elegir Business",
   },
@@ -60,5 +82,5 @@ export function planLabel(plan: Plan): string {
 }
 
 export function isValidPlan(v: unknown): v is Plan {
-  return v === "free" || v === "pro" || v === "business";
+  return v === "free" || v === "plus" || v === "pro" || v === "business";
 }

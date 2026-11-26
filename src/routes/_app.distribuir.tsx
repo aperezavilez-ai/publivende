@@ -266,12 +266,18 @@ function Distribuir() {
                 <span className="text-xs text-muted-foreground">
                   {quota.limite === null
                     ? "Sin límite (administrador)"
-                    : `${quota.usados} de ${quota.limite} impulso(s) usados este mes`}
+                    : user?.plan === "free"
+                      ? `${quota.usados} de ${quota.limite} compartida gratuita usada`
+                      : `${quota.usados} de ${quota.limite} compartidas usadas este mes`}
                 </span>
               )}
             </div>
             {sinCupo && (
-              <p className="text-xs text-amber-700">Ya usaste los impulsos de tu plan este mes.</p>
+              <p className="text-xs text-amber-700">
+                {user?.plan === "free"
+                  ? "Ya usaste tu compartida gratuita. Sube de plan para tener más."
+                  : "Ya usaste las compartidas de tu plan este mes."}
+              </p>
             )}
           </div>
         )}

@@ -24,6 +24,7 @@ const MINUTE = 60000;
 /** Regenerar a mano cuesta tokens de IA: Free una vez por semana, planes de pago cada 10 minutos. */
 export const REGEN_COOLDOWN_MS = {
   free: 7 * DAY,
+  plus: 10 * MINUTE,
   pro: 10 * MINUTE,
   business: 10 * MINUTE,
 } as const;

@@ -7,7 +7,7 @@ import { createStripePortalSession, createStripeSubscriptionCheckout } from "@/s
 import { PLAN_OFFERS } from "@/lib/plans";
 
 export const createPlanCheckoutServer = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ token: z.string(), plan: z.enum(["pro", "business"]) }))
+  .inputValidator(z.object({ token: z.string(), plan: z.enum(["plus", "pro", "business"]) }))
   .handler(async ({ data }) => {
     if (!isProductionMode()) return { ok: false as const, error: "Modo demo", useLocal: true };
     if (!getStripeSecretKey()) return { ok: false as const, error: "Cobro de planes no configurado (STRIPE_SECRET_KEY)" };

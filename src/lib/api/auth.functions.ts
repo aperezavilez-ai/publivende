@@ -42,7 +42,7 @@ export const authSignUp = createServerFn({ method: "POST" })
       codigo_pais: z.string(),
       celular: z.string(),
       nombre_negocio: z.string(),
-      plan: z.enum(["free", "pro", "business"]).optional(),
+      plan: z.enum(["free", "plus", "pro", "business"]).optional(),
     }),
   )
   .handler(async ({ data }) => {

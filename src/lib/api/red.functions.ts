@@ -102,6 +102,22 @@ export const getBoostStatus = createServerFn({ method: "POST" })
     }
   });
 
+/** Cuota de compartidas del propio usuario (misma fuente que usa la pantalla
+ *  de Red vía getBoostStatus): la usan el dashboard y Configuración para
+ *  mostrar compartidas usadas vs límite del plan. */
+export const getMyBoostQuota = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ token: z.string() }))
+  .handler(async ({ data }) => {
+    if (!isProductionMode()) return { ok: false as const, error: "Requiere producción" };
+    try {
+      const user = await requireUser(data.token);
+      const quota = await boostQuota(user);
+      return { ok: true as const, quota };
+    } catch (err) {
+      return { ok: false as const, error: errorMessage(err) };
+    }
+  });
+
 export const requestBoost = createServerFn({ method: "POST" })
   .inputValidator(z.object({ token: z.string(), postId: z.string().uuid(), acepto: z.literal(true) }))
   .handler(async ({ data }) => {
@@ -111,16 +127,22 @@ export const requestBoost = createServerFn({ method: "POST" })
       const post = (await getDb().select().from(schema.posts).where(eq(schema.posts.id, data.postId)).limit(1))[0];
       if (!post || post.userId !== user.id) return { ok: false as const, error: "Publicación no encontrada" };
       if (post.estado !== "publicado") {
-        return { ok: false as const, error: "Primero publica el contenido en tus redes; después puedes impulsarlo." };
+        return { ok: false as const, error: "Primero comparte el contenido desde tu panel; después puedes pedir su impulso en la Red." };
       }
       if (await getBoostForPost(post.id)) {
         return { ok: false as const, error: "Esta publicación ya tiene una solicitud de impulso." };
       }
       const quota = await boostQuota(user);
       if (quota.limite !== null && quota.usados >= quota.limite) {
+        // [PLANES VERDAD — 2026-11-26] El mensaje habla de «compartidas» y
+        // respeta la ventana real: la gratuita es de por vida; las de planes
+        // pagos son del mes.
         return {
           ok: false as const,
-          error: `Usaste tus ${quota.limite} impulso(s) de este mes. Sube de plan para tener más.`,
+          error:
+            (user.plan ?? "free") === "free"
+              ? "Usaste tu compartida gratuita. Sube de plan para tener más compartidas."
+              : `Usaste tus ${quota.limite} compartidas de este mes. Sube de plan para tener más.`,
         };
       }
       const boost = await createBoostRequest(user.id, post.id);

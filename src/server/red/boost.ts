@@ -9,29 +9,29 @@ import { reviewBoostOpenAI } from "@/server/ai/openai";
 import { publishToNetworkMulti } from "@/server/publish/networks";
 import { resolveAppBaseUrl } from "@/lib/app-url";
 import { inferNichoFromText, normalizeIndustria, toCanonicalNicho } from "@/services/import/inferNiche";
-import { BOOST_LIMITS, redAcceptsMedia } from "@/lib/red/limits";
+import { BOOST_LIMITS, boostWindowStart, redAcceptsMedia } from "@/lib/red/limits";
 import type { Plan, PublishSurfaceResult } from "@/lib/mock/types";
 import { channelsForNicho, getFreshHubToken, listHubChannels, type DbHubChannel } from "./channels";
 
 export type DbBoost = typeof schema.boostRequests.$inferSelect;
 
-function startOfMonth(): Date {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-
 export async function boostQuota(user: DbUser): Promise<{ usados: number; limite: number | null }> {
+  const plan = (user.plan ?? "free") as Plan;
+  // [PLANES VERDAD — 2026-11-26] La compartida Free es DE POR VIDA: se cuentan
+  // TODOS los impulsos no rechazados históricos del usuario, sin filtro de
+  // mes. Los planes pagos cuentan solo los del mes en curso. Los impulsos
+  // rechazados nunca consumen cuota y el administrador no tiene límite.
+  const desde = boostWindowStart(plan);
+  const conditions = [
+    eq(schema.boostRequests.userId, user.id),
+    ne(schema.boostRequests.estado, "rechazado"),
+    ...(desde ? [gte(schema.boostRequests.createdAt, desde)] : []),
+  ];
   const rows = await getDb()
     .select({ id: schema.boostRequests.id })
     .from(schema.boostRequests)
-    .where(
-      and(
-        eq(schema.boostRequests.userId, user.id),
-        gte(schema.boostRequests.createdAt, startOfMonth()),
-        ne(schema.boostRequests.estado, "rechazado"),
-      ),
-    );
-  return { usados: rows.length, limite: user.isAdmin ? null : BOOST_LIMITS[(user.plan ?? "free") as Plan] };
+    .where(and(...conditions));
+  return { usados: rows.length, limite: user.isAdmin ? null : BOOST_LIMITS[plan] };
 }
 
 export async function getBoostForPost(postId: string): Promise<DbBoost | null> {

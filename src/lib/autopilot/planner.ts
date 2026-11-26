@@ -14,6 +14,7 @@ import { fillHook, NICHES, type NicheProfile } from "@/lib/brain/niches";
 
 export const AUTOPILOT_LIMITS: Record<Plan, { max_posts: number; modos: AutopilotModo[] }> = {
   free: { max_posts: 3, modos: ["aprobar"] },
+  plus: { max_posts: 5, modos: ["aprobar"] },
   pro: { max_posts: 7, modos: ["aprobar", "automatico"] },
   business: { max_posts: 14, modos: ["aprobar", "automatico"] },
 };

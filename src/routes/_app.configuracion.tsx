@@ -16,7 +16,8 @@ import { fetchOAuthProvidersStatus, oauthProviderLabel } from "@/services/social
 import { checkMetaPublishHealth } from "@/lib/api/meta-health.functions";
 import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
 import { loadDB, saveDB, uid } from "@/lib/mock/db";
-import { PLAN_LIMITS } from "@/lib/mock/types";
+import { BOOST_LIMITS } from "@/lib/red/limits";
+import { getMyBoostQuota } from "@/lib/api/red.functions";
 import { planLabel, PLAN_OFFERS } from "@/lib/plans";
 import { toast } from "sonner";
 import { ArrowLeft, Copy, ExternalLink, Trash2 } from "lucide-react";
@@ -47,7 +48,6 @@ function Conf() {
   });
   const metricsSync = useDB((db) => db.metrics_sync ?? []);
   const posts = useDB((db) => db.posts.filter((p) => p.user_id === user?.id && p.estado === "publicado"));
-  const contacts = useDB((db) => db.whatsapp_contacts.filter((c) => c.user_id === user?.id));
   const productos = useDB((db) => db.productos.filter((p) => p.user_id === user?.id));
   const [oauthReady, setOauthReady] = useState<{
     meta: boolean;
@@ -143,8 +143,21 @@ function Conf() {
       }
     }
   }
-  const limits = PLAN_LIMITS[user.plan];
-  const usado = { posts: posts.length, conv: contacts.length, prods: productos.length };
+  // [PLANES VERDAD — 2026-11-26] El uso del plan se mide en COMPARTIDAS
+  // (BOOST_LIMITS, lo único que el servidor hace cumplir). En producción las
+  // usadas vienen de boostQuota (misma fuente que la pantalla de Red); en
+  // demo se usa el conteo local de posts publicados como aproximación.
+  const limiteCompartidas = BOOST_LIMITS[user.plan];
+  const [cuotaServidor, setCuotaServidor] = useState<{ usados: number; limite: number | null } | null>(null);
+  useEffect(() => {
+    const token = getSessionToken();
+    if (!token || !isProductionModeClient()) return;
+    getMyBoostQuota({ data: { token } })
+      .then((r) => { if (r.ok) setCuotaServidor(r.quota); })
+      .catch(() => { /* sin cuota del servidor se muestra el límite del plan */ });
+  }, []);
+  const compartidasUsadas = cuotaServidor?.usados ?? posts.length;
+  const compartidasIlimitadas = limiteCompartidas >= 9999 || (cuotaServidor != null && cuotaServidor.limite === null);
 
   // Real v2: desconectar borra el token EN EL SERVIDOR (fila oauth_accounts)
   // y después refleja lo mismo en el espejo local. Ya no es solo visual.
@@ -283,7 +296,17 @@ function Conf() {
         <ConnectWhatsApp />
       </Card>
 
+      {/* [FLUJO SIN REDES DEL CLIENTE — 2026-11-26] La sección de redes
+          personales SOLO la ve el administrador: las cuentas de los clientes
+          ya no se conectan (su flujo es pegar su link y que la Red PubliVende
+          difunda). La maquinaria OAuth se conserva: las cuentas OFICIALES la
+          usan desde Red PubliVende. Al cliente esta pantalla le muestra su
+          plan, sus compartidas y su saldo. */}
+      {isAdmin && (
       <Card className="p-5">
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50/90 p-3 text-xs text-amber-900">
+          <b>Solo administración de plataforma.</b> Las cuentas de los clientes ya no se conectan; esta sección corresponde a cuentas del administrador.
+        </div>
         {isAdmin && (
           <div className="mb-4 rounded-xl border border-blue-300 bg-blue-50/90 p-4 text-xs space-y-2.5">
             <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -304,34 +327,16 @@ function Conf() {
           </div>
         )}
 
-        <h2 className="font-semibold mb-1">Redes de tu Negocio (Opcional)</h2>
+        <h2 className="font-semibold mb-1">Cuentas personales del administrador</h2>
         <p className="text-xs text-muted-foreground mb-3">
-          <b>PubliVende difunde tus publicaciones automáticamente a través de la Red Central Oficial PubliVende y comunidades aliadas.</b>{" "}
-          Si deseas que tu publicación aparezca también en tus cuentas personales de tu negocio (tu Fan Page o perfiles de redes), puedes vincularlas aquí.
+          <b>PubliVende difunde las publicaciones de los clientes automáticamente a través de la Red Central Oficial PubliVende y comunidades aliadas.</b>{" "}
+          Estas son únicamente las cuentas personales del administrador de la plataforma; ningún cliente conecta las suyas.
         </p>
-
-        {!isAdmin && (
-          <div className="mb-4 rounded-lg border bg-muted/40 p-3 text-xs space-y-2">
-            <p className="font-semibold">¿Cómo funciona la sincronización con tu Fan Page?</p>
-            <ol className="list-decimal pl-4 text-muted-foreground space-y-1">
-              <li>Pulsa <b>Conectar</b> en Facebook, Instagram, TikTok o YouTube</li>
-              <li>Inicia sesión con la cuenta que administra tu negocio</li>
-              <li>Autoriza a PubliVende y elige tu Fan Page o perfil</li>
-              <li>Al difundir en la Cabina, se publicará en la Red PubliVende y opcionalmente en tu página</li>
-            </ol>
-          </div>
-        )}
 
         {isAdmin && oauthReady && !oauthConfigured && (
           <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50/80 p-3 text-xs text-amber-900">
             <b>Falta configurar OAuth en el servidor.</b> Copia <code>.env.example</code> a <code>.env</code> y agrega
             META_APP_ID, GOOGLE_CLIENT_ID y/o TIKTOK_CLIENT_KEY. Reinicia <code>npm run dev</code>.
-          </div>
-        )}
-
-        {!isAdmin && oauthReady && !oauthConfigured && (
-          <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50/80 p-3 text-xs text-amber-900">
-            La sincronización con redes personales no está disponible temporalmente. La difusión central de PubliVende sigue activa.
           </div>
         )}
 
@@ -487,6 +492,7 @@ function Conf() {
         })}
         </div>
       </Card>
+      )}
 
       <Card className="p-5">
         <h2 className="font-semibold mb-1">Productos</h2>
@@ -550,16 +556,22 @@ function Conf() {
           )}
         </div>
         <div className="space-y-3 text-sm">
-          {[
-            { label: "Publicaciones este mes", v: usado.posts, max: limits.posts_mes },
-            { label: "Conversaciones WhatsApp", v: usado.conv, max: limits.conversaciones },
-            { label: "Productos en catálogo", v: usado.prods, max: limits.productos },
-          ].map((u) => (
-            <div key={u.label}>
-              <div className="flex justify-between mb-1"><span>{u.label}</span><span className="text-muted-foreground">{u.v} / {u.max}</span></div>
-              <Progress value={Math.min(100, (u.v / u.max) * 100)} />
+          {/* [PLANES VERDAD — 2026-11-26] Solo se muestra la cuota que el
+              servidor sí hace cumplir: compartidas. Fuera los contadores de
+              publicaciones/conversaciones/productos contra límites ficticios. */}
+          <div>
+            <div className="flex justify-between mb-1">
+              <span>{user.plan === "free" ? "Compartidas (de por vida)" : "Compartidas este mes"}</span>
+              <span className="text-muted-foreground">
+                {compartidasIlimitadas ? `${compartidasUsadas} / Ilimitadas` : `${compartidasUsadas} / ${limiteCompartidas}`}
+              </span>
             </div>
-          ))}
+            <Progress value={compartidasIlimitadas ? 0 : Math.min(100, (compartidasUsadas / limiteCompartidas) * 100)} />
+            <p className="text-xs text-muted-foreground mt-1">
+              1 compartida = 1 impulso de tu link en las cuentas oficiales de tu nicho (hasta 4 redes).
+              {user.plan === "free" && " Tu compartida gratuita no se renueva cada mes."}
+            </p>
+          </div>
         </div>
       </Card>
 

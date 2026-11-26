@@ -71,9 +71,9 @@ import {
   type PublishAlcance,
 } from "@/lib/geo-targeting";
 import type { Red, Post, PostAlcance } from "@/lib/mock/types";
-import { PLAN_LIMITS } from "@/lib/mock/types";
+import { BOOST_LIMITS } from "@/lib/red/limits";
 import { planLabel } from "@/lib/plans";
-import { buildPublishResultMessage, disconnectedRedes, resolveMediaForPublish } from "@/lib/publish-status";
+import { buildPublishResultMessage, resolveMediaForPublish } from "@/lib/publish-status";
 
 export const Route = createFileRoute("/_app/publicar")({
   component: Publicar,
@@ -151,12 +151,12 @@ function Publicar() {
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     }).length,
   );
-  const maxRedesPlan = user ? PLAN_LIMITS[user.plan].redes : 1;
-  const maxPostsMes = user ? PLAN_LIMITS[user.plan].posts_mes : 10;
-  const disconnected = useMemo(
-    () => (user ? disconnectedRedes(redes, accounts) : []),
-    [redes, accounts, user],
-  );
+  // [FLUJO SIN REDES DEL CLIENTE — 2026-11-26] Ya no hay tope de redes ni de
+  // posts por plan: el cliente no conecta ni elige sus redes. La única cuota
+  // real es la de COMPARTIDAS (BOOST_LIMITS), que el servidor hace cumplir al
+  // pedir el impulso (boostQuota). `redes` queda como dato interno: son las
+  // redes de difusión de la Red PubliVende y se fijan a las 4 al importar.
+  const limiteCompartidas = user ? BOOST_LIMITS[user.plan] : 1;
 
   // Auto-guardar borrador persistente en localStorage para evitar pérdida al recargar
   useEffect(() => {
@@ -294,25 +294,10 @@ function Publicar() {
     setMunicipiosSel([]);
   }
 
-  function toggleRed(r: Red) {
-    setRedes((rs) => {
-      if (rs.includes(r)) return rs.filter((x) => x !== r);
-      if (rs.length >= maxRedesPlan) {
-        toast.message(`Plan ${planLabel(user!.plan)}: hasta ${maxRedesPlan} red${maxRedesPlan > 1 ? "es" : ""} por publicación`);
-        return rs;
-      }
-      return [...rs, r];
-    });
-  }
-  function selectAllDestinos() {
-    setRedes([...ALL_REDES].slice(0, maxRedesPlan));
-    setWhatsappSelected(true);
-    toast.success(
-      maxRedesPlan >= ALL_REDES.length
-        ? "Todas las redes + WhatsApp seleccionadas"
-        : `Plan ${planLabel(user!.plan)}: ${maxRedesPlan} red${maxRedesPlan > 1 ? "es" : ""} + WhatsApp`,
-    );
-  }
+  // [FLUJO SIN REDES DEL CLIENTE — 2026-11-26] Se retiraron toggleRed y
+  // selectAllDestinos: eran el selector de redes PROPIAS del cliente, con el
+  // tope de redes del plan. El cliente ya no elige redes; la difusión sale
+  // por las cuentas oficiales de la Red PubliVende en las 4 redes.
   function onFile(e: React.ChangeEvent<HTMLInputElement>, setter: (s: string) => void) {
     const f = e.target.files?.[0]; if (!f) return; setter(URL.createObjectURL(f));
   }
@@ -419,7 +404,7 @@ function Publicar() {
       setVariants(newVariants);
 
       if (redes.length === 0) {
-        setRedes([...ALL_REDES].slice(0, maxRedesPlan));
+        setRedes([...ALL_REDES]);
       }
       setWhatsappSelected(true);
       setReachFuente("ia_real");
@@ -653,10 +638,10 @@ function Publicar() {
 
   async function publicar() {
     if (!user) return;
-    if (redes.length === 0 && !whatsappSelected) return toast.error("Selecciona al menos una red o WhatsApp");
-    if (!programar && postsEsteMes >= maxPostsMes) {
-      return toast.error(`Límite del plan ${planLabel(user!.plan)}: ${maxPostsMes} publicaciones este mes`);
-    }
+    if (redes.length === 0 && !whatsappSelected) return toast.error("Primero importa tu link o prepara el contenido");
+    // [PLANES VERDAD — 2026-11-26] Se retiró el «límite de publicaciones al
+    // mes»: el servidor nunca lo hizo cumplir. La cuota real es la de
+    // compartidas y se aplica al pedir el impulso, no al preparar el post.
     if (!programar && !media && !(publishMode === "link" && sourceUrl)) {
       return toast.error("Sube una imagen o video, o pega un link");
     }
@@ -682,15 +667,10 @@ function Publicar() {
       return toast.error("Elige estado y al menos un municipio, o usa «Todos los municipios»");
     }
 
-    if (redes.length > 0 && publishMode !== "ai_campaign" && !user?.is_admin) {
-      const missing = disconnectedRedes(redes, accounts);
-      if (missing.length) {
-        return toast.error(
-          `Conecta ${missing.map((r) => RED_LABELS[r]).join(", ")} en Configuración para publicar`,
-          { duration: 8000 },
-        );
-      }
-    }
+    // [FLUJO SIN REDES DEL CLIENTE — 2026-11-26] Se eliminó el bloqueo duro
+    // que abortaba la publicación si el cliente no tenía SUS redes
+    // conectadas: el cliente nunca conecta cuentas; la difusión sale por
+    // las cuentas oficiales de la Red PubliVende.
 
     const alcance = buildPostAlcance();
     const meta = buildPublishMeta();
@@ -740,8 +720,8 @@ function Publicar() {
       });
 
       if (!res.ok) {
-        toast.error(res.error ?? "No se pudo publicar en tus redes", {
-          description: "No se guardó ninguna publicación como exitosa. Revisa tus conexiones e intenta de nuevo.",
+        toast.error(res.error ?? "No se pudo completar la difusión", {
+          description: "No se guardó ninguna publicación como exitosa. Inténtalo de nuevo en unos minutos.",
           duration: 8000,
         });
         return;
@@ -817,8 +797,8 @@ function Publicar() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Crear publicación</h1>
           <p className="text-xs text-muted-foreground mt-1 max-w-xl">
-            Pega tu link → la IA adapta el contenido a cada red → lo publicamos en tus cuentas a la mejor hora.
-            Después puedes impulsarlo en la red oficial PubliVende de tu nicho o con Meta Ads.
+            Pega tu link → la IA detecta tu nicho y adapta el contenido → PubliVende lo difunde en las cuentas oficiales de tu nicho.
+            Sin conectar tus redes: solo necesitas el link de tu publicación.
           </p>
         </div>
       </div>
@@ -843,12 +823,12 @@ function Publicar() {
 
       {postsEsteMes === 0 && (
         <Card className="p-4 border-primary/30 bg-primary/5">
-          <p className="text-sm font-semibold mb-2">Primera publicación en 4 pasos</p>
+          <p className="text-sm font-semibold mb-2">Tu primera compartida en 4 pasos</p>
           <ol className="grid sm:grid-cols-4 gap-2 text-xs text-muted-foreground">
-            <li className="rounded-md border bg-background p-2"><b className="text-foreground">1. Redes.</b> Conecta Facebook o Instagram en <Link to="/configuracion" className="underline">Configuración</Link>.</li>
+            <li className="rounded-md border bg-background p-2"><b className="text-foreground">1. Link.</b> Copia el link de tu publicación en tu página o perfil y pégalo aquí.</li>
             <li className="rounded-md border bg-background p-2"><b className="text-foreground">2. Alcance.</b> Nacional, todo un estado, o municipios sueltos.</li>
-            <li className="rounded-md border bg-background p-2"><b className="text-foreground">3. Contenido.</b> Pega el link de tu post: la IA lo adapta a cada red.</li>
-            <li className="rounded-md border bg-background p-2"><b className="text-foreground">4. Publicar.</b> En Biblioteca verás si salió en cada red.</li>
+            <li className="rounded-md border bg-background p-2"><b className="text-foreground">3. IA y nicho.</b> La IA lee tu post, detecta el nicho y adapta el texto para cada red.</li>
+            <li className="rounded-md border bg-background p-2"><b className="text-foreground">4. Difundir.</b> PubliVende lo comparte en las cuentas oficiales de tu nicho; sigue los clics en tu panel.</li>
           </ol>
         </Card>
       )}
@@ -863,40 +843,25 @@ function Publicar() {
           </p>
           <div className="mb-3 rounded-lg border p-3 text-xs space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium text-muted-foreground">Variantes por red (plan {planLabel(user!.plan)}: {maxRedesPlan})</span>
-              <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
-                <Link to="/configuracion">Conectar redes</Link>
-              </Button>
+              <span className="font-medium text-muted-foreground">
+                Variantes por red — la IA adapta tu texto para la difusión en la Red PubliVende
+                {user ? ` · Plan ${planLabel(user.plan)}: ${limiteCompartidas >= 9999 ? "compartidas ilimitadas" : `${limiteCompartidas} compartida${limiteCompartidas > 1 ? "s" : ""}`}` : ""}
+              </span>
             </div>
             <div className="flex flex-wrap gap-2">
               {ALL_REDES.map((r) => {
-                const acc = accounts.find((a) => a.red === r);
-                const ok = acc?.estado_conexion === "conectada";
                 const Icon = ICONS[r];
                 return (
-                  <Badge
-                    key={r}
-                    variant="outline"
-                    className={`gap-1 ${ok ? "border-green-400 text-green-800 bg-green-50/80" : "text-muted-foreground"}`}
-                  >
+                  <Badge key={r} variant="outline" className="gap-1 text-muted-foreground">
                     <Icon className="w-3 h-3" />
                     {RED_LABELS[r]}
-                    {ok ? ` · ${acc?.nombre_cuenta}` : " · sin conectar"}
                   </Badge>
                 );
               })}
             </div>
-            {sourceMeta?.platform === "facebook" && !fbConnected && (
-              <p className="text-amber-800 dark:text-amber-200">
-                Para jalar posts de Facebook con imagen, conecta tu Fan Page en <Link to="/configuracion" className="underline font-medium">Configuración</Link> y vuelve a importar.
-              </p>
-            )}
-            {sourceMeta?.platform === "facebook" && fbConnected && sourceMeta.importSource === "graph_api" && (
-              <p className="text-green-800 dark:text-green-200 flex items-center gap-1">
-                <Facebook className="w-3.5 h-3.5" />
-                Importación automática vía {fbAccount?.nombre_cuenta}
-              </p>
-            )}
+            <p className="text-muted-foreground">
+              No necesitas conectar tus cuentas: la difusión sale por las cuentas oficiales de PubliVende de tu nicho.
+            </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Input
@@ -1017,45 +982,26 @@ function Publicar() {
                     return c === nichoKey || c === "general";
                   });
                 const canalesOk = redChannels.filter((c) => acepta(c.nichos));
-                const redesMap: { red: Red; label: string }[] = [
-                  { red: "facebook", label: "Facebook" },
-                  { red: "instagram", label: "Instagram" },
-                  { red: "tiktok", label: "TikTok" },
-                  { red: "youtube", label: "YouTube" },
-                ];
                 return (
                   <div className="space-y-4 text-sm">
+                    {/* [FLUJO SIN REDES DEL CLIENTE — 2026-11-26] Se retiró la
+                        sección «TUS REDES»: el cliente no conecta cuentas ni
+                        publica en las suyas desde aquí. El único destino es la
+                        Red PubliVende. */}
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-2">TUS REDES — sale con tu texto y tu WhatsApp</p>
-                      <div className="space-y-1.5">
-                        {redesMap.map(({ red, label }) => {
-                          const acc = accounts.find((a) => a.red === red);
-                          const ok = acc?.estado_conexion === "conectada";
-                          return (
-                            <div key={red} className="flex items-center justify-between gap-2">
-                              <span>{label}</span>
-                              {ok
-                                ? <Badge variant="outline" className="text-emerald-700 border-emerald-300 bg-emerald-50">{acc?.nombre_cuenta}</Badge>
-                                : <Badge variant="outline" className="text-muted-foreground">sin conectar</Badge>}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="border-t pt-3">
                       <p className="text-xs font-medium text-muted-foreground mb-2">
-                        RED PUBLIVENDE — repost en las cuentas oficiales de tu nicho
+                        RED PUBLIVENDE — difusión en las cuentas oficiales de tu nicho
                       </p>
                       <p className="text-xs mb-2">
                         Nicho detectado de este post: <span className="font-medium">{NICHO_LABEL[nichoKey] ?? nichoKey}</span>
                       </p>
                       {redChannels.length === 0 ? (
                         <p className="text-xs text-muted-foreground">
-                          La red oficial aún no tiene cuentas activas. Tu post sale en tus redes; el impulso se activa cuando Publivende encienda los canales del nicho.
+                          La red oficial aún no tiene cuentas activas. El impulso se activa cuando PubliVende encienda los canales del nicho.
                         </p>
                       ) : canalesOk.length === 0 ? (
                         <p className="text-xs text-muted-foreground">
-                          Ninguna cuenta oficial activa acepta este nicho todavía. Tu post sale en tus redes.
+                          Ninguna cuenta oficial activa acepta este nicho todavía.
                         </p>
                       ) : (
                         <div className="space-y-1.5">
@@ -1086,7 +1032,7 @@ function Publicar() {
                 Respaldo — texto del post
               </Label>
               <p className="text-xs text-muted-foreground mb-3">
-                Solo si el link no trajo el texto. Con la red conectada esto no debería hacer falta.
+                Solo si el link no trajo el texto.
               </p>
               <Textarea
                 rows={4}
@@ -1162,56 +1108,39 @@ function Publicar() {
           ) : null}
 
 
+          {/* [FLUJO SIN REDES DEL CLIENTE — 2026-11-26] Se retiró la tarjeta
+              «Redes destino»: era el selector de redes PROPIAS del cliente
+              (con «Conecta en Configuración» por red y el tope del plan). El
+              cliente ya no elige ni conecta redes: `redes` se fija
+              internamente a las 4 redes de difusión al importar el link y la
+              compartida sale por las cuentas oficiales de la Red PubliVende.
+              Se conserva solo el aviso por WhatsApp, que no es una red social
+              del cliente sino el aviso de su publicación a sus contactos. */}
           <Card className="p-5">
             <div className="flex items-center justify-between mb-1">
-              <Label className="font-semibold">Redes destino</Label>
+              <Label className="font-semibold">Difusión por la Red PubliVende</Label>
               <Badge variant="secondary" className="text-[10px]">
-                Plan {planLabel(user!.plan)}: {maxRedesPlan} red{maxRedesPlan > 1 ? "es" : ""}
+                Plan {planLabel(user!.plan)}: {limiteCompartidas >= 9999 ? "compartidas ilimitadas" : `${limiteCompartidas} compartida${limiteCompartidas > 1 ? "s" : ""}`}
               </Badge>
             </div>
             <p className="text-[11px] text-muted-foreground mb-3">
-              Generamos el texto adaptado para cada red. Tú lo publicas en tu cuenta (o auto-publicamos si la conectaste).
+              Generamos el texto adaptado para cada red y PubliVende lo difunde en las cuentas oficiales de tu nicho. No necesitas conectar tus cuentas.
             </p>
-            <div className="flex justify-end mb-2">
-              <Button size="sm" variant="outline" onClick={selectAllDestinos} className="h-7 text-xs">
-                Máximo del plan ({maxRedesPlan})
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {ALL_REDES.map((r) => {
-                const acc = accounts.find((a) => a.red === r);
-                const Icon = ICONS[r];
-                const sel = redes.includes(r);
-                const connected = acc?.estado_conexion === "conectada";
-                return (
-                  <button key={r} onClick={() => toggleRed(r)}
-                    className={`flex items-center gap-2 p-3 rounded-lg border-2 text-left text-sm ${sel ? "border-primary bg-accent" : "border-border hover:border-primary/50"}`}>
-                    <Icon className="w-4 h-4" />
-                    <div className="flex-1">
-                      <div className="font-medium">{RED_LABELS[r]}</div>
-                      <div className="text-[10px] text-muted-foreground">
-                        {connected ? `Publicará en: ${acc?.nombre_cuenta}` : "Conecta en Configuración"}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                onClick={() => setWhatsappSelected((v) => !v)}
-                className={`flex items-center gap-2 p-3 rounded-lg border-2 text-left text-sm col-span-2 ${whatsappSelected ? "border-green-500 bg-green-50 dark:bg-green-950/30" : "border-border hover:border-green-400/50"}`}
-              >
-                <MessageCircle className="w-4 h-4 text-green-600" />
-                <div className="flex-1">
-                  <div className="font-medium">WhatsApp</div>
-                  <div className="text-[10px] text-muted-foreground">
-                    {user?.whatsapp_configurado
-                      ? `${waContactCount} contacto${waContactCount !== 1 ? "s" : ""} · envía link de la publicación`
-                      : "Configura tu número · difusión a contactos"}
-                  </div>
+            <button
+              type="button"
+              onClick={() => setWhatsappSelected((v) => !v)}
+              className={`flex items-center gap-2 p-3 rounded-lg border-2 text-left text-sm w-full ${whatsappSelected ? "border-green-500 bg-green-50 dark:bg-green-950/30" : "border-border hover:border-green-400/50"}`}
+            >
+              <MessageCircle className="w-4 h-4 text-green-600" />
+              <div className="flex-1">
+                <div className="font-medium">WhatsApp</div>
+                <div className="text-[10px] text-muted-foreground">
+                  {user?.whatsapp_configurado
+                    ? `${waContactCount} contacto${waContactCount !== 1 ? "s" : ""} · envía link de la publicación`
+                    : "Configura tu número · difusión a contactos"}
                 </div>
-              </button>
-            </div>
+              </div>
+            </button>
           </Card>
 
           <Card className="p-5 space-y-3">
@@ -1237,7 +1166,7 @@ function Publicar() {
           >
             {programar ? "Programar publicación" : (() => {
               if (publishMode === "ai_campaign") {
-                return "🚀 Publicar Campaña en Red PubliVende y mis Redes";
+                return "🚀 Publicar Campaña en Red PubliVende";
               }
               const parts = redes.length ? `${redes.length} red${redes.length > 1 ? "es" : ""}` : "";
               const wa = whatsappSelected ? "WhatsApp" : "";
@@ -1452,7 +1381,7 @@ function Publicar() {
 
               {redes.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
-                  Selecciona al menos una red en <b>Redes destino</b> para ver el alcance estimado.
+                  Importa tu link para ver el alcance estimado de la difusión en la Red PubliVende.
                 </div>
               ) : publishMode === "link" && !puedeMedirAlcanceIA ? (
                 <div className="rounded-lg border border-amber-200 bg-amber-50/80 dark:bg-amber-950/20 p-4 text-xs space-y-2">
@@ -1561,7 +1490,7 @@ function Publicar() {
                         </Badge>
                       </div>
                       <p className="text-[10px] text-muted-foreground">
-                        Dónde se publica automáticamente en tus cuentas conectadas.
+                        Dónde se difunde automáticamente en las cuentas oficiales de la Red PubliVende.
                       </p>
                       <div className="space-y-1.5 max-h-40 overflow-y-auto">
                         {distribucionIA.map((c, i) => {
@@ -1628,7 +1557,7 @@ function Publicar() {
               Vista previa por red
             </Label>
           </div>
-          {redes.length === 0 && <Card className="p-8 text-center text-sm text-muted-foreground">Selecciona al menos una red para ver la vista previa.</Card>}
+          {redes.length === 0 && <Card className="p-8 text-center text-sm text-muted-foreground">Importa tu link para ver la vista previa por red.</Card>}
           {redes.map((r) => (
             <Card key={r} className="overflow-hidden">
               <div className="flex items-center gap-2 p-3 border-b flex-wrap" style={{ background: RED_COLORS[r] + "11" }}>

@@ -83,16 +83,22 @@ async function stripePost(path: string, params: URLSearchParams) {
 export interface SubscriptionCheckoutInput {
   userId: string;
   email: string;
-  plan: "pro" | "business";
+  plan: "plus" | "pro" | "business";
   planName: string;
   amountMxn: number;
   customerId?: string | null;
 }
 
-/** Checkout de suscripción mensual. Usa STRIPE_PRICE_PRO / STRIPE_PRICE_BUSINESS si existen. */
+/** Checkout de suscripción mensual. Usa STRIPE_PRICE_PLUS / STRIPE_PRICE_PRO /
+ *  STRIPE_PRICE_BUSINESS si existen; si no, price_data con el monto del plan. */
 export async function createStripeSubscriptionCheckout(input: SubscriptionCheckoutInput): Promise<StripeCheckoutResult> {
   const baseUrl = getAppBaseUrl();
-  const priceId = input.plan === "pro" ? process.env.STRIPE_PRICE_PRO : process.env.STRIPE_PRICE_BUSINESS;
+  const priceId =
+    input.plan === "plus"
+      ? process.env.STRIPE_PRICE_PLUS
+      : input.plan === "pro"
+        ? process.env.STRIPE_PRICE_PRO
+        : process.env.STRIPE_PRICE_BUSINESS;
   const params = new URLSearchParams();
   params.set("mode", "subscription");
   params.set("success_url", `${baseUrl}/configuracion?suscripcion=ok`);

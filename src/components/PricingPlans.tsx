@@ -15,7 +15,7 @@ interface PricingPlansProps {
 
 export function PricingPlans({ signupLinks = true, currentPlan, compact = false }: PricingPlansProps) {
   return (
-    <div className={`grid gap-6 ${compact ? "md:grid-cols-3" : "md:grid-cols-3"}`}>
+    <div className={`grid gap-6 sm:grid-cols-2 ${compact ? "xl:grid-cols-4 max-w-6xl mx-auto" : "xl:grid-cols-4"}`}>
       {PLAN_OFFERS.map((p) => {
         const isCurrent = currentPlan === p.id;
         return (
