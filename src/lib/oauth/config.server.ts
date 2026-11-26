@@ -17,11 +17,13 @@ export function getOAuthStateSecret(): string {
 
 export function getMetaScopesForRed(red: Red): string[] {
   // Meta requiere pages_show_list, pages_read_engagement, pages_manage_posts
-  // e instagram_basic, instagram_content_publish para conectar ambas redes a la vez.
+  // y read_insights (metricas de la Pagina) e instagram_basic,
+  // instagram_content_publish para conectar ambas redes a la vez.
   const base = [
     "pages_show_list",
     "pages_read_engagement",
     "pages_manage_posts",
+    "read_insights",
   ];
   if (red === "instagram" || red === "facebook") {
     return [...base, "instagram_basic", "instagram_content_publish"];
