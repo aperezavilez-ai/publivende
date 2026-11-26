@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { isProductionMode } from "@/server/config";
 import { verifySessionToken } from "@/server/auth/crypto";
 import { getDb, schema } from "@/server/db";
+import { decryptSecretLenient } from "@/server/crypto/vault";
 import { getMetaOAuthConfig } from "@/lib/oauth/config.server";
 
 export const checkMetaPublishHealth = createServerFn({ method: "POST" })
@@ -31,6 +32,12 @@ export const checkMetaPublishHealth = createServerFn({ method: "POST" })
       };
     }
 
+    // El token en BD está CIFRADO (vault AES-256-GCM): hay que descifrarlo
+    // antes de mandarlo a Meta, como hacen todas las demás rutas. Antes se
+    // mandaba el texto cifrado y el chequeo SIEMPRE concluía que la cuenta
+    // no podía publicar.
+    const accessToken = decryptSecretLenient(fb.accessToken);
+
     const cfg = getMetaOAuthConfig();
     const scopes: string[] = [];
     let canPublish = false;
@@ -38,13 +45,13 @@ export const checkMetaPublishHealth = createServerFn({ method: "POST" })
 
     if (cfg) {
       const debugRes = await fetch(
-        `https://graph.facebook.com/v21.0/debug_token?input_token=${encodeURIComponent(fb.accessToken)}&access_token=${encodeURIComponent(`${cfg.appId}|${cfg.appSecret}`)}`,
+        `https://graph.facebook.com/v21.0/debug_token?input_token=${encodeURIComponent(accessToken)}&access_token=${encodeURIComponent(`${cfg.appId}|${cfg.appSecret}`)}`,
       );
       const debugJson = (await debugRes.json()) as {
         data?: { scopes?: string[]; is_valid?: boolean; error?: { message?: string } };
       };
       if (debugJson.data?.scopes) scopes.push(...debugJson.data.scopes);
-      canPublish = scopes.includes("pages_manage_posts");
+      canPublish = !!debugJson.data?.is_valid && scopes.includes("pages_manage_posts");
       if (!debugJson.data?.is_valid) debugError = "Token inválido o expirado";
     }
 
@@ -54,7 +61,7 @@ export const checkMetaPublishHealth = createServerFn({ method: "POST" })
       body: JSON.stringify({
         message: "[PubliVende] Verificación de permisos — no publicado",
         published: false,
-        access_token: fb.accessToken,
+        access_token: accessToken,
       }),
     });
     const draftJson = (await draftRes.json()) as { id?: string; error?: { message?: string; code?: number } };

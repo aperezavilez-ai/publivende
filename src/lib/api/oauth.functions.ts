@@ -181,8 +181,18 @@ async function exchangeMetaUserToken(code: string): Promise<string> {
       fb_exchange_token: tokenJson.access_token,
     })}`,
   );
-  const longJson = (await longRes.json()) as { access_token?: string };
-  return longJson.access_token ?? tokenJson.access_token;
+  const longJson = (await longRes.json()) as { access_token?: string; error?: { message: string } };
+  if (!longJson.access_token) {
+    // Antes: se guardaba en silencio el token de corta duración (~1 h) como
+    // si fuera la conexión definitiva; sus tokens de página caducaban a la
+    // hora y la cuenta seguía diciendo «conectada» para siempre. Ahora la
+    // conexión FALLA en voz alta y no se guarda nada.
+    throw new Error(
+      longJson.error?.message ??
+        "Meta no entregó el token de larga duración. Vuelve a conectar Facebook; no se guardó una conexión temporal.",
+    );
+  }
+  return longJson.access_token;
 }
 
 async function fetchMetaPages(userAccessToken: string): Promise<MetaPageRaw[]> {

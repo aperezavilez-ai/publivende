@@ -133,7 +133,13 @@ export async function expandDistribution(input: ExpandDistributionInput): Promis
             "published",
           );
         } else {
-          // Registrar fallo de sincronización personal sin romper la difusión general
+          // El fallo de la cuenta personal SÍ llega a las superficies: es el
+          // error real de la red (Meta) y el usuario debe verlo, no quedar
+          // tapado por un mensaje genérico.
+          surfaces.push({
+            ...s,
+            channel_name: `Perfil Propio (${acc.nombreCuenta})`,
+          });
           await recordDistribution(
             input.userId,
             input.postId,
@@ -149,41 +155,14 @@ export async function expandDistribution(input: ExpandDistributionInput): Promis
     }
   }
 
-  // 2. Distribución en el Banco de Comunidades Asignadas por el Cerebro Agéntico
-  const comunidades = Array.isArray(input.canalesDistribucion)
-    ? (input.canalesDistribucion as Array<{ id?: string; nombre: string; plataforma?: string; miembros?: number; alcance?: string }>)
-    : [];
+  // 2. canalesDistribucion es solo la ETIQUETA del plan (qué redes eligió el
+  // usuario); NO es una publicación. Ninguna superficie se marca publicada
+  // sin una llamada real a la red con external_id devuelto por la red.
+  // (Antes este bloque fabricaba superficies ok:true con IDs inventados
+  // «brain_comm_…» sin llamar a ninguna red, y el post quedaba «publicado»
+  // aunque todas las redes reales hubieran fallado.)
 
-  if (comunidades.length > 0) {
-    for (const com of comunidades) {
-      const platLower = (com.plataforma || "facebook").toLowerCase();
-      const redTarget: Red =
-        platLower.includes("instagram") ? "instagram" :
-        platLower.includes("tiktok") ? "tiktok" :
-        platLower.includes("youtube") ? "youtube" : "facebook";
-
-      const commExternalId = com.id || `brain_comm_${Math.random().toString(36).slice(2, 8)}`;
-      const commSurface: PublishSurfaceResult = {
-        red: redTarget,
-        surface: "comunidad",
-        channel_name: `${com.nombre} (${(com.miembros ?? 50000).toLocaleString()} miembros)`,
-        external_id: commExternalId,
-        ok: true,
-      };
-      surfaces.push(commSurface);
-      await recordDistribution(
-        input.userId,
-        input.postId,
-        `comunidad:${redTarget}`,
-        com.nombre,
-        com.id,
-        commExternalId,
-        "published",
-      );
-    }
-  }
-
-  // 3. Si no hubo ninguna comunidad ni canal activo
+  // 3. Si no hubo ningún canal activo
   if (surfaces.filter((s) => s.ok).length === 0) {
     for (const red of input.redes) {
       surfaces.push({
