@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, ExternalLink, Loader2, MessageCircle, Unplug } from "lucide-react";
+import { CheckCircle2, ExternalLink, Loader2, MessageCircle, PencilLine, RefreshCw, Unplug } from "lucide-react";
 import { toast } from "sonner";
 import {
   completeWhatsAppConnect,
@@ -30,6 +30,13 @@ interface WaSessionData {
   code?: string;
 }
 
+// [CAMBIAR NÚMERO — 2026-11-26] Antes, ya conectado, el formulario del
+// número desaparecía y la única vía de cambiarlo era desconectar y volver
+// a conectar. Ahora: «Cambiar número» edita el número de contacto (perfil,
+// enlaces wa.me) sin desconectar, y en modo API «Cambiar número API»
+// repite el registro en Meta — el servidor reemplaza la cuenta (upsert),
+// así el Vendedor IA pasa a operar con el número nuevo (p. ej. uno
+// dedicado del negocio, no el personal).
 export function ConnectWhatsApp() {
   const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -41,6 +48,7 @@ export function ConnectWhatsApp() {
   const [verifiedName, setVerifiedName] = useState<string | null>(null);
   const [codigoPais, setCodigoPais] = useState("+52");
   const [celular, setCelular] = useState("");
+  const [editando, setEditando] = useState(false);
   const sessionRef = useRef<WaSessionData | null>(null);
   const popupRef = useRef<Window | null>(null);
 
@@ -187,6 +195,8 @@ export function ConnectWhatsApp() {
       return;
     }
 
+    const eraApi = mode === "api";
+    const estabaEditando = editando;
     setConnecting(true);
     updateUser({ celular: digits, codigo_pais: codigoPais, whatsapp_configurado: true });
 
@@ -200,14 +210,25 @@ export function ConnectWhatsApp() {
         toast.error(res.error);
         return;
       }
-      applyAccount(res.account);
+      // En modo API manda el número registrado en Meta: se relee el estado
+      // completo para no degradar la vista a modo enlace tras editar el
+      // número de contacto.
+      if (eraApi) await refreshStatus();
+      else applyAccount(res.account);
     } else {
       setMode("link");
       setDisplayPhone(formatWhatsAppDisplay(codigoPais, digits));
       setConnecting(false);
     }
 
-    toast.success(<span><span className="text-[#25D366] font-semibold">WhatsApp</span> conectado con tu número</span>);
+    setEditando(false);
+    toast.success(
+      estabaEditando ? (
+        <span><span className="text-[#25D366] font-semibold">WhatsApp</span>: número actualizado</span>
+      ) : (
+        <span><span className="text-[#25D366] font-semibold">WhatsApp</span> conectado con tu número</span>
+      ),
+    );
   }
 
   function onConnectApi() {
@@ -301,8 +322,16 @@ export function ConnectWhatsApp() {
         </p>
       )}
 
-      {!connected && (
-        <div className="grid sm:grid-cols-[auto_1fr] gap-3 items-end">
+      {(!connected || editando) && (
+        <>
+          {editando && mode === "api" && (
+            <p className="text-xs text-muted-foreground">
+              Este formulario cambia tu <b>número de contacto</b> (el de los enlaces wa.me de tus
+              publicaciones). El número del <b>Vendedor IA</b> es el registrado en la API de Meta:
+              se cambia con «Cambiar número API».
+            </p>
+          )}
+          <div className="grid sm:grid-cols-[auto_1fr] gap-3 items-end">
           <div className="w-24">
             <Label className="text-xs">País</Label>
             <Input value={codigoPais} onChange={(e) => setCodigoPais(e.target.value)} placeholder="+52" />
@@ -316,11 +345,36 @@ export function ConnectWhatsApp() {
               maxLength={15}
             />
           </div>
-        </div>
+          </div>
+        </>
       )}
 
       <div className="flex flex-wrap gap-2">
-        {!connected ? (
+        {editando ? (
+          <>
+            <Button
+              size="sm"
+              disabled={connecting}
+              onClick={onConnectNumber}
+              className="gap-1 bg-[#25D366] hover:bg-[#1da851]"
+            >
+              {connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+              Guardar nuevo número
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={connecting}
+              onClick={() => {
+                setEditando(false);
+                void refreshStatus();
+              }}
+              className="gap-1"
+            >
+              Cancelar
+            </Button>
+          </>
+        ) : !connected ? (
           <>
             <Button
               size="sm"
@@ -354,6 +408,16 @@ export function ConnectWhatsApp() {
                 Activar envío automático (API)
               </Button>
             )}
+            <Button size="sm" variant="outline" disabled={connecting} onClick={() => setEditando(true)} className="gap-1">
+              <PencilLine className="w-3.5 h-3.5" />
+              Cambiar número
+            </Button>
+            {mode === "api" && metaAppId && (
+              <Button size="sm" variant="outline" disabled={connecting} onClick={onConnectApi} className="gap-1">
+                <RefreshCw className="w-3.5 h-3.5" />
+                Cambiar número API
+              </Button>
+            )}
             <Button size="sm" variant="outline" disabled={connecting} onClick={onDisconnect} className="gap-1">
               <Unplug className="w-3.5 h-3.5" />
               Desconectar
@@ -370,6 +434,12 @@ export function ConnectWhatsApp() {
         <p>
           <b>API Meta (opcional)</b> — envío automático masivo y respuestas por API. Si tu número ya está en
           <span className="text-[#25D366] font-semibold"> WhatsApp</span> Business, Meta puede pedir migración con coexistencia.
+        </p>
+        <p>
+          <b>¿Es tu número personal?</b> Para el Vendedor IA conviene un número <b>dedicado del negocio</b>:
+          al registrarlo en Meta queda fijo en la API y ahí escriben los clientes a toda hora. Un chip
+          prepago que pueda recibir un SMS basta para registrarlo, y tu número personal queda libre.
+          Cámbialo cuando quieras con «Cambiar número» o «Cambiar número API».
         </p>
       </div>
     </div>
