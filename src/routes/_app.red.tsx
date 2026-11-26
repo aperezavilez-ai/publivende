@@ -32,6 +32,7 @@ import {
   redUpdateChannel,
 } from "@/lib/api/red.functions";
 import type { Red } from "@/lib/mock/types";
+import { getDiscoverySummary, runDiscoveryNow } from "@/lib/api/discovery.functions";
 
 export const Route = createFileRoute("/_app/red")({
   beforeLoad: requirePlatformAdmin,
@@ -412,7 +413,69 @@ function RedPage() {
           </div>
         )}
       </Card>
+
+      <DiscoveryCard />
     </div>
+  );
+}
+
+function DiscoveryCard() {
+  const [resumen, setResumen] = useState<Record<string, { total: number; miembros: number }> | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function cargar() {
+    const token = getSessionToken();
+    if (!token) return;
+    const res = await getDiscoverySummary({ data: { token } });
+    if (res.ok) setResumen(res.porEstado);
+  }
+
+  useEffect(() => {
+    void cargar();
+  }, []);
+
+  async function descubrir() {
+    const token = getSessionToken();
+    if (!token) return;
+    setBusy(true);
+    const res = await runDiscoveryNow({ data: { token } });
+    setBusy(false);
+    if (res.ok) {
+      toast.success(
+        `Descubrimiento real: ${res.hallazgos} hallazgos (${res.nuevos} nuevos, ${res.actualizados} actualizados) vía ${res.provider}`,
+      );
+      await cargar();
+    } else {
+      toast.error(res.error);
+    }
+  }
+
+  const descubiertos = resumen?.["descubierto"] ?? { total: 0, miembros: 0 };
+  const catalogo = resumen?.["catalogo_sin_verificar"] ?? { total: 0, miembros: 0 };
+
+  return (
+    <Card className="p-5">
+      <h2 className="font-semibold mb-1">Descubrimiento real por nicho</h2>
+      <p className="text-xs text-muted-foreground mb-3">
+        Grupos y páginas públicos de Facebook encontrados de verdad en el índice web, con fuente y
+        fecha de verificación. El catálogo sembrado a mano NO cuenta como alcance hasta ser verificado.
+        La pasada automática corre cada lunes; también puedes lanzarla ahora.
+      </p>
+      <div className="flex flex-wrap items-center gap-4 text-sm mb-3">
+        <span>
+          <strong>{descubiertos.total}</strong> descubiertos reales
+          {descubiertos.miembros > 0 && (
+            <span className="text-muted-foreground"> · {descubiertos.miembros.toLocaleString("es-MX")} miembros/seguidores observados</span>
+          )}
+        </span>
+        <span className="text-muted-foreground">
+          {catalogo.total} en catálogo sin verificar (no cuentan como alcance)
+        </span>
+      </div>
+      <Button size="sm" variant="outline" disabled={busy} onClick={() => void descubrir()}>
+        <RefreshCw className="w-4 h-4 mr-1" /> {busy ? "Buscando en la red…" : "Buscar ahora en la red"}
+      </Button>
+    </Card>
   );
 }
 

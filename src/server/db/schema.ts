@@ -459,6 +459,16 @@ export const brainCommunities = pgTable("brain_communities", {
   miembrosEstimados: integer("miembros_estimados").notNull().default(10000),
   nivelInteraccion: text("nivel_interaccion").notNull().default("alta"), // alta, media, muy_alta
   activo: boolean("activo").notNull().default(true),
+  // [FASE 1 — Descubrimiento real] Procedencia y verificación. Las filas del
+  // catálogo sembrado quedan en "catalogo_sin_verificar" con fuente null:
+  // nombres y miembros escritos a mano, NO observados. Solo una fila con
+  // fuente y verificadoEn fue vista de verdad en la red.
+  fuente: text("fuente"), // serpapi | brave | indice_web
+  // OJO: "estado" (arriba) es la entidad federativa; el estado del prospecto
+  // vive en su propia columna para no pisar la geografía.
+  estadoProspecto: text("estado_prospecto").notNull().default("catalogo_sin_verificar"), // catalogo_sin_verificar | descubierto | contactado | aliado
+  verificadoEn: timestamp("verificado_en", { withTimezone: true }),
+  evidenciaUrl: text("evidencia_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

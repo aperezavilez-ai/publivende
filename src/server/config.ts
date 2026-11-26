@@ -62,3 +62,19 @@ export function isRealPaymentsEnabled(): boolean {
 export function getCronSecret(): string | undefined {
   return process.env.CRON_SECRET;
 }
+
+/**
+ * [FASE 1 — Descubrimiento real] Proveedor de búsqueda web para descubrir
+ * grupos y páginas públicos de Facebook por nicho. Sin llave configurada el
+ * motor NO inventa resultados: reporta "sin proveedor" y no escribe nada.
+ */
+export function getSearchConfig():
+  | { provider: "serpapi"; apiKey: string }
+  | { provider: "brave"; apiKey: string }
+  | null {
+  const serp = process.env.SERPAPI_API_KEY;
+  if (serp) return { provider: "serpapi", apiKey: serp };
+  const brave = process.env.BRAVE_SEARCH_API_KEY;
+  if (brave) return { provider: "brave", apiKey: brave };
+  return null;
+}
