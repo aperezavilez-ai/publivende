@@ -32,7 +32,11 @@ import {
   redUpdateChannel,
 } from "@/lib/api/red.functions";
 import type { Red } from "@/lib/mock/types";
-import { getDiscoverySummary, runDiscoveryNow } from "@/lib/api/discovery.functions";
+import {
+  getDiscoveredCommunities,
+  getDiscoverySummary,
+  runDiscoveryNow,
+} from "@/lib/api/discovery.functions";
 
 export const Route = createFileRoute("/_app/red")({
   beforeLoad: requirePlatformAdmin,
@@ -168,6 +172,9 @@ function RedPage() {
           </Button>
         </div>
       </div>
+
+      {/* Descubrimiento real: primer bloque tras el encabezado */}
+      <DiscoveryCard />
 
       {/* Modal Dialog para Conectar las 4 Redes */}
       <Dialog open={modalConectarOpen} onOpenChange={setModalConectarOpen}>
@@ -362,7 +369,7 @@ function RedPage() {
             </Button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid gap-3 lg:grid-cols-2">
             {data.channels.map((c) => (
               <ChannelRow key={c.id} channel={c} onChange={load} />
             ))}
@@ -370,6 +377,8 @@ function RedPage() {
         )}
       </Card>
 
+      {/* Solicitudes y Demanda lado a lado en escritorio */}
+      <div className="grid gap-6 lg:grid-cols-2 items-start">
       <Card className="p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">Solicitudes de impulso</h2>
@@ -401,7 +410,7 @@ function RedPage() {
         {data.demanda.length === 0 ? (
           <p className="text-sm text-muted-foreground">Todavía no hay solicitudes.</p>
         ) : (
-          <div className="grid sm:grid-cols-2 gap-2">
+          <div className="grid gap-2">
             {data.demanda.map((d) => (
               <div key={d.nicho} className="flex items-center justify-between border rounded-lg px-3 py-2 text-sm">
                 <span className="font-medium capitalize">{d.nicho}</span>
@@ -413,14 +422,25 @@ function RedPage() {
           </div>
         )}
       </Card>
-
-      <DiscoveryCard />
+      </div>
     </div>
   );
 }
 
+type DiscoveredCommunity = {
+  nombre: string;
+  nicheId: string;
+  plataforma: string;
+  url: string | null;
+  ciudad: string | null;
+  estado: string;
+  miembrosEstimados: number;
+  verificadoEn: string | null;
+};
+
 function DiscoveryCard() {
   const [resumen, setResumen] = useState<Record<string, { total: number; miembros: number }> | null>(null);
+  const [descubiertas, setDescubiertas] = useState<DiscoveredCommunity[]>([]);
   const [busy, setBusy] = useState(false);
 
   async function cargar() {
@@ -428,6 +448,8 @@ function DiscoveryCard() {
     if (!token) return;
     const res = await getDiscoverySummary({ data: { token } });
     if (res.ok) setResumen(res.porEstado);
+    const lista = await getDiscoveredCommunities({ data: { token } });
+    if (lista.ok) setDescubiertas(lista.comunidades);
   }
 
   useEffect(() => {
@@ -472,6 +494,29 @@ function DiscoveryCard() {
           {catalogo.total} en catálogo sin verificar (no cuentan como alcance)
         </span>
       </div>
+      {descubiertas.length > 0 && (
+        <div className="max-h-80 overflow-y-auto rounded-md border border-slate-200 mb-3 divide-y divide-slate-100">
+          {descubiertas.map((c, i) => (
+            <div key={`${c.url ?? c.nombre}-${i}`} className="flex items-baseline gap-2 px-3 py-1.5 text-xs">
+              {c.url ? (
+                <a
+                  href={c.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-blue-700 hover:underline truncate"
+                >
+                  {c.nombre}
+                </a>
+              ) : (
+                <span className="font-medium truncate">{c.nombre}</span>
+              )}
+              <span className="text-muted-foreground shrink-0">{c.nicheId}</span>
+              <span className="shrink-0">{c.miembrosEstimados.toLocaleString("es-MX")}</span>
+              {c.ciudad && <span className="text-muted-foreground shrink-0">{c.ciudad}</span>}
+            </div>
+          ))}
+        </div>
+      )}
       <Button size="sm" variant="outline" disabled={busy} onClick={() => void descubrir()}>
         <RefreshCw className="w-4 h-4 mr-1" /> {busy ? "Buscando en la red…" : "Buscar ahora en la red"}
       </Button>
@@ -534,7 +579,7 @@ function ChannelRow({ channel, onChange }: { channel: Channel; onChange: () => P
   }
 
   return (
-    <div className="border rounded-lg p-3 space-y-3">
+    <div className="border rounded-lg p-3 space-y-3 h-full">
       <div className="flex flex-wrap items-center gap-3">
         {channel.avatar ? (
           <img src={channel.avatar} alt="" className="w-9 h-9 rounded-full object-cover" />
@@ -562,7 +607,7 @@ function ChannelRow({ channel, onChange }: { channel: Channel; onChange: () => P
       </div>
       {channel.error && <p className="text-xs text-red-600">{channel.error}</p>}
       <div className="flex flex-wrap items-end gap-2">
-        <div className="flex-1 min-w-56">
+        <div className="flex-1 min-w-40">
           <Label className="text-xs">Nichos (separados por coma; vacío = cualquier nicho)</Label>
           <Input
             value={nichos}
@@ -585,7 +630,7 @@ function ChannelRow({ channel, onChange }: { channel: Channel; onChange: () => P
       {abierto && (
         <div className="rounded-lg bg-muted/40 p-3 space-y-2">
           <div className="flex flex-wrap gap-2 items-end">
-            <div className="flex-1 min-w-56">
+            <div className="flex-1 min-w-40">
               <Label className="text-xs">Tema (opcional; si lo dejas vacío la IA elige)</Label>
               <Input value={tema} onChange={(e) => setTema(e.target.value)} className="h-9" />
             </div>
@@ -595,7 +640,7 @@ function ChannelRow({ channel, onChange }: { channel: Channel; onChange: () => P
           </div>
           <Textarea value={copy} onChange={(e) => setCopy(e.target.value)} rows={6} placeholder="Texto de la publicación" />
           <div className="flex flex-wrap gap-2 items-end">
-            <div className="flex-1 min-w-56">
+            <div className="flex-1 min-w-40">
               <Label className="text-xs">URL pública de imagen o video (Instagram, TikTok y YouTube la requieren)</Label>
               <Input value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} className="h-9" placeholder="https://…" />
             </div>
