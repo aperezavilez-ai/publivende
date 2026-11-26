@@ -5,6 +5,7 @@ import { getDb, schema } from "@/server/db";
 import type { hubChannels } from "@/server/db/schema";
 import { refreshGoogle, refreshTikTok, RefreshRejected } from "@/server/auth/token-refresh";
 import { normalizeNicho } from "@/lib/red/limits";
+import { NICHO_CATALOG, toCanonicalNicho } from "@/services/import/inferNiche";
 import type { Red } from "@/lib/mock/types";
 
 export type DbHubChannel = typeof hubChannels.$inferSelect;
@@ -123,14 +124,39 @@ async function markHubExpired(id: string, reason: string) {
     .where(eq(schema.hubChannels.id, id));
 }
 
-/** Cuentas activas que aceptan el nicho: las etiquetadas con ese nicho primero, luego las generales (sin nichos). */
+/**
+ * [UNIFICACIÓN DE NICHOS — 2026-11-26] Cuentas activas que aceptan el nicho
+ * del post, ya en taxonomía canónica (ids de market_niches). Una cuenta casa
+ * si alguno de sus nichos (texto libre, separados por coma):
+ *  - canoniza al mismo id («comida» o «restaurantes» → gastronomia;
+ *    «llantas» → automotriz; también acepta claves viejas e ids nuevos), o
+ *  - contiene/es una keyword o palabra del nombre de ese nicho en el catálogo.
+ * Las cuentas SIN nichos aceptan todo y van después de las específicas,
+ * como siempre. Primero las específicas, luego las generales.
+ */
 export function channelsForNicho(channels: DbHubChannel[], nicho: string): DbHubChannel[] {
-  const target = normalizeNicho(nicho);
-  const words = new Set(target.split(" ").filter((w) => w.length > 2));
+  const target = toCanonicalNicho(nicho);
+  const entry = NICHO_CATALOG.find((n) => n.id === target);
+  const terms = new Set<string>();
+  if (entry) {
+    for (const kw of entry.keywords) terms.add(normalizeNicho(kw));
+    for (const w of normalizeNicho(entry.nombre).split(" ")) if (w.length > 2) terms.add(w);
+    terms.add(normalizeNicho(entry.id.replace(/_/g, " ")));
+  }
+  const entriesOf = (c: DbHubChannel) =>
+    c.nichos.flatMap((n) => n.split(",")).map((s) => s.trim()).filter(Boolean);
+  const matches = (c: DbHubChannel) =>
+    entriesOf(c).some((raw) => {
+      if (toCanonicalNicho(raw) === target) return true;
+      const e = normalizeNicho(raw);
+      if (!e) return false;
+      for (const t of terms) {
+        if (t.length > 2 && (e === t || e.includes(t) || t.includes(e))) return true;
+      }
+      return false;
+    });
   const active = channels.filter((c) => c.activo && c.estadoConexion === "conectada");
-  const specific = active.filter((c) =>
-    c.nichos.some((n) => n === target || n.split(" ").some((w) => words.has(w))),
-  );
-  const general = active.filter((c) => c.nichos.length === 0);
+  const specific = active.filter(matches);
+  const general = active.filter((c) => entriesOf(c).length === 0);
   return [...specific, ...general.filter((g) => !specific.includes(g))];
 }

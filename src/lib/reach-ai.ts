@@ -26,27 +26,31 @@ export interface AlcancePorRedIA extends AlcancePorRed {
   confianza: number;
 }
 
+// [UNIFICACIÓN DE NICHOS — 2026-11-26] Labels y afinidades con la taxonomía
+// canónica de market_niches (antes: moda|ropa|belleza|comida|fitness|…).
 const NICHO_LABELS: Record<NichoKey, string> = {
-  moda: "Moda y retail",
-  ropa: "Ropa y accesorios",
-  belleza: "Belleza y cuidado personal",
-  comida: "Comida y restaurantes",
-  fitness: "Fitness y wellness",
-  servicios: "Servicios profesionales",
-  tecnologia: "Tecnología y digital",
-  default: "Emprendimiento general",
+  automotriz: "Automotriz, llantas y mecánica",
+  belleza_tatuajes: "Tatuajes, arte corporal y belleza",
+  gastronomia: "Restaurantes, comida y bebidas",
+  hogar_inmuebles: "Inmuebles, construcción y hogar",
+  servicios_profesionales: "Servicios profesionales y negocios",
+  comercio_general: "Comercio local y emprendimiento",
+  salud_fitness: "Salud, gimnasios y bienestar",
+  tecnologia_gadgets: "Tecnología, celulares y electrónica",
+  general: "Emprendimiento general",
 };
 
 /** Afinidad del nicho por red (1 = promedio LATAM). */
 const AFINIDAD_NICHO_RED: Record<NichoKey, Record<Red, number>> = {
-  moda: { instagram: 1.38, tiktok: 1.32, facebook: 0.92, youtube: 0.88 },
-  ropa: { instagram: 1.35, tiktok: 1.28, facebook: 0.95, youtube: 0.85 },
-  belleza: { instagram: 1.42, tiktok: 1.35, facebook: 0.88, youtube: 1.05 },
-  comida: { instagram: 1.15, tiktok: 1.22, facebook: 1.12, youtube: 1.08 },
-  fitness: { instagram: 1.2, tiktok: 1.38, facebook: 0.9, youtube: 1.15 },
-  servicios: { instagram: 0.95, tiktok: 0.88, facebook: 1.18, youtube: 1.22 },
-  tecnologia: { instagram: 0.9, tiktok: 1.05, facebook: 1.05, youtube: 1.35 },
-  default: { instagram: 1.05, tiktok: 1.1, facebook: 1.0, youtube: 0.95 },
+  automotriz: { instagram: 0.95, tiktok: 1.0, facebook: 1.15, youtube: 1.1 },
+  belleza_tatuajes: { instagram: 1.42, tiktok: 1.35, facebook: 0.88, youtube: 1.05 },
+  gastronomia: { instagram: 1.15, tiktok: 1.22, facebook: 1.12, youtube: 1.08 },
+  hogar_inmuebles: { instagram: 0.9, tiktok: 0.85, facebook: 1.2, youtube: 1.1 },
+  servicios_profesionales: { instagram: 0.95, tiktok: 0.88, facebook: 1.18, youtube: 1.22 },
+  comercio_general: { instagram: 1.32, tiktok: 1.28, facebook: 0.98, youtube: 0.88 },
+  salud_fitness: { instagram: 1.2, tiktok: 1.38, facebook: 0.9, youtube: 1.15 },
+  tecnologia_gadgets: { instagram: 0.9, tiktok: 1.05, facebook: 1.05, youtube: 1.35 },
+  general: { instagram: 1.05, tiktok: 1.1, facebook: 1.0, youtube: 0.95 },
 };
 
 /** Boost si republicas en la misma red de origen. */
@@ -113,7 +117,7 @@ export function analizarAlcanceIA(input: AnalizarAlcanceInput): AnalizarAlcanceR
     copyManual ?? "",
     ...textosRed,
   );
-  const nicho: NichoKey = nichoTexto !== "default" ? nichoTexto : nichoIndustria;
+  const nicho: NichoKey = nichoTexto !== "general" ? nichoTexto : nichoIndustria;
 
   const confianzaBase = fuente === "link_ia" ? 82 : fuente === "link_import" ? 58 : 48;
   const confianza = Math.min(

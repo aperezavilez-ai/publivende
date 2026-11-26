@@ -18,7 +18,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { RED_LABELS, RED_LIMITS, RED_COLORS } from "@/lib/redes";
 import { publishPostReal } from "@/lib/api/publish.functions";
 import { getRedDistribution } from "@/lib/api/red.functions";
-import { inferNichoFromText } from "@/services/import/inferNiche";
+import { inferNichoFromText, toCanonicalNicho } from "@/services/import/inferNiche";
 import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
 import { generateCaptions, type Tono } from "@/services/ai/mock";
 import {
@@ -1001,14 +1001,21 @@ function Publicar() {
               </Label>
               {(() => {
                 const nichoKey = inferNichoFromText(sourceMeta.originalCaption, sourceMeta.title ?? "");
+                // [UNIFICACIÓN DE NICHOS — 2026-11-26] Labels y aceptación con la
+                // taxonomía canónica: los nichos libres de cada cuenta se canonizan
+                // («comida»/«restaurantes» → gastronomia, «llantas» → automotriz).
                 const NICHO_LABEL: Record<string, string> = {
-                  moda: "Moda", ropa: "Ropa", belleza: "Belleza", comida: "Comida",
-                  fitness: "Fitness y salud", servicios: "Servicios", tecnologia: "Tecnología",
-                  default: "General (sin nicho específico)",
+                  automotriz: "Automotriz", belleza_tatuajes: "Tatuajes y belleza", gastronomia: "Comida",
+                  hogar_inmuebles: "Hogar e inmuebles", servicios_profesionales: "Servicios profesionales",
+                  comercio_general: "Comercio", salud_fitness: "Salud y fitness", tecnologia_gadgets: "Tecnología",
+                  general: "General (sin nicho específico)",
                 };
                 const acepta = (nichos: string[]) =>
                   nichos.length === 0 ||
-                  nichos.some((n) => n.toLowerCase() === nichoKey || n.toLowerCase() === "general");
+                  nichos.some((n) => {
+                    const c = toCanonicalNicho(n);
+                    return c === nichoKey || c === "general";
+                  });
                 const canalesOk = redChannels.filter((c) => acepta(c.nichos));
                 const redesMap: { red: Red; label: string }[] = [
                   { red: "facebook", label: "Facebook" },

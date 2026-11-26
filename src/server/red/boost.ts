@@ -8,8 +8,8 @@ import { isRealAIEnabled } from "@/server/config";
 import { reviewBoostOpenAI } from "@/server/ai/openai";
 import { publishToNetworkMulti } from "@/server/publish/networks";
 import { resolveAppBaseUrl } from "@/lib/app-url";
-import { inferNichoFromText } from "@/services/import/inferNiche";
-import { BOOST_LIMITS, normalizeNicho, redAcceptsMedia } from "@/lib/red/limits";
+import { inferNichoFromText, normalizeIndustria, toCanonicalNicho } from "@/services/import/inferNiche";
+import { BOOST_LIMITS, redAcceptsMedia } from "@/lib/red/limits";
 import type { Plan, PublishSurfaceResult } from "@/lib/mock/types";
 import { channelsForNicho, getFreshHubToken, listHubChannels, type DbHubChannel } from "./channels";
 
@@ -75,8 +75,13 @@ const reviewSchema = z.object({
 });
 
 function reviewByRules(post: DbPost, user: DbUser, candidates: DbHubChannel[]) {
+  // [UNIFICACIÓN DE NICHOS — 2026-11-26] El nicho del impulso es el id
+  // canónico de market_niches: manda el giro del negocio y, si no clasifica,
+  // el nicho inferido del texto del post (antes se guardaba texto libre y un
+  // post de llantas jamás casaba con el mapa de automotriz).
   const inferred = inferNichoFromText(post.copy);
-  const nicho = normalizeNicho(user.industria || (inferred === "default" ? "general" : inferred)) || "general";
+  const fromIndustria = user.industria ? normalizeIndustria(user.industria) : "general";
+  const nicho = fromIndustria !== "general" ? fromIndustria : inferred;
   const media = mediaTypeOf(post);
   let score = 50;
   if (media !== "texto") score += 15;
@@ -113,7 +118,10 @@ export async function reviewBoost(boostId: string): Promise<DbBoost> {
         canales: candidates.map((c) => ({ id: c.id, red: c.red, nombre: c.nombre, nichos: c.nichos })),
       });
       const parsed = reviewSchema.parse(raw);
-      const nicho = normalizeNicho(parsed.nicho) || review.nicho;
+      // La IA puede devolver el nicho en texto libre o con claves viejas:
+      // se canoniza; si no clasifica, queda el nicho de las reglas.
+      const nichoIa = toCanonicalNicho(parsed.nicho);
+      const nicho = nichoIa !== "general" ? nichoIa : review.nicho;
       const valid = parsed.canales.filter((id) => candidates.some((c) => c.id === id));
       review = {
         nicho,
