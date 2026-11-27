@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/mock/auth";
 import { useDB } from "@/lib/mock/useDB";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RED_LABELS, REDES_ORDEN } from "@/lib/redes";
@@ -23,9 +22,10 @@ export const Route = createFileRoute("/_app/conectar-redes")({ component: Conect
 // Configuración y no se encontraba. La lógica de conexión es la
 // misma que ya funcionaba ahí (connectSocialNetwork + salud de Meta
 // + desconexión en el servidor); lo nuevo es el lugar y que las 4
-// redes aparecen siempre, conectadas o no. Solo la ve el
-// administrador: los clientes no conectan cuentas (su difusión sale
-// por estas oficiales).
+// redes aparecen siempre, conectadas o no. El botón del menú lo
+// ven todos: el administrador ve los controles de conectar y el
+// cliente ve el estado real de las redes oficiales (él no conecta
+// cuentas; su difusión sale por estas oficiales).
 function ConectarRedes() {
   const { user } = useAuth();
   const accounts = useDB((db) => {
@@ -111,17 +111,6 @@ function ConectarRedes() {
 
   if (!user) return null;
 
-  if (!user.is_admin) {
-    return (
-      <div className="mx-auto w-full max-w-3xl p-4 sm:p-6">
-        <Card className="p-5 text-sm text-muted-foreground">
-          Las redes de difusión las conecta PubliVende: son las cuentas oficiales de la plataforma y
-          por ahí sale la difusión de todos los clientes. Tú no necesitas conectar ninguna cuenta.
-        </Card>
-      </div>
-    );
-  }
-
   const oauthConfigured = !!(oauthReady?.meta || oauthReady?.google || oauthReady?.tiktok);
 
   async function onConnect(red: Red) {
@@ -189,18 +178,20 @@ function ConectarRedes() {
       <div>
         <h1 className="text-xl font-bold">Conectar redes</h1>
         <p className="text-sm text-muted-foreground">
-          Las cuentas oficiales de PubliVende. Desde aquí se difunden las publicaciones de todos los
-          clientes; por eso conectarlas es tarea del administrador.
+          {user.is_admin
+            ? "Las cuentas oficiales de PubliVende. Desde aquí se difunden las publicaciones de todos los clientes; por eso conectarlas es tarea del administrador."
+            : "Las cuentas oficiales de PubliVende: por estas redes sale tu difusión. Tú no necesitas conectar ninguna cuenta tuya."}
         </p>
       </div>
 
-      {oauthReady && !oauthConfigured && (
+      {user.is_admin && oauthReady && !oauthConfigured && (
         <div className="rounded-lg border border-amber-300 bg-amber-50/80 p-3 text-xs text-amber-900">
           <b>Falta configurar OAuth en el servidor.</b> Sin las llaves de Meta, Google y TikTok en el
           servidor, los botones de conectar no pueden abrir la autorización.
         </div>
       )}
 
+      {user.is_admin ? (
       <div className="space-y-2">
         {REDES_ORDEN.map((red) => {
           const a = porRed.get(red);
@@ -283,6 +274,46 @@ function ConectarRedes() {
           );
         })}
       </div>
+      ) : (
+      <div className="space-y-2">
+        {REDES_ORDEN.map((red) => {
+          const st = metricsSync.find((s) => s.red === red);
+          const conectada = !!st?.conectada;
+          return (
+            <div
+              key={red}
+              className="flex items-center justify-between gap-3 p-3 border rounded-lg bg-card"
+            >
+              <div className="min-w-0">
+                <div className="font-medium text-sm flex items-center gap-2 flex-wrap">
+                  {RED_LABELS[red]}
+                  {conectada ? (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] border-green-400 text-green-800 bg-green-50/80"
+                    >
+                      Conectada
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] border-red-300 text-red-700 bg-red-50/80"
+                    >
+                      Sin conectar
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {conectada
+                    ? "Lista para publicar — por aquí sale tu difusión"
+                    : "PubliVende todavía no activa esta red"}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      )}
     </div>
   );
 }

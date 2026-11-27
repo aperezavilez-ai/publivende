@@ -148,7 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 />
                 <span>{item.label}</span>
               </Link>
-              {item.to === "/dashboard" && user.is_admin && (
+              {item.to === "/dashboard" && (
                 <Link
                   to="/conectar-redes"
                   onClick={closeMenu}
