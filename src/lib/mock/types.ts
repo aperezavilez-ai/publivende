@@ -93,7 +93,8 @@ export interface NicheBenchmark {
   actualizado_at: string;
 }
 export type TipoPost = "imagen" | "video" | "texto";
-export type PagoProvider = "mercadopago" | "payu" | "wompi" | "kushki" | "stripe" | "manual";
+// [SOLO MERCADO PAGO — 2026-11-27] Las demás pasarelas salieron del código.
+export type PagoProvider = "mercadopago";
 
 export interface Profile {
   id: string;

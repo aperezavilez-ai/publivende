@@ -43,7 +43,7 @@ function Onboarding() {
     tono: user?.tono_marca ?? "casual",
     ciudad: user?.ciudad ?? "",
     horario: user?.horario_atencion ?? "Lunes a sábado, 9am a 7pm",
-    pago_provider: (user?.pago_provider_default ?? "stripe") as PagoProvider,
+    pago_provider: (user?.pago_provider_default ?? "mercadopago") as PagoProvider,
   });
 
   const [productos, setProductos] = useState<OnboardingProductInput[]>([
@@ -313,10 +313,7 @@ function Onboarding() {
                       <Select value={negocio.pago_provider} onValueChange={(v) => setNegocio({ ...negocio, pago_provider: v as PagoProvider })}>
                         <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="stripe">Stripe</SelectItem>
                           <SelectItem value="mercadopago">Mercado Pago</SelectItem>
-                          <SelectItem value="wompi">Wompi</SelectItem>
-                          <SelectItem value="payu">PayU</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

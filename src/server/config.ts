@@ -35,10 +35,6 @@ export function getWhatsAppConfig() {
   return { token, phoneNumberId, verifyToken: verifyToken ?? "publivende_verify" };
 }
 
-export function getStripeSecretKey(): string | undefined {
-  return process.env.STRIPE_SECRET_KEY;
-}
-
 export function getMercadoPagoToken(): string | undefined {
   return process.env.MERCADOPAGO_ACCESS_TOKEN;
 }
@@ -56,7 +52,7 @@ export function isRealAIEnabled(): boolean {
 }
 
 export function isRealPaymentsEnabled(): boolean {
-  return !!(getStripeSecretKey() || getMercadoPagoToken());
+  return !!getMercadoPagoToken();
 }
 
 export function getCronSecret(): string | undefined {

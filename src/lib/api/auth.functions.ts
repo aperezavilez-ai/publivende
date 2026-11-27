@@ -21,7 +21,7 @@ export const getProductionStatus = createServerFn({ method: "GET" }).handler(asy
       !!(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID) ||
       !!process.env.WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID,
     realAI: !!process.env.MEAI_API_KEY,
-    realPayments: !!(process.env.STRIPE_SECRET_KEY || process.env.MERCADOPAGO_ACCESS_TOKEN),
+    realPayments: !!process.env.MERCADOPAGO_ACCESS_TOKEN,
   },
 }));
 
@@ -50,7 +50,7 @@ export const authSignUp = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Modo demo — configura DATABASE_URL y SESSION_SECRET" };
     }
     try {
-      // Los planes de pago se activan solo cuando Stripe confirma la suscripción.
+      // Los planes de pago se activan solo cuando Mercado Pago confirma el pago (webhook).
       const user = await createUser({ ...data, plan: "free" });
       const token = await createSessionToken(user.id, user.email);
       return { ok: true as const, user: dbUserToProfile(user), token };
@@ -98,7 +98,7 @@ export const authUpdateProfile = createServerFn({ method: "POST" })
     if (!isProductionMode()) return { ok: false as const, error: "Modo demo" };
     const session = await verifySessionToken(data.token);
     if (!session) return { ok: false as const, error: "Sesión inválida" };
-    // El plan solo cambia vía webhook de Stripe; is_admin solo vía scripts/set-admin.
+    // El plan solo cambia vía webhook de Mercado Pago; is_admin solo vía scripts/set-admin.
     const { plan: _plan, is_admin: _isAdmin, password: _password, ...patch } =
       data.patch as Partial<import("@/lib/mock/types").Profile>;
     const user = await updateUserProfile(session.userId, patch);

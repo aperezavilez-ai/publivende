@@ -2,9 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { isRealPaymentsEnabled } from "@/server/config";
 import { createMercadoPagoPreference } from "@/server/payments/mercadopago";
-import { createStripeCheckoutSession } from "@/server/payments/stripe";
 
-const providerSchema = z.enum(["stripe", "mercadopago", "payu", "wompi", "kushki", "manual"]);
+const providerSchema = z.enum(["mercadopago"]);
 
 export const createPaymentLinkServer = createServerFn({ method: "POST" })
   .inputValidator(
@@ -13,23 +12,12 @@ export const createPaymentLinkServer = createServerFn({ method: "POST" })
       amount: z.number().positive(),
       currency: z.string().default("MXN"),
       reference: z.string().optional(),
-      provider: providerSchema.default("stripe"),
+      provider: providerSchema.default("mercadopago"),
     }),
   )
   .handler(async ({ data }) => {
     if (!isRealPaymentsEnabled()) {
       return { ok: false as const, useLocal: true };
-    }
-
-    if (data.provider === "stripe") {
-      const result = await createStripeCheckoutSession({
-        title: data.title,
-        amount: data.amount,
-        currency: data.currency,
-        reference: data.reference,
-      });
-      if (!result.ok) return { ok: false as const, error: result.error };
-      return { ok: true as const, url: result.url!, preferenceId: result.sessionId };
     }
 
     if (data.provider === "mercadopago") {

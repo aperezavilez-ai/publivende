@@ -1,6 +1,6 @@
-// Links de cobro REALES (Stripe / Mercado Pago vía servidor).
+// Links de cobro REALES (Mercado Pago vía servidor).
 // Real v2: se eliminó el «generador mock» que fabricaba URLs inexistentes
-// (buy.stripe.com/test_<random>, mpago.la/<random>) cuando el proveedor no
+// (links falsos tipo test_<random> o mpago.la/<random>) cuando el proveedor no
 // respondía. Ahora, sin proveedor real configurado, generarLinkCobro LANZA
 // un error claro: jamás se presenta un link de cobro falso como real.
 import type { PagoProvider } from "@/lib/mock/types";
@@ -17,12 +17,7 @@ export interface CobroLink {
 }
 
 export const PROVIDER_LABEL: Record<PagoProvider, string> = {
-  stripe: "Stripe",
   mercadopago: "MercadoPago",
-  wompi: "Wompi",
-  payu: "PayU",
-  kushki: "Kushki",
-  manual: "Transferencia",
 };
 
 export class PagoNoDisponibleError extends Error {
@@ -40,7 +35,7 @@ export async function generarLinkCobro(opts: {
   moneda: string;
   descripcion: string;
 }): Promise<CobroLink> {
-  if (opts.provider === "stripe" || opts.provider === "mercadopago") {
+  if (opts.provider === "mercadopago") {
     try {
       const { createPaymentLinkServer } = await import("@/lib/api/payments.functions");
       const real = await createPaymentLinkServer({

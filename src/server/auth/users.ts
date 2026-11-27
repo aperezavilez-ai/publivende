@@ -110,8 +110,6 @@ export async function setUserBilling(
   userId: string,
   billing: {
     plan?: Plan;
-    stripeCustomerId?: string | null;
-    stripeSubscriptionId?: string | null;
     planStatus?: string | null;
     planRenewsAt?: Date | null;
   },
@@ -121,12 +119,6 @@ export async function setUserBilling(
     .update(schema.users)
     .set({ ...billing, updatedAt: new Date() })
     .where(eq(schema.users.id, userId));
-}
-
-export async function findUserByStripeCustomerId(customerId: string): Promise<DbUser | null> {
-  const db = getDb();
-  const rows = await db.select().from(schema.users).where(eq(schema.users.stripeCustomerId, customerId)).limit(1);
-  return rows[0] ?? null;
 }
 
 export async function upsertOAuthAccount(

@@ -4,8 +4,8 @@ import { findUserById, setUserBilling } from "@/server/auth/users";
 import { isValidPlan } from "@/lib/plans";
 
 /**
- * Real v2 — Webhook de Mercado Pago (no existía: un pago por MP nunca
- * confirmaba el plan, a diferencia de Stripe).
+ * Real v2 — Webhook de Mercado Pago: es la confirmación oficial de
+ * pagos de PubliVende (única pasarela desde el 2026-11-27).
  *
  * Flujo: MP notifica (topic=payment / type=payment) → se consulta el pago a
  * la API de MP con el token del servidor (la notificación sola NO se cree)

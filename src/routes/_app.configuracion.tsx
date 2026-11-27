@@ -26,7 +26,7 @@ import { ConnectWhatsApp } from "@/components/whatsapp/ConnectWhatsApp";
 export const Route = createFileRoute("/_app/configuracion")({ component: Conf });
 
 function Conf() {
-  const { user, updateUser, signOut, changePlan, openBillingPortal } = useAuth();
+  const { user, updateUser, signOut, changePlan } = useAuth();
   const navigate = useNavigate();
   const [billingBusy, setBillingBusy] = useState(false);
 
@@ -505,7 +505,7 @@ function Conf() {
         <h2 className="text-base font-bold mb-1">Productos</h2>
         <p className="text-[13px] text-muted-foreground mb-4">
           Tu catálogo para publicar y cobrar. Los links de cobro se generan con tu proveedor real
-          (Stripe o Mercado Pago): si no está configurado, verás el error — nunca un link falso.
+          (Mercado Pago): si no está configurado, verás el error — nunca un link falso.
         </p>
         <div className="space-y-2 mb-4">
           {productos.length === 0 && (
@@ -556,11 +556,6 @@ function Conf() {
               Cambiar a {p.nombre} · {p.precio} MXN/mes
             </Button>
           ))}
-          {!isAdmin && user.plan !== "free" && (
-            <Button size="sm" variant="ghost" disabled={billingBusy} onClick={() => runBilling(openBillingPortal)}>
-              Administrar suscripción
-            </Button>
-          )}
         </div>
         <div className="space-y-3 text-sm">
           {/* [PLANES VERDAD — 2026-11-26] Solo se muestra la cuota que el

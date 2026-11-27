@@ -18,9 +18,8 @@ interface AuthCtx {
   signIn: (email: string, password: string) => Promise<Profile>;
   signOut: () => void;
   updateUser: (patch: Partial<Profile>) => void;
-  /** En producción redirige a Stripe Checkout; en demo cambia el plan localmente. */
+  /** En producción redirige al pago con Mercado Pago; en demo cambia el plan localmente. */
   changePlan: (plan: Plan) => Promise<void>;
-  openBillingPortal: () => Promise<void>;
 }
 
 async function redirectToPlanCheckout(token: string, plan: Exclude<Plan, "free">) {
@@ -269,23 +268,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (plan === "free") {
-      await openBillingPortal();
-      return;
+      // [SOLO MERCADO PAGO — 2026-11-27] No hay portal externo que
+      // abrir: el plan pagado se conserva hasta vencer el periodo y
+      // al vencer la cuenta pasa a Free sin hacer nada más.
+      throw new Error("Tu plan pagado se conserva hasta que venza el periodo; al vencer pasas a Free sin hacer nada más.");
     }
     await redirectToPlanCheckout(token, plan);
   };
 
-  const openBillingPortal = async () => {
-    const token = getSessionToken();
-    if (!productionMode || !token) throw new Error("Disponible solo en producción");
-    const { createBillingPortalServer } = await import("@/lib/api/billing.functions");
-    const res = await createBillingPortalServer({ data: { token } });
-    if (!res.ok) throw new Error(res.error);
-    window.location.href = res.url;
-  };
-
   return (
-    <Ctx.Provider value={{ user, loading, productionMode, signUp, signIn, signOut, updateUser, changePlan, openBillingPortal }}>
+    <Ctx.Provider value={{ user, loading, productionMode, signUp, signIn, signOut, updateUser, changePlan }}>
       {children}
     </Ctx.Provider>
   );

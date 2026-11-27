@@ -28,8 +28,6 @@ export const users = pgTable("users", {
   horarioAtencion: text("horario_atencion"),
   pagoProviderDefault: text("pago_provider_default").$type<PagoProvider>(),
   plan: text("plan").$type<Plan>().notNull().default("free"),
-  stripeCustomerId: text("stripe_customer_id"),
-  stripeSubscriptionId: text("stripe_subscription_id"),
   planStatus: text("plan_status"),
   planRenewsAt: timestamp("plan_renews_at", { withTimezone: true }),
   isAdmin: boolean("is_admin").notNull().default(false),

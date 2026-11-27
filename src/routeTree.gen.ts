@@ -37,7 +37,6 @@ import { Route as ApiCronPublishScheduledRouteImport } from './routes/api.cron.p
 import { Route as ApiCronSyncMetricsRouteImport } from './routes/api.cron.sync-metrics'
 import { Route as ApiMediaTokenRouteImport } from './routes/api.media.$token'
 import { Route as ApiWebhookMercadopagoRouteImport } from './routes/api.webhook.mercadopago'
-import { Route as ApiWebhookStripeRouteImport } from './routes/api.webhook.stripe'
 import { Route as ApiWebhookWhatsappRouteImport } from './routes/api.webhook.whatsapp'
 import { Route as OauthCallbackProviderRouteImport } from './routes/oauth.callback.$provider'
 import { Route as ApiV1PartnersConnectRouteImport } from './routes/api.v1.partners.connect'
@@ -184,11 +183,6 @@ const ApiWebhookMercadopagoRoute = ApiWebhookMercadopagoRouteImport.update({
   path: '/api/webhook/mercadopago',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiWebhookStripeRoute = ApiWebhookStripeRouteImport.update({
-  id: '/api/webhook/stripe',
-  path: '/api/webhook/stripe',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiWebhookWhatsappRoute = ApiWebhookWhatsappRouteImport.update({
   id: '/api/webhook/whatsapp',
   path: '/api/webhook/whatsapp',
@@ -249,7 +243,6 @@ export interface FileRoutesByFullPath {
   '/api/cron/sync-metrics': typeof ApiCronSyncMetricsRoute
   '/api/media/$token': typeof ApiMediaTokenRoute
   '/api/webhook/mercadopago': typeof ApiWebhookMercadopagoRoute
-  '/api/webhook/stripe': typeof ApiWebhookStripeRoute
   '/api/webhook/whatsapp': typeof ApiWebhookWhatsappRoute
   '/oauth/callback/$provider': typeof OauthCallbackProviderRoute
   '/api/v1/partners/connect': typeof ApiV1PartnersConnectRoute
@@ -285,7 +278,6 @@ export interface FileRoutesByTo {
   '/api/cron/sync-metrics': typeof ApiCronSyncMetricsRoute
   '/api/media/$token': typeof ApiMediaTokenRoute
   '/api/webhook/mercadopago': typeof ApiWebhookMercadopagoRoute
-  '/api/webhook/stripe': typeof ApiWebhookStripeRoute
   '/api/webhook/whatsapp': typeof ApiWebhookWhatsappRoute
   '/oauth/callback/$provider': typeof OauthCallbackProviderRoute
   '/api/v1/partners/connect': typeof ApiV1PartnersConnectRoute
@@ -323,7 +315,6 @@ export interface FileRoutesById {
   '/api/cron/sync-metrics': typeof ApiCronSyncMetricsRoute
   '/api/media/$token': typeof ApiMediaTokenRoute
   '/api/webhook/mercadopago': typeof ApiWebhookMercadopagoRoute
-  '/api/webhook/stripe': typeof ApiWebhookStripeRoute
   '/api/webhook/whatsapp': typeof ApiWebhookWhatsappRoute
   '/oauth/callback/$provider': typeof OauthCallbackProviderRoute
   '/api/v1/partners/connect': typeof ApiV1PartnersConnectRoute
@@ -361,7 +352,6 @@ export interface FileRouteTypes {
     | '/api/cron/sync-metrics'
     | '/api/media/$token'
     | '/api/webhook/mercadopago'
-    | '/api/webhook/stripe'
     | '/api/webhook/whatsapp'
     | '/oauth/callback/$provider'
     | '/api/v1/partners/connect'
@@ -397,7 +387,6 @@ export interface FileRouteTypes {
     | '/api/cron/sync-metrics'
     | '/api/media/$token'
     | '/api/webhook/mercadopago'
-    | '/api/webhook/stripe'
     | '/api/webhook/whatsapp'
     | '/oauth/callback/$provider'
     | '/api/v1/partners/connect'
@@ -434,7 +423,6 @@ export interface FileRouteTypes {
     | '/api/cron/sync-metrics'
     | '/api/media/$token'
     | '/api/webhook/mercadopago'
-    | '/api/webhook/stripe'
     | '/api/webhook/whatsapp'
     | '/oauth/callback/$provider'
     | '/api/v1/partners/connect'
@@ -462,7 +450,6 @@ export interface RootRouteChildren {
   ApiCronSyncMetricsRoute: typeof ApiCronSyncMetricsRoute
   ApiMediaTokenRoute: typeof ApiMediaTokenRoute
   ApiWebhookMercadopagoRoute: typeof ApiWebhookMercadopagoRoute
-  ApiWebhookStripeRoute: typeof ApiWebhookStripeRoute
   ApiWebhookWhatsappRoute: typeof ApiWebhookWhatsappRoute
   OauthCallbackProviderRoute: typeof OauthCallbackProviderRoute
   ApiV1PartnersConnectRoute: typeof ApiV1PartnersConnectRoute
@@ -668,13 +655,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWebhookMercadopagoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/webhook/stripe': {
-      id: '/api/webhook/stripe'
-      path: '/api/webhook/stripe'
-      fullPath: '/api/webhook/stripe'
-      preLoaderRoute: typeof ApiWebhookStripeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/webhook/whatsapp': {
       id: '/api/webhook/whatsapp'
       path: '/api/webhook/whatsapp'
@@ -779,7 +759,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronSyncMetricsRoute: ApiCronSyncMetricsRoute,
   ApiMediaTokenRoute: ApiMediaTokenRoute,
   ApiWebhookMercadopagoRoute: ApiWebhookMercadopagoRoute,
-  ApiWebhookStripeRoute: ApiWebhookStripeRoute,
   ApiWebhookWhatsappRoute: ApiWebhookWhatsappRoute,
   OauthCallbackProviderRoute: OauthCallbackProviderRoute,
   ApiV1PartnersConnectRoute: ApiV1PartnersConnectRoute,
