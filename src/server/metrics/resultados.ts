@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { getDb, schema } from "@/server/db";
 import { findUserById } from "@/server/auth/users";
 import { getMetricsSyncStatus } from "@/server/metrics/sync";
@@ -35,6 +35,15 @@ export interface ResultadosPaquete {
     ingresos: number;
     seguidores: number;
   };
+  anterior: {
+    vistas: number;
+    alcance: number | null;
+    interacciones: number;
+    clics: number | null;
+    leads: number;
+    ventas_cerradas: number;
+    ingresos: number;
+  } | null;
   por_red: Array<{
     red: Red;
     conectada: boolean;
@@ -60,6 +69,9 @@ export interface ResultadosPaquete {
     leads: number;
     ventas: number;
     ingresos: number;
+    likes: number;
+    comentarios: number;
+    compartidos: number;
     distribuciones: number;
     por_red: Array<{ red: Red; vistas: number; alcance: number | null; interacciones: number; clics: number | null }>;
   }>;
@@ -90,10 +102,14 @@ const KPI_ETIQUETAS: Record<string, string> = {
  */
 export async function buildResultados(
   userId: string,
-  opts: { dias?: number; postId?: string } = {},
+  opts: { dias?: number; postId?: string; desplazamientoDias?: number } = {},
 ): Promise<ResultadosPaquete> {
   const dias = Math.min(365, Math.max(1, opts.dias ?? 30));
-  const desde = new Date(Date.now() - dias * 24 * 3600 * 1000);
+  // [MÉTRICAS — 2026-11-27] desplazamientoDias mueve la ventana al
+  // periodo anterior (para la comparación estilo Analytics).
+  const desplazamiento = Math.min(365, Math.max(0, opts.desplazamientoDias ?? 0));
+  const hasta = desplazamiento > 0 ? new Date(Date.now() - desplazamiento * 24 * 3600 * 1000) : null;
+  const desde = new Date(Date.now() - (dias + desplazamiento) * 24 * 3600 * 1000);
   const db = getDb();
   const user = await findUserById(userId);
 
@@ -104,6 +120,7 @@ export async function buildResultados(
         eq(schema.posts.userId, userId),
         eq(schema.posts.estado, "publicado"),
         gte(schema.posts.fechaPublicacion, desde),
+        ...(hasta ? [lt(schema.posts.fechaPublicacion, hasta)] : []),
       );
   const posts = await db
     .select()
@@ -160,6 +177,9 @@ export async function buildResultados(
       vistas: ms.reduce((s, m) => s + m.vistas, 0),
       alcance: alcanceVals.length ? alcanceVals.reduce((s, m) => s + (m.alcance ?? 0), 0) : null,
       interacciones: ms.reduce((s, m) => s + inter(m), 0),
+      likes: ms.reduce((s, m) => s + m.likes, 0),
+      comentarios: ms.reduce((s, m) => s + m.comentarios, 0),
+      compartidos: ms.reduce((s, m) => s + m.compartidos, 0),
       clics:
         (clicsPorPost.get(p.id) ?? 0) +
         ms.reduce((s, m) => s + (m.clics ?? 0), 0),
@@ -393,6 +413,7 @@ export async function buildResultados(
     filtro_post_id: opts.postId ?? null,
     negocio: { nombre: user?.nombreNegocio || user?.nombre || "Mi negocio", industria: nicho },
     totales,
+    anterior: null,
     por_red: porRed,
     por_post: porPost,
     evolucion,

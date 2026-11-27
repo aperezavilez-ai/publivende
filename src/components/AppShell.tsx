@@ -17,11 +17,13 @@ import { isProductionModeClient } from "@/lib/production/session";
 // activo (violeta PubliVende vía tokens); fuera los colores por ítem.
 const CLIENT_NAV = [
   { to: "/dashboard", label: "Cabina de Difusión", icon: Radio },
+  { to: "/resultados", label: "Métricas", icon: BarChart3 },
   { to: "/configuracion", label: "Mi Plan & Saldo", icon: Settings },
 ] as const;
 
 const MOBILE_TABS = [
   { to: "/dashboard", label: "Cabina", icon: Radio },
+  { to: "/resultados", label: "Métricas", icon: BarChart3 },
   { to: "/configuracion", label: "Plan & Saldo", icon: Settings },
 ] as const;
 

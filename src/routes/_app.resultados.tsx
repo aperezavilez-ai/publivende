@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/mock/auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import {
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { FileDown, Loader2, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
+import { FileDown, FileSpreadsheet, Loader2, AlertTriangle, CheckCircle2, ArrowRight, TrendingUp, TrendingDown, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
 import {
@@ -26,11 +26,23 @@ export const Route = createFileRoute("/_app/resultados")({ component: Resultados
 const fmt = (n: number | null | undefined) => (n == null ? "No disponible" : n.toLocaleString("es-MX"));
 const money = (n: number) => `$${n.toLocaleString("es-MX")} MXN`;
 
-function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+/** Variación % contra el periodo anterior; null si no hay comparable. */
+function deltaPct(actual: number | null | undefined, anterior: number | null | undefined): number | null {
+  if (actual == null || anterior == null || anterior === 0) return null;
+  return ((actual - anterior) / anterior) * 100;
+}
+
+function Kpi({ label, value, sub, delta }: { label: string; value: string; sub?: string; delta?: number | null }) {
   return (
     <Card className="p-4">
       <div className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">{label}</div>
       <div className="text-2xl font-bold mt-1">{value}</div>
+      {delta != null && (
+        <div className={`text-xs font-semibold mt-0.5 flex items-center gap-1 ${delta >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+          {delta >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+          {delta >= 0 ? "+" : ""}{delta.toFixed(0)}% vs periodo anterior
+        </div>
+      )}
       {sub && <div className="text-xs text-slate-500 mt-0.5">{sub}</div>}
     </Card>
   );
@@ -45,11 +57,13 @@ function Resultados() {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const [descargando, setDescargando] = useState(false);
+  const [metricaGrafica, setMetricaGrafica] = useState<"vistas_totales" | "seguidores">("vistas_totales");
+  const [orden, setOrden] = useState<{ clave: string; dir: 1 | -1 }>({ clave: "vistas", dir: -1 });
 
   const cargar = useCallback(async () => {
     const token = getSessionToken();
     if (!isProductionModeClient() || !token) {
-      setError("Resultados muestra datos reales de tus redes: requiere modo producción con cuentas conectadas.");
+      setError("Métricas muestra datos reales de tu difusión: requiere modo producción.");
       return;
     }
     setCargando(true);
@@ -71,6 +85,36 @@ function Resultados() {
 
   useEffect(() => { void cargar(); }, [cargar]);
 
+  function descargarCsv() {
+    if (!paquete) return;
+    const filas: Array<Array<string | number>> = [
+      ["Publicación", "Fecha", "Nicho", "Vistas", "Alcance", "Me gusta", "Comentarios", "Compartidos", "Interacciones", "Clics", "Conversaciones", "Ventas", "Ingresos MXN"],
+      ...paquete.por_post.map((p) => [
+        p.copy,
+        p.fecha_publicacion ? new Date(p.fecha_publicacion).toLocaleDateString("es-MX") : "",
+        p.nicho_label ?? "",
+        p.vistas,
+        p.alcance ?? "",
+        p.likes,
+        p.comentarios,
+        p.compartidos,
+        p.interacciones,
+        p.clics ?? "",
+        p.leads,
+        p.ventas,
+        p.ingresos,
+      ]),
+    ];
+    const csv = "\uFEFF" + filas.map((f) => f.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "metricas-publivende.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast.success("Tabla de métricas descargada (CSV)");
+  }
+
   async function descargarPdf() {
     const token = getSessionToken();
     if (!token) return toast.error("Sesión inválida");
@@ -85,10 +129,10 @@ function Resultados() {
       const blob = await res.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "reporte-lanzamiento-publivende.pdf";
+      a.download = "reporte-general-publivende.pdf";
       a.click();
       URL.revokeObjectURL(a.href);
-      toast.success("Reporte de Lanzamiento descargado");
+      toast.success("Reporte general descargado");
     } catch {
       toast.error("No se pudo generar el PDF. Intenta de nuevo.");
     } finally {
@@ -104,19 +148,55 @@ function Resultados() {
     interacciones: r.interacciones,
   }));
 
+  const porPostOrdenado = useMemo(() => {
+    if (!paquete) return [];
+    const arr = [...paquete.por_post];
+    arr.sort((a, b) => {
+      const va = (a as unknown as Record<string, unknown>)[orden.clave];
+      const vb = (b as unknown as Record<string, unknown>)[orden.clave];
+      const na = typeof va === "number" ? va : -1;
+      const nb = typeof vb === "number" ? vb : -1;
+      return (na - nb) * orden.dir;
+    });
+    return arr;
+  }, [paquete, orden]);
+
+  const thOrden = (clave: string, label: string) => (
+    <th className="py-2 pr-3">
+      <button
+        type="button"
+        onClick={() => setOrden((o) => ({ clave, dir: o.clave === clave ? (o.dir === 1 ? -1 : 1) : -1 }))}
+        className="inline-flex items-center gap-1 hover:text-slate-800 uppercase"
+      >
+        {label}
+        {orden.clave === clave ? (
+          orden.dir === -1 ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />
+        ) : (
+          <ArrowUpDown className="w-3 h-3 opacity-50" />
+        )}
+      </button>
+    </th>
+  );
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Resultados</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">Métricas</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Todo medido desde las APIs oficiales de tus redes. Lo que una red no entrega se muestra como «No disponible».
+            El rendimiento de tu difusión, medido desde las APIs oficiales de las redes de la Red PubliVende. Lo que una red no entrega se muestra como «No disponible».
           </p>
         </div>
-        <Button onClick={descargarPdf} disabled={descargando || !paquete} className="gap-2">
-          {descargando ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-          Descargar Reporte de Lanzamiento (PDF)
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={descargarCsv} disabled={!paquete} className="gap-2">
+            <FileSpreadsheet className="w-4 h-4" />
+            Descargar tabla (CSV)
+          </Button>
+          <Button onClick={descargarPdf} disabled={descargando || !paquete} className="gap-2">
+            {descargando ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+            Descargar reporte general (PDF)
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
@@ -148,7 +228,7 @@ function Resultados() {
 
       {cargando && (
         <div className="flex items-center gap-2 text-slate-500 text-sm">
-          <Loader2 className="w-4 h-4 animate-spin" /> Cargando resultados reales…
+          <Loader2 className="w-4 h-4 animate-spin" /> Cargando métricas reales…
         </div>
       )}
       {error && (
@@ -159,13 +239,18 @@ function Resultados() {
 
       {paquete && !cargando && (
         <>
+          {!paquete.anterior && postId === "todos" && (
+            <p className="text-xs text-slate-500">
+              Sin comparación todavía: no hay publicaciones del periodo anterior para contrastar. La variación % contra el periodo anterior aparecerá en cuanto exista.
+            </p>
+          )}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Kpi label="Vistas" value={fmt(paquete.totales.vistas)} sub={`${paquete.totales.posts} publicaciones medidas`} />
-            <Kpi label="Alcance" value={fmt(paquete.totales.alcance)} sub="Personas únicas alcanzadas" />
-            <Kpi label="Interacciones" value={fmt(paquete.totales.interacciones)} sub={`${fmt(paquete.totales.likes)} me gusta · ${fmt(paquete.totales.comentarios)} comentarios · ${fmt(paquete.totales.compartidos)} compartidos`} />
-            <Kpi label="Clics medidos" value={fmt(paquete.totales.clics)} sub="Enlaces /p/ y clics reportados por las redes" />
-            <Kpi label="Conversaciones atribuidas" value={fmt(paquete.totales.leads)} sub="Leads de WhatsApp con post de origen" />
-            <Kpi label="Ventas cerradas" value={fmt(paquete.totales.ventas_cerradas)} sub={money(paquete.totales.ingresos)} />
+            <Kpi label="Vistas" value={fmt(paquete.totales.vistas)} sub={`${paquete.totales.posts} publicaciones medidas`} delta={deltaPct(paquete.totales.vistas, paquete.anterior?.vistas)} />
+            <Kpi label="Alcance" value={fmt(paquete.totales.alcance)} sub="Personas únicas alcanzadas" delta={deltaPct(paquete.totales.alcance, paquete.anterior?.alcance)} />
+            <Kpi label="Interacciones" value={fmt(paquete.totales.interacciones)} sub={`${fmt(paquete.totales.likes)} me gusta · ${fmt(paquete.totales.comentarios)} comentarios · ${fmt(paquete.totales.compartidos)} compartidos`} delta={deltaPct(paquete.totales.interacciones, paquete.anterior?.interacciones)} />
+            <Kpi label="Clics medidos" value={fmt(paquete.totales.clics)} sub="Enlaces /p/ y clics reportados por las redes" delta={deltaPct(paquete.totales.clics, paquete.anterior?.clics)} />
+            <Kpi label="Conversaciones atribuidas" value={fmt(paquete.totales.leads)} sub="Leads de WhatsApp con post de origen" delta={deltaPct(paquete.totales.leads, paquete.anterior?.leads)} />
+            <Kpi label="Ventas cerradas" value={fmt(paquete.totales.ventas_cerradas)} sub={money(paquete.totales.ingresos)} delta={deltaPct(paquete.totales.ventas_cerradas, paquete.anterior?.ventas_cerradas)} />
             <Kpi label="Seguidores" value={fmt(paquete.totales.seguidores)} sub="Suma de tus redes conectadas" />
             <Kpi label="Distribuciones" value={fmt(paquete.por_post.reduce((s, p) => s + p.distribuciones, 0))} sub="Salidas por la Red PubliVende" />
           </div>
@@ -199,7 +284,7 @@ function Resultados() {
                       <XAxis dataKey="red" fontSize={11} />
                       <YAxis fontSize={11} />
                       <Tooltip />
-                      <Bar dataKey="vistas" fill="#1d4ed8" name="Vistas" />
+                      <Bar dataKey="vistas" fill="#7c3aed" name="Vistas" />
                       <Bar dataKey="interacciones" fill="#059669" name="Interacciones" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -209,6 +294,23 @@ function Resultados() {
 
             <Card className="p-5">
               <h2 className="font-semibold mb-3">Evolución de la cuenta</h2>
+              <div className="flex gap-1.5 mb-3">
+                {(
+                  [
+                    { id: "vistas_totales", label: "Vistas por día" },
+                    { id: "seguidores", label: "Seguidores" },
+                  ] as const
+                ).map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setMetricaGrafica(m.id)}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${metricaGrafica === m.id ? "bg-primary text-white border-primary" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
               {paquete.evolucion.length > 1 ? (
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -217,8 +319,7 @@ function Resultados() {
                       <XAxis dataKey="fecha" fontSize={11} />
                       <YAxis fontSize={11} />
                       <Tooltip />
-                      <Line type="monotone" dataKey="seguidores" stroke="#1d4ed8" name="Seguidores" strokeWidth={2} />
-                      <Line type="monotone" dataKey="vistas_totales" stroke="#059669" name="Vistas del día" strokeWidth={2} />
+                      <Line type="monotone" dataKey={metricaGrafica} stroke={metricaGrafica === "seguidores" ? "#059669" : "#7c3aed"} name={metricaGrafica === "seguidores" ? "Seguidores" : "Vistas del día"} strokeWidth={2} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -282,21 +383,24 @@ function Resultados() {
             {paquete.por_post.length === 0 ? (
               <p className="text-sm text-slate-500">Sin publicaciones medidas en este periodo.</p>
             ) : (
-              <table className="w-full text-sm min-w-[720px]">
+              <table className="w-full text-sm min-w-[980px]">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-slate-500 border-b">
                     <th className="py-2 pr-3">Publicación</th>
-                    <th className="py-2 pr-3">Vistas</th>
-                    <th className="py-2 pr-3">Alcance</th>
-                    <th className="py-2 pr-3">Interacc.</th>
-                    <th className="py-2 pr-3">Clics</th>
-                    <th className="py-2 pr-3">Convers.</th>
-                    <th className="py-2 pr-3">Ventas</th>
-                    <th className="py-2">Ingresos</th>
+                    {thOrden("vistas", "Vistas")}
+                    {thOrden("alcance", "Alcance")}
+                    {thOrden("likes", "Me gusta")}
+                    {thOrden("comentarios", "Comentarios")}
+                    {thOrden("compartidos", "Compartidos")}
+                    {thOrden("interacciones", "Interacc.")}
+                    {thOrden("clics", "Clics")}
+                    {thOrden("leads", "Convers.")}
+                    {thOrden("ventas", "Ventas")}
+                    {thOrden("ingresos", "Ingresos")}
                   </tr>
                 </thead>
                 <tbody>
-                  {paquete.por_post.map((p) => (
+                  {porPostOrdenado.map((p) => (
                     <tr key={p.id} className="border-b border-slate-100 align-top">
                       <td className="py-2 pr-3 max-w-[280px]">
                         <div className="line-clamp-2">{p.copy}</div>
@@ -307,6 +411,9 @@ function Resultados() {
                       </td>
                       <td className="py-2 pr-3 font-medium">{fmt(p.vistas)}</td>
                       <td className="py-2 pr-3">{fmt(p.alcance)}</td>
+                      <td className="py-2 pr-3">{fmt(p.likes)}</td>
+                      <td className="py-2 pr-3">{fmt(p.comentarios)}</td>
+                      <td className="py-2 pr-3">{fmt(p.compartidos)}</td>
                       <td className="py-2 pr-3">{fmt(p.interacciones)}</td>
                       <td className="py-2 pr-3">{fmt(p.clics)}</td>
                       <td className="py-2 pr-3">{fmt(p.leads)}</td>

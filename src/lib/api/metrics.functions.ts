@@ -50,6 +50,29 @@ export const getResultadosServer = createServerFn({ method: "POST" })
     if (!session) return { ok: false as const, error: "Sesión inválida" };
     const { buildResultados } = await import("@/server/metrics/resultados");
     const paquete = await buildResultados(session.userId, { dias: data.dias, postId: data.postId });
+    // [MÉTRICAS — 2026-11-27] Comparación estilo Analytics: totales del
+    // periodo anterior (misma duración, ventana desplazada) para los
+    // deltas de los KPI. Solo sin filtro por post y solo si el periodo
+    // anterior tuvo publicaciones; si no, anterior queda null y la
+    // pantalla lo dice — nunca un delta falso.
+    if (!data.postId) {
+      const ant = await buildResultados(session.userId, {
+        dias: data.dias,
+        desplazamientoDias: data.dias,
+      });
+      paquete.anterior =
+        ant.totales.posts > 0
+          ? {
+              vistas: ant.totales.vistas,
+              alcance: ant.totales.alcance,
+              interacciones: ant.totales.interacciones,
+              clics: ant.totales.clics,
+              leads: ant.totales.leads,
+              ventas_cerradas: ant.totales.ventas_cerradas,
+              ingresos: ant.totales.ingresos,
+            }
+          : null;
+    }
     return { ok: true as const, paquete };
   });
 

@@ -28,7 +28,7 @@ function renderPdf(p: ResultadosPaquete): Promise<Buffer> {
       day: "numeric", month: "long", year: "numeric",
     });
 
-    doc.fontSize(22).fillColor("#0f172a").text("Reporte de Lanzamiento", { align: "left" });
+    doc.fontSize(22).fillColor("#0f172a").text("Reporte General de Métricas", { align: "left" });
     doc.fontSize(12).fillColor("#334155").text(p.negocio.nombre);
     doc
       .fontSize(10)
