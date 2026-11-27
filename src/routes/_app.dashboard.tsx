@@ -474,36 +474,38 @@ function CabinaDifusion() {
   }, [variants, selectedRedes, reachPorRed, detectedNicho, copy]);
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      {/* 1. Header con Saldo y Redes en tiempo real */}
-      <div className="bg-card rounded-2xl p-6 shadow-soft border border-border">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-5">
+    <div className="space-y-8 max-w-6xl mx-auto">
+      {/* [REESTRUCTURA DISEÑO — 2026-11-27] Encabezado sin caja: título
+          grande, subtítulo y el saldo como tarjeta compacta a la derecha.
+          Solo cambia la estructura visual; la lógica es la misma. */}
+      <header>
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary">
                 Plataforma de Difusión con IA
               </span>
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground mt-1">
-              Cabina de Difusión Multicanal
+            <h1 className="text-[28px] leading-tight font-extrabold tracking-tight text-foreground mt-2">
+              Cabina de Difusión
             </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-sm text-muted-foreground mt-1 max-w-xl">
               {user.nombre_negocio ? `${user.nombre_negocio} · ` : ""}Pega tu link y PubliVende lo difunde con IA en sus comunidades oficiales y redes.
             </p>
           </div>
 
           {/* Saldo y Recarga */}
-          <div className="flex items-center gap-3 bg-muted border border-border rounded-xl p-3 px-4">
+          <div className="flex items-center gap-3.5 bg-card border border-border rounded-2xl px-4 py-3 shadow-soft shrink-0">
             <CreditCard className="w-5 h-5 text-primary shrink-0" />
             <div>
-              <div className="text-[11px] text-muted-foreground font-medium">Saldo de Compartidas</div>
-              <div className="text-sm font-bold text-foreground">
+              <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Saldo de Compartidas</div>
+              <div className="text-base font-extrabold text-foreground leading-snug">
                 {esIlimitado ? "Ilimitadas" : `${creditosRestantes} de ${limiteCompartidas} restantes`}
               </div>
             </div>
             <Link to="/configuracion">
-              <Button size="sm" variant="outline" className="text-xs ml-2">
+              <Button size="sm" className="text-xs ml-1">
                 Recargar
               </Button>
             </Link>
@@ -515,26 +517,25 @@ function CabinaDifusion() {
             «+ Conectar» por popup): el cliente nunca conecta sus cuentas.
             En su lugar, el estado de la Red PubliVende y su saldo de
             compartidas del plan. */}
-        <div className="pt-4">
-          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground mb-2.5">
-            <span>Difusión centralizada: tu link sale por las cuentas oficiales de tu nicho. No necesitas conectar tus cuentas.</span>
-            <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Red PubliVende Activa
-            </span>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {esIlimitado
-              ? "Compartidas ilimitadas en tu plan."
-              : user?.plan === "free"
-                ? `Compartida gratuita: ${compartidasUsadas} de ${limiteCompartidas} usada (es de por vida, no se renueva cada mes).`
-                : `Compartidas de este mes: ${compartidasUsadas} de ${limiteCompartidas} usadas.`}
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 mt-5 text-[13px]">
+          <span className="text-muted-foreground">Difusión centralizada: tu link sale por las cuentas oficiales de tu nicho. No necesitas conectar tus cuentas.</span>
+          <span className="text-emerald-700 font-semibold flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Red PubliVende Activa
+          </span>
         </div>
-      </div>
+        <div className="text-[13px] text-muted-foreground mt-1">
+          {esIlimitado
+            ? "Compartidas ilimitadas en tu plan."
+            : user?.plan === "free"
+              ? `Compartida gratuita: ${compartidasUsadas} de ${limiteCompartidas} usada (es de por vida, no se renueva cada mes).`
+              : `Compartidas de este mes: ${compartidasUsadas} de ${limiteCompartidas} usadas.`}
+        </div>
+        <div className="border-b border-border mt-5" />
+      </header>
 
       {/* Indicador de Borrador Guardado Automáticamente */}
       {hasDraftRestored && Boolean(sourceUrl || copy || media || brainResult) && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-900 shadow-soft">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[13px] text-emerald-900 shadow-soft">
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <div>
@@ -553,19 +554,19 @@ function CabinaDifusion() {
         </div>
       )}
 
-      {/* 2. Paso 1: Pega tu Enlace a Difundir */}
+      {/* Paso 1: Pega tu Enlace a Difundir */}
       <Card className="p-6 border-border shadow-soft">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">1</span>
-          <h2 className="text-base font-bold text-stone-900">Pega el enlace de tu publicación o producto</h2>
+        <div className="flex items-center gap-2.5 mb-1.5">
+          <span className="bg-accent text-accent-foreground text-[10px] font-extrabold tracking-[0.1em] rounded-full px-2.5 py-1">PASO 1</span>
+          <h2 className="text-base font-bold text-foreground">Pega el enlace de tu publicación o producto</h2>
         </div>
-        <p className="text-xs text-stone-500 mb-4">
+        <p className="text-[13px] text-muted-foreground mb-5">
           Acepta enlaces de Facebook (post, foto, video), Instagram, TikTok, YouTube o tu tienda en línea.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-2.5">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Link2 className="absolute left-3.5 top-1/2 -transtone-y-1/2 w-4 h-4 text-stone-400" />
+            <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={sourceUrl}
               onChange={(e) => setSourceUrl(e.target.value)}
@@ -573,14 +574,14 @@ function CabinaDifusion() {
                 if (e.key === "Enter") void procesarEnlace();
               }}
               placeholder="https://facebook.com/share/p/... o enlace de tu negocio"
-              className="pl-10 h-11 text-sm bg-stone-50 border-stone-200 text-stone-900 placeholder:text-stone-400 focus:bg-white"
+              className="pl-11 h-12 text-sm bg-white border-input text-foreground placeholder:text-muted-foreground"
             />
           </div>
 
           <Button
             onClick={() => void procesarEnlace()}
             disabled={importing || !sourceUrl.trim()}
-            className="h-11 px-6 bg-primary hover:bg-primary/90 text-white font-semibold text-sm gap-2 shadow-sm transition-all"
+            className="h-12 px-6 bg-primary hover:bg-primary/90 text-white font-semibold text-sm gap-2 shadow-soft transition-all"
           >
             {importing ? (
               <>
@@ -595,16 +596,16 @@ function CabinaDifusion() {
         </div>
 
         {sourceMeta && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-stone-600 pt-2 border-t border-stone-100">
-            <span className="font-medium text-stone-700">Fuente detectada:</span>
-            <Badge variant="outline" className="bg-stone-50 border-stone-200 text-stone-800">
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground pt-4 border-t border-border">
+            <span className="font-medium text-foreground">Fuente detectada:</span>
+            <Badge variant="outline" className="bg-muted border-border text-foreground text-xs px-2.5 py-1 rounded-full">
               {SOURCE_LABELS[sourceMeta.platform]}
             </Badge>
-            <Badge variant="outline" className="bg-accent border-primary/25 text-accent-foreground">
+            <Badge variant="outline" className="bg-accent border-primary/25 text-accent-foreground text-xs px-2.5 py-1 rounded-full">
               {sourceMeta.mediaType === "video" ? "Video detectado" : "Imagen detectada"}
             </Badge>
             {detectedNicho && (
-              <Badge className="bg-accent text-accent-foreground border border-primary/25 gap-1">
+              <Badge className="bg-accent text-accent-foreground border border-primary/25 gap-1 text-xs px-2.5 py-1 rounded-full">
                 <Sparkles className="w-3 h-3" /> Nicho: {detectedNicho}
               </Badge>
             )}
@@ -612,437 +613,446 @@ function CabinaDifusion() {
         )}
       </Card>
 
-      {/* 3. Paso 2: Vista previa del contenido y adaptación por IA */}
-      <div className="grid lg:grid-cols-12 gap-6">
-        {/* Columna Izquierda: Vista previa con Foto Real */}
-        <div className="lg:col-span-5 space-y-4">
-          <Card className="p-5 border-border shadow-soft">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">2</span>
-              <h2 className="text-sm font-bold text-stone-900">Vista previa del contenido</h2>
-            </div>
+      {/* Paso 2 + Paso 3: Vista previa y Texto adaptado */}
+      <div className="grid lg:grid-cols-12 gap-6 items-start">
+        <Card className="lg:col-span-5 p-6 border-border shadow-soft">
+          <div className="flex items-center gap-2.5 mb-4">
+            <span className="bg-accent text-accent-foreground text-[10px] font-extrabold tracking-[0.1em] rounded-full px-2.5 py-1">PASO 2</span>
+            <h2 className="text-base font-bold text-foreground">Vista previa del contenido</h2>
+          </div>
 
-            {sourceMeta ? (
-              <div className="space-y-3">
-                <ImportedPostPreview
-                  platform={sourceMeta.platform}
-                  pageName={sourceMeta.pageName ?? fbAccount?.nombre_cuenta ?? user.nombre_negocio}
-                  caption={copyPorRed[activeTabRed] || copy || sourceMeta.originalCaption}
-                  mediaUrl={media}
-                  mediaType={sourceMeta.mediaType}
-                  linkTitle={sourceMeta.title}
-                  linkDescription={sourceMeta.linkDescription}
-                  linkUrl={sourceMeta.url}
-                />
-                <div className="pt-2 border-t flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-stone-500 font-medium">
-                    {media ? "Imagen lista para compartir" : "Sin imagen detectada"}
-                  </span>
-                  <label className="cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*,video/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                          const dataUrl = ev.target?.result as string;
-                          if (dataUrl) {
-                            setMedia(dataUrl);
-                            toast.success("Foto del post actualizada correctamente");
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      }}
-                    />
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary bg-accent hover:bg-accent/70 border border-primary/25 px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
-                      <Upload className="w-3.5 h-3.5" />
-                      {media ? "Cambiar foto" : "Subir foto"}
-                    </span>
-                  </label>
-                </div>
-              </div>
-            ) : (
-              <div className="border-2 border-dashed border-stone-200 rounded-xl p-8 text-center bg-stone-50">
-                <Link2 className="w-8 h-8 mx-auto text-stone-400 mb-2" />
-                <p className="text-xs font-semibold text-stone-700">Pega un enlace en el paso 1</p>
-                <p className="text-[11px] text-stone-500 mt-1">
-                  Aquí verás en tiempo real la foto real y el texto adaptado para cada red.
-                </p>
-              </div>
-            )}
-          </Card>
-
-          {/* 1. Diagnóstico y Comunidades del Cerebro Agéntico */}
-          {brainResult ? (
-            <Card className="p-5 border-border bg-card shadow-soft space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-primary" /> Cerebro Agéntico PubliVende
-                  </span>
-                </div>
-                <Badge className="bg-accent text-accent-foreground border border-primary/20 text-[11px] font-bold">
-                  {brainResult.nichoAsignado.afinidadScore}% Afinidad
-                </Badge>
-              </div>
-
-              {/* Métricas Principales */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-muted border border-border rounded-xl p-3">
-                  <div className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5 text-primary" /> Personas Alcanzadas
-                  </div>
-                  <div className="text-base font-extrabold text-foreground mt-1">
-                    {formatAlcanceNumero(brainResult.alcanceEstimado.personasMin)} – {formatAlcanceNumero(brainResult.alcanceEstimado.personasMax)}
-                  </div>
-                </div>
-
-                <div className="bg-muted border border-border rounded-xl p-3">
-                  <div className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                    <Globe className="w-3.5 h-3.5 text-emerald-600" /> Comunidades del Banco
-                  </div>
-                  <div className="text-base font-extrabold text-emerald-700 mt-1">
-                    {brainResult.comunidadesObjetivo.length} Oficiales
-                  </div>
-                </div>
-              </div>
-
-              {/* Diagnóstico Estratégico de la Oferta */}
-              <div className="bg-muted border border-border rounded-xl p-3.5 space-y-2 text-xs">
-                <div>
-                  <span className="text-muted-foreground font-semibold block text-[10px] uppercase">Giro Comercial:</span>
-                  <span className="text-foreground font-bold">{brainResult.diagnostico.giroComercial}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground font-semibold block text-[10px] uppercase">Oferta Detectada:</span>
-                  <span className="text-foreground">{brainResult.diagnostico.ofertaDetectada}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground font-semibold block text-[10px] uppercase">Gancho Psicológico:</span>
-                  <span className="text-amber-700 font-medium">{brainResult.diagnostico.ganchoPsicologico}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground font-semibold block text-[10px] uppercase">Público Objetivo:</span>
-                  <span className="text-foreground/80">{brainResult.diagnostico.publicoObjetivo}</span>
-                </div>
-              </div>
-
-              {/* Comunidades Oficiales Asignadas por el Banco */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-foreground flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-primary" /> Comunidades Oficiales Asignadas:
-                  </span>
-                  <span className="text-[10px] text-muted-foreground font-medium">
-                    {brainResult.nichoAsignado.nombre}
-                  </span>
-                </div>
-
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {brainResult.comunidadesObjetivo.map((c, i) => (
-                    <div
-                      key={c.id || i}
-                      className="bg-white border border-border rounded-xl p-2.5 text-xs hover:border-primary/40 transition-colors"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="font-semibold text-foreground text-[11px] leading-tight">
-                          {c.nombre}
-                        </div>
-                        <Badge variant="outline" className="text-[9px] bg-accent border-primary/20 text-accent-foreground shrink-0">
-                          {c.miembros.toLocaleString()} miembros
-                        </Badge>
-                      </div>
-                      <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-2">
-                        <span className="text-emerald-700 font-medium capitalize">[{c.plataforma}]</span>
-                        <span>Alcance {c.alcance}</span>
-                        {c.ciudad && <span>· {c.ciudad}</span>}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground mt-1 italic">
-                        &quot;{c.razonSeleccionada}&quot;
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Hashtags Virales del Banco */}
-              {brainResult.hashtagsVirales?.length > 0 && (
-                <div className="pt-2 border-t border-border">
-                  <div className="text-[11px] font-semibold text-foreground mb-1.5 flex items-center gap-1">
-                    <Hash className="w-3 h-3 text-primary" /> Hashtags Virales Asignados:
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {brainResult.hashtagsVirales.slice(0, 8).map((h) => (
-                      <span key={h} className="text-[10px] bg-accent text-accent-foreground border border-primary/20 px-2 py-0.5 rounded-md font-mono">
-                        {h}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </Card>
-          ) : reachAnalysis ? (
-            <Card className="p-5 border-border bg-card shadow-soft">
-              <div className="flex items-center gap-2 text-foreground font-bold text-xs uppercase tracking-wider mb-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                Impacto Proyectado por IA
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mt-3">
-                <div className="bg-muted border border-border rounded-xl p-3">
-                  <div className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                    <Users className="w-3 h-3 text-primary" /> Personas Alcanzadas
-                  </div>
-                  <div className="text-base font-extrabold text-foreground mt-0.5">
-                    {formatAlcanceNumero(totalAlcance.personas_min)} – {formatAlcanceNumero(totalAlcance.personas_max)}
-                  </div>
-                </div>
-
-                <div className="bg-muted border border-border rounded-xl p-3">
-                  <div className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3 text-emerald-600" /> Score de Afinidad
-                  </div>
-                  <div className="text-base font-extrabold text-emerald-700 mt-0.5">
-                    {reachAnalysis.confianza}% Alta
-                  </div>
-                </div>
-              </div>
-
-              {/* Nichos detectados */}
-              <div className="mt-3">
-                <div className="text-[11px] font-semibold text-stone-700 mb-1">Nichos de mercado afines:</div>
-                <div className="flex flex-wrap gap-1">
-                  {reachAnalysis.mercados.slice(0, 5).map((m) => (
-                    <Badge key={m} variant="secondary" className="text-[10px] bg-white border border-stone-200 text-stone-700">
-                      {m}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* Hashtags Virales */}
-              {viralHashtags.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-border">
-                  <div className="text-[11px] font-semibold text-stone-700 mb-1 flex items-center gap-1">
-                    <Hash className="w-3 h-3 text-primary" /> Hashtags optimizados:
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {viralHashtags.map((h) => (
-                      <span key={h} className="text-[10px] bg-accent text-accent-foreground border border-primary/20 px-1.5 py-0.5 rounded">
-                        {h}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </Card>
-          ) : null}
-        </div>
-
-        {/* Columna Derecha: Copys adaptados por Red + Cobertura + Difusión */}
-        <div className="lg:col-span-7 space-y-5">
-          {/* Adaptación de Textos por Red */}
-          <Card className="p-5 border-border shadow-soft">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">3</span>
-                <h2 className="text-sm font-bold text-stone-900">Texto adaptado para cada red</h2>
-              </div>
-              <Badge variant="outline" className="text-[10px] border-stone-200 text-stone-600">
-                Optimizado con IA
-              </Badge>
-            </div>
-
-            <Tabs value={activeTabRed} onValueChange={(v) => setActiveTabRed(v as Red)}>
-              <TabsList className="grid grid-cols-4 w-full h-10 bg-stone-100 p-1 rounded-lg">
-                {ALL_REDES.map((r) => {
-                  const Icon = ICONS[r];
-                  return (
-                    <TabsTrigger
-                      key={r}
-                      value={r}
-                      className="text-xs flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-xs rounded-md"
-                    >
-                      <Icon className="w-3.5 h-3.5" style={{ color: RED_COLORS[r] }} />
-                      <span className="hidden sm:inline">{RED_LABELS[r]}</span>
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-
-              {ALL_REDES.map((r) => (
-                <TabsContent key={r} value={r} className="mt-3 space-y-2">
-                  <Textarea
-                    rows={5}
-                    value={copyPorRed[r] ?? copy}
-                    onChange={(e) => setCopyPorRed({ ...copyPorRed, [r]: e.target.value })}
-                    placeholder={`Escribe o ajusta el copy para ${RED_LABELS[r]}…`}
-                    className="text-xs leading-relaxed border-stone-200 focus:border-primary"
+          {sourceMeta ? (
+            <div className="space-y-3">
+              <ImportedPostPreview
+                platform={sourceMeta.platform}
+                pageName={sourceMeta.pageName ?? fbAccount?.nombre_cuenta ?? user.nombre_negocio}
+                caption={copyPorRed[activeTabRed] || copy || sourceMeta.originalCaption}
+                mediaUrl={media}
+                mediaType={sourceMeta.mediaType}
+                linkTitle={sourceMeta.title}
+                linkDescription={sourceMeta.linkDescription}
+                linkUrl={sourceMeta.url}
+              />
+              <div className="pt-3 border-t border-border flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground font-medium">
+                  {media ? "Imagen lista para compartir" : "Sin imagen detectada"}
+                </span>
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        const dataUrl = ev.target?.result as string;
+                        if (dataUrl) {
+                          setMedia(dataUrl);
+                          toast.success("Foto del post actualizada correctamente");
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }}
                   />
-                  <div className="flex items-center justify-between text-[11px] text-stone-500">
-                    <span>
-                      {(copyPorRed[r] ?? copy).length}/{RED_LIMITS[r]} caracteres
-                    </span>
-                    {variants[r]?.hook && (
-                      <span className="text-primary font-medium truncate max-w-xs">
-                        Gancho: &quot;{variants[r]!.hook}&quot;
-                      </span>
-                    )}
-                  </div>
-                </TabsContent>
-              ))}
-            </Tabs>
-          </Card>
-
-          {/* Cobertura Geográfica */}
-          <Card className="p-5 border-border shadow-soft">
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-bold text-stone-900">Cobertura y Alcance Territorial</h2>
+                  <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary bg-accent hover:bg-accent/70 border border-primary/25 px-3.5 py-2 rounded-[10px] transition-colors cursor-pointer">
+                    <Upload className="w-3.5 h-3.5" />
+                    {media ? "Cambiar foto" : "Subir foto"}
+                  </span>
+                </label>
+              </div>
             </div>
-            <p className="text-xs text-stone-500 mb-3">
-              ¿A qué nivel geográfico deseas dirigir esta difusión?
-            </p>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {[
-                { id: "local", label: "Local", desc: user.ciudad || "Mi ciudad", icon: MapPin },
-                { id: "estatal", label: "Estatal", desc: "Todo el estado", icon: MapPin },
-                { id: "nacional", label: "Nacional", desc: "Todo el país", icon: Globe },
-                { id: "global", label: "Global", desc: "Internacional", icon: Globe },
-              ].map((c) => {
-                const Icon = c.icon;
-                const active = alcanceNivel === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setAlcanceNivel(c.id as AlcanceTipo)}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all cursor-pointer ${
-                      active
-                        ? "bg-accent border-primary text-accent-foreground font-semibold shadow-xs"
-                        : "bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100"
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 mb-1 ${active ? "text-primary" : "text-stone-400"}`} />
-                    <span className="text-xs">{c.label}</span>
-                    <span className="text-[10px] text-stone-400 mt-0.5 truncate max-w-full">{c.desc}</span>
-                  </button>
-                );
-              })}
+          ) : (
+            <div className="border-2 border-dashed border-border rounded-2xl p-10 text-center bg-muted">
+              <Link2 className="w-9 h-9 mx-auto text-muted-foreground mb-2.5" />
+              <p className="text-sm font-semibold text-foreground">Pega un enlace en el paso 1</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Aquí verás en tiempo real la foto real y el texto adaptado para cada red.
+              </p>
             </div>
-          </Card>
+          )}
+        </Card>
 
-          {/* Redes de Destino Activas */}
-          <Card className="p-5 border-border shadow-soft">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-bold text-stone-900">¿En qué redes compartir?</div>
-              <span className="text-xs text-stone-500">
-                {selectedRedes.length} redes seleccionadas
-              </span>
+        <Card className="lg:col-span-7 p-6 border-border shadow-soft">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <span className="bg-accent text-accent-foreground text-[10px] font-extrabold tracking-[0.1em] rounded-full px-2.5 py-1">PASO 3</span>
+              <h2 className="text-base font-bold text-foreground">Texto adaptado para cada red</h2>
             </div>
+            <Badge variant="outline" className="text-[11px] border-border text-muted-foreground rounded-full px-2.5 py-1">
+              Optimizado con IA
+            </Badge>
+          </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <Tabs value={activeTabRed} onValueChange={(v) => setActiveTabRed(v as Red)}>
+            <TabsList className="grid grid-cols-4 w-full h-11 bg-muted p-1 rounded-xl">
               {ALL_REDES.map((r) => {
                 const Icon = ICONS[r];
-                const sel = selectedRedes.includes(r);
-
                 return (
-                  <button
+                  <TabsTrigger
                     key={r}
-                    type="button"
-                    onClick={() => toggleRed(r)}
-                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      sel
-                        ? "border-primary bg-accent/60 text-foreground font-semibold"
-                        : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
-                    }`}
+                    value={r}
+                    className="text-[13px] font-medium flex items-center gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-soft data-[state=active]:font-semibold rounded-lg"
                   >
-                    <div className={`w-4 h-4 rounded-md border flex items-center justify-center ${sel ? "bg-primary border-primary text-white" : "border-stone-300"}`}>
-                      {sel && <Check className="w-3 h-3" />}
-                    </div>
-                    <Icon className="w-4 h-4 shrink-0" style={{ color: RED_COLORS[r] }} />
-                    <div className="truncate text-xs">
-                      <div>{RED_LABELS[r]}</div>
-                      <div className="text-[9px] text-stone-400 truncate">
-                        Red PubliVende
-                      </div>
-                    </div>
-                  </button>
+                    <Icon className="w-4 h-4" style={{ color: RED_COLORS[r] }} />
+                    <span className="hidden sm:inline">{RED_LABELS[r]}</span>
+                  </TabsTrigger>
                 );
               })}
+            </TabsList>
 
-              {/* WhatsApp */}
-              <button
-                type="button"
-                onClick={() => setWhatsappSelected(!whatsappSelected)}
-                className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                  whatsappSelected
-                    ? "border-emerald-600 bg-emerald-50/60 text-emerald-950 font-semibold"
-                    : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-md border flex items-center justify-center ${whatsappSelected ? "bg-emerald-600 border-emerald-600 text-white" : "border-stone-300"}`}>
-                  {whatsappSelected && <Check className="w-3 h-3" />}
+            {ALL_REDES.map((r) => (
+              <TabsContent key={r} value={r} className="mt-4 space-y-2">
+                <Textarea
+                  rows={5}
+                  value={copyPorRed[r] ?? copy}
+                  onChange={(e) => setCopyPorRed({ ...copyPorRed, [r]: e.target.value })}
+                  placeholder={`Escribe o ajusta el copy para ${RED_LABELS[r]}…`}
+                  className="text-sm leading-relaxed border-input focus:border-primary rounded-xl"
+                />
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    {(copyPorRed[r] ?? copy).length}/{RED_LIMITS[r]} caracteres
+                  </span>
+                  {variants[r]?.hook && (
+                    <span className="text-primary font-medium truncate max-w-xs">
+                      Gancho: &quot;{variants[r]!.hook}&quot;
+                    </span>
+                  )}
                 </div>
-                <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                <div className="truncate text-xs">
-                  <div>WhatsApp</div>
-                  <div className="text-[9px] text-stone-400">Canal de difusión</div>
-                </div>
-              </button>
-            </div>
-          </Card>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </Card>
+      </div>
 
-          {/* 4. Paso 4: Botón Grande de Difusión */}
-          <div className="pt-2">
-            <Button
-              onClick={() => void ejecutarDifusion()}
-              disabled={publishing || (!copy.trim() && !media)}
-              className="w-full h-14 bg-primary hover:bg-primary/90 text-white text-base font-extrabold shadow-elegant rounded-xl gap-2 cursor-pointer transition-all"
-            >
-              {publishing ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" /> Compartiendo en la Red PubliVende…
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-5 h-5" /> Compartir en la Red PubliVende {brainResult ? `· ${selectedRedes.length} redes + ${brainResult.comunidadesObjetivo.length} comunidades` : `· ${selectedRedes.length} redes`}
-                </>
-              )}
-            </Button>
-            <div className="flex items-center justify-between text-xs text-stone-500 mt-2 px-1">
-              <span>Costo: <b>1 compartida</b></span>
-              <span>
-                {esIlimitado ? "Saldo ilimitado" : `Saldo restante tras publicar: ${Math.max(0, creditosRestantes - 1)}`}
+      {/* Cerebro Agéntico / Impacto: banda ancha a 3 columnas */}
+      {brainResult ? (
+        <Card className="p-6 border-border bg-card shadow-soft">
+          <div className="flex items-center justify-between gap-3 pb-5 border-b border-border">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-[10px] bg-accent flex items-center justify-center shrink-0">
+                <Sparkles className="w-5 h-5 text-primary" />
               </span>
-            </div>
-            <p className="text-[11px] text-stone-400 text-center mt-1">
-              Difusión multicanal centralizada: se distribuye a través de la infraestructura y comunidades oficiales de PubliVende.
-            </p>
-
-            {publishedUrl && (
-              <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Tu publicación ya está en vivo en la Red PubliVende.</span>
+              <div>
+                <div className="text-base font-extrabold text-foreground flex items-center gap-2">
+                  Cerebro Agéntico PubliVende
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
-                <a
-                  href={publishedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-bold underline flex items-center gap-1 hover:text-emerald-700"
-                >
-                  Ver en vivo <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                <div className="text-[13px] text-muted-foreground">Diagnóstico y comunidades para tu publicación</div>
               </div>
-            )}
+            </div>
+            <Badge className="bg-accent text-accent-foreground border border-primary/20 text-xs font-bold rounded-full px-3 py-1.5 shrink-0">
+              {brainResult.nichoAsignado.afinidadScore}% Afinidad
+            </Badge>
           </div>
+
+          <div className="grid md:grid-cols-3 gap-8 pt-6">
+            {/* Columna 1: Métricas */}
+            <div className="space-y-6">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-primary" /> Personas Alcanzadas
+                </div>
+                <div className="text-[22px] leading-tight font-extrabold text-foreground mt-1.5">
+                  {formatAlcanceNumero(brainResult.alcanceEstimado.personasMin)} – {formatAlcanceNumero(brainResult.alcanceEstimado.personasMax)}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-emerald-600" /> Comunidades del Banco
+                </div>
+                <div className="text-lg font-extrabold text-emerald-700 mt-1">
+                  {brainResult.comunidadesObjetivo.length} Oficiales
+                </div>
+              </div>
+            </div>
+
+            {/* Columna 2: Diagnóstico Estratégico de la Oferta */}
+            <div className="space-y-4 md:border-l md:border-border md:pl-8">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground block">Giro Comercial</span>
+                <span className="text-sm text-foreground font-semibold">{brainResult.diagnostico.giroComercial}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground block">Oferta Detectada</span>
+                <span className="text-sm text-foreground">{brainResult.diagnostico.ofertaDetectada}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground block">Gancho Psicológico</span>
+                <span className="text-sm text-amber-700 font-medium">{brainResult.diagnostico.ganchoPsicologico}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground block">Público Objetivo</span>
+                <span className="text-sm text-foreground/80">{brainResult.diagnostico.publicoObjetivo}</span>
+              </div>
+            </div>
+
+            {/* Columna 3: Comunidades Oficiales Asignadas por el Banco */}
+            <div className="md:border-l md:border-border md:pl-8">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-primary" /> Comunidades Asignadas
+                </span>
+                <span className="text-[11px] text-muted-foreground font-medium text-right">
+                  {brainResult.nichoAsignado.nombre}
+                </span>
+              </div>
+
+              <div className="max-h-64 overflow-y-auto pr-1 mt-1 divide-y divide-border">
+                {brainResult.comunidadesObjetivo.map((c, i) => (
+                  <div key={c.id || i} className="py-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="font-semibold text-foreground text-[13px] leading-tight">
+                        {c.nombre}
+                      </div>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {c.miembros.toLocaleString()} miembros
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+                      <span className="text-emerald-700 font-medium capitalize">[{c.plataforma}]</span>
+                      <span>Alcance {c.alcance}</span>
+                      {c.ciudad && <span>· {c.ciudad}</span>}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5 italic">
+                      &quot;{c.razonSeleccionada}&quot;
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Hashtags Virales del Banco */}
+          {brainResult.hashtagsVirales?.length > 0 && (
+            <div className="mt-6 pt-5 border-t border-border">
+              <div className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                <Hash className="w-3.5 h-3.5 text-primary" /> Hashtags Virales Asignados:
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {brainResult.hashtagsVirales.slice(0, 8).map((h) => (
+                  <span key={h} className="text-[11px] bg-accent text-accent-foreground border border-primary/20 px-2 py-1 rounded-md font-mono">
+                    {h}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+      ) : reachAnalysis ? (
+        <Card className="p-6 border-border bg-card shadow-soft">
+          <div className="flex items-center gap-3 pb-5 border-b border-border">
+            <span className="w-10 h-10 rounded-[10px] bg-accent flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-primary" />
+            </span>
+            <div>
+              <div className="text-base font-extrabold text-foreground">Impacto Proyectado por IA</div>
+              <div className="text-[13px] text-muted-foreground">Estimación según tu nicho y tu cobertura</div>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 pt-6">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-primary" /> Personas Alcanzadas
+              </div>
+              <div className="text-[22px] leading-tight font-extrabold text-foreground mt-1.5">
+                {formatAlcanceNumero(totalAlcance.personas_min)} – {formatAlcanceNumero(totalAlcance.personas_max)}
+              </div>
+            </div>
+
+            <div className="md:border-l md:border-border md:pl-8">
+              <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground flex items-center gap-1.5">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" /> Score de Afinidad
+              </div>
+              <div className="text-[22px] leading-tight font-extrabold text-emerald-700 mt-1.5">
+                {reachAnalysis.confianza}% Alta
+              </div>
+            </div>
+
+            {/* Nichos detectados */}
+            <div className="md:border-l md:border-border md:pl-8">
+              <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Nichos de mercado afines</div>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {reachAnalysis.mercados.slice(0, 5).map((m) => (
+                  <Badge key={m} variant="secondary" className="text-[11px] bg-muted border border-border text-foreground rounded-full px-2.5 py-1">
+                    {m}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Hashtags Virales */}
+          {viralHashtags.length > 0 && (
+            <div className="mt-6 pt-5 border-t border-border">
+              <div className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                <Hash className="w-3.5 h-3.5 text-primary" /> Hashtags optimizados:
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {viralHashtags.map((h) => (
+                  <span key={h} className="text-[11px] bg-accent text-accent-foreground border border-primary/20 px-2 py-1 rounded-md">
+                    {h}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+      ) : null}
+
+      {/* Cobertura + Redes de destino */}
+      <div className="grid lg:grid-cols-2 gap-6 items-start">
+        {/* Cobertura Geográfica */}
+        <Card className="p-6 border-border shadow-soft">
+          <div className="flex items-center gap-2.5 mb-1.5">
+            <MapPin className="w-4.5 h-4.5 text-primary" />
+            <h2 className="text-base font-bold text-foreground">Cobertura y Alcance Territorial</h2>
+          </div>
+          <p className="text-[13px] text-muted-foreground mb-4">
+            ¿A qué nivel geográfico deseas dirigir esta difusión?
+          </p>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            {[
+              { id: "local", label: "Local", desc: user.ciudad || "Mi ciudad", icon: MapPin },
+              { id: "estatal", label: "Estatal", desc: "Todo el estado", icon: MapPin },
+              { id: "nacional", label: "Nacional", desc: "Todo el país", icon: Globe },
+              { id: "global", label: "Global", desc: "Internacional", icon: Globe },
+            ].map((c) => {
+              const Icon = c.icon;
+              const active = alcanceNivel === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setAlcanceNivel(c.id as AlcanceTipo)}
+                  className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all cursor-pointer ${
+                    active
+                      ? "bg-accent/60 border-primary ring-1 ring-primary/25"
+                      : "bg-white border-border hover:bg-muted"
+                  }`}
+                >
+                  <span className={`w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 ${active ? "bg-accent" : "bg-muted"}`}>
+                    <Icon className={`w-4.5 h-4.5 ${active ? "text-primary" : "text-muted-foreground"}`} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className={`block text-sm font-semibold ${active ? "text-accent-foreground" : "text-foreground"}`}>{c.label}</span>
+                    <span className="block text-xs text-muted-foreground truncate">{c.desc}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
+        {/* Redes de Destino Activas */}
+        <Card className="p-6 border-border shadow-soft">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-base font-bold text-foreground">¿En qué redes compartir?</div>
+            <span className="text-[13px] text-muted-foreground">
+              {selectedRedes.length} redes seleccionadas
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            {ALL_REDES.map((r) => {
+              const Icon = ICONS[r];
+              const sel = selectedRedes.includes(r);
+
+              return (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => toggleRed(r)}
+                  className={`flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    sel
+                      ? "border-primary bg-accent/60 ring-1 ring-primary/25"
+                      : "border-border bg-white hover:bg-muted"
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${sel ? "bg-primary border-primary text-white" : "border-input"}`}>
+                    {sel && <Check className="w-3.5 h-3.5" />}
+                  </div>
+                  <Icon className="w-5 h-5 shrink-0" style={{ color: RED_COLORS[r] }} />
+                  <div className="truncate">
+                    <div className="text-sm font-semibold leading-tight text-foreground">{RED_LABELS[r]}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      Red PubliVende
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+
+            {/* WhatsApp */}
+            <button
+              type="button"
+              onClick={() => setWhatsappSelected(!whatsappSelected)}
+              className={`flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                whatsappSelected
+                  ? "border-emerald-600 bg-emerald-50/60 ring-1 ring-emerald-600/25"
+                  : "border-border bg-white hover:bg-muted"
+              }`}
+            >
+              <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${whatsappSelected ? "bg-emerald-600 border-emerald-600 text-white" : "border-input"}`}>
+                {whatsappSelected && <Check className="w-3.5 h-3.5" />}
+              </div>
+              <MessageCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+              <div className="truncate">
+                <div className="text-sm font-semibold leading-tight text-foreground">WhatsApp</div>
+                <div className="text-[11px] text-muted-foreground">Canal de difusión</div>
+              </div>
+            </button>
+          </div>
+        </Card>
+      </div>
+
+      {/* Paso 4: Botón Grande de Difusión */}
+      <div>
+        <Button
+          onClick={() => void ejecutarDifusion()}
+          disabled={publishing || (!copy.trim() && !media)}
+          className="w-full h-14 bg-primary hover:bg-primary/90 text-white text-base font-extrabold shadow-elegant rounded-xl gap-2 cursor-pointer transition-all"
+        >
+          {publishing ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" /> Compartiendo en la Red PubliVende…
+            </>
+          ) : (
+            <>
+              <Share2 className="w-5 h-5" /> Compartir en la Red PubliVende {brainResult ? `· ${selectedRedes.length} redes + ${brainResult.comunidadesObjetivo.length} comunidades` : `· ${selectedRedes.length} redes`}
+            </>
+          )}
+        </Button>
+        <div className="flex items-center justify-between text-[13px] text-muted-foreground mt-2.5 px-1">
+          <span>Costo: <b className="text-foreground">1 compartida</b></span>
+          <span>
+            {esIlimitado ? "Saldo ilimitado" : `Saldo restante tras publicar: ${Math.max(0, creditosRestantes - 1)}`}
+          </span>
         </div>
+        <p className="text-xs text-muted-foreground text-center mt-1.5">
+          Difusión multicanal centralizada: se distribuye a través de la infraestructura y comunidades oficiales de PubliVende.
+        </p>
+
+        {publishedUrl && (
+          <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-[13px] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Tu publicación ya está en vivo en la Red PubliVende.</span>
+            </div>
+            <a
+              href={publishedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold underline flex items-center gap-1 hover:text-emerald-700"
+            >
+              Ver en vivo <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );

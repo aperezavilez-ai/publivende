@@ -261,9 +261,12 @@ function Conf() {
   }
 
   return (
-    <div className="space-y-5 max-w-4xl">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl md:text-3xl font-bold">Configuración</h1>
+    <div className="space-y-6 max-w-4xl">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[28px] leading-tight font-extrabold tracking-tight">Configuración</h1>
+          <p className="text-sm text-muted-foreground mt-1">Tu perfil, tu WhatsApp de ventas, tus productos y tu plan.</p>
+        </div>
         <Button
           variant="outline"
           size="sm"
@@ -278,18 +281,22 @@ function Conf() {
         </Button>
       </div>
 
-      <Card className="p-5"><h2 className="font-semibold mb-3">Perfil y negocio</h2>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div><Label>Nombre</Label><Input value={user.nombre} onChange={(e) => updateUser({ nombre: e.target.value })} /></div>
-          <div><Label>Negocio</Label><Input value={user.nombre_negocio} onChange={(e) => updateUser({ nombre_negocio: e.target.value })} /></div>
-          <div><Label>Email</Label><Input value={user.email} disabled /></div>
-          <div><Label>WhatsApp</Label><Input value={`${user.codigo_pais} ${user.celular}`} onChange={(e) => updateUser({ celular: e.target.value })} /></div>
+      <Card className="p-6">
+        <h2 className="text-base font-bold mb-1">Perfil y negocio</h2>
+        <p className="text-[13px] text-muted-foreground mb-4">
+          Así te identifican tus clientes cuando PubliVende difunde tu link.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5"><Label className="text-[13px] font-medium">Nombre</Label><Input className="h-11 text-sm" value={user.nombre} onChange={(e) => updateUser({ nombre: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label className="text-[13px] font-medium">Negocio</Label><Input className="h-11 text-sm" value={user.nombre_negocio} onChange={(e) => updateUser({ nombre_negocio: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label className="text-[13px] font-medium">Email</Label><Input className="h-11 text-sm" value={user.email} disabled /></div>
+          <div className="space-y-1.5"><Label className="text-[13px] font-medium">WhatsApp</Label><Input className="h-11 text-sm" value={`${user.codigo_pais} ${user.celular}`} onChange={(e) => updateUser({ celular: e.target.value })} /></div>
         </div>
       </Card>
 
-      <Card className="p-5">
-        <h2 className="font-semibold mb-1">WhatsApp Business</h2>
-        <p className="text-xs text-muted-foreground mb-4">
+      <Card className="p-6">
+        <h2 className="text-base font-bold mb-1">WhatsApp Business</h2>
+        <p className="text-[13px] text-muted-foreground mb-4">
           Conecta <b>tu</b> número. Tus clientes te escriben directo a tu WhatsApp — PubliVende genera los enlaces
           y textos al publicar.
         </p>
@@ -303,7 +310,7 @@ function Conf() {
           usan desde Red PubliVende. Al cliente esta pantalla le muestra su
           plan, sus compartidas y su saldo. */}
       {isAdmin && (
-      <Card className="p-5">
+      <Card className="p-6">
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50/90 p-3 text-xs text-amber-900">
           <b>Solo administración de plataforma.</b> Las cuentas de los clientes ya no se conectan; esta sección corresponde a cuentas del administrador.
         </div>
@@ -327,8 +334,8 @@ function Conf() {
           </div>
         )}
 
-        <h2 className="font-semibold mb-1">Cuentas personales del administrador</h2>
-        <p className="text-xs text-muted-foreground mb-3">
+        <h2 className="text-base font-bold mb-1">Cuentas personales del administrador</h2>
+        <p className="text-[13px] text-muted-foreground mb-3">
           <b>PubliVende difunde las publicaciones de los clientes automáticamente a través de la Red Central Oficial PubliVende y comunidades aliadas.</b>{" "}
           Estas son únicamente las cuentas personales del administrador de la plataforma; ningún cliente conecta las suyas.
         </p>
@@ -494,9 +501,9 @@ function Conf() {
       </Card>
       )}
 
-      <Card className="p-5">
-        <h2 className="font-semibold mb-1">Productos</h2>
-        <p className="text-xs text-muted-foreground mb-4">
+      <Card className="p-6">
+        <h2 className="text-base font-bold mb-1">Productos</h2>
+        <p className="text-[13px] text-muted-foreground mb-4">
           Tu catálogo para publicar y cobrar. Los links de cobro se generan con tu proveedor real
           (Stripe o Mercado Pago): si no está configurado, verás el error — nunca un link falso.
         </p>
@@ -524,17 +531,17 @@ function Conf() {
           ))}
         </div>
         <div className="grid sm:grid-cols-[1fr_140px] gap-2">
-          <Input placeholder="Nombre del producto o servicio" value={nuevoProd.nombre} onChange={(e) => setNuevoProd({ ...nuevoProd, nombre: e.target.value })} />
-          <Input type="number" placeholder="Precio MXN" value={nuevoProd.precio} onChange={(e) => setNuevoProd({ ...nuevoProd, precio: e.target.value })} />
+          <Input className="h-11 text-sm" placeholder="Nombre del producto o servicio" value={nuevoProd.nombre} onChange={(e) => setNuevoProd({ ...nuevoProd, nombre: e.target.value })} />
+          <Input className="h-11 text-sm" type="number" placeholder="Precio MXN" value={nuevoProd.precio} onChange={(e) => setNuevoProd({ ...nuevoProd, precio: e.target.value })} />
         </div>
-        <Input className="mt-2" placeholder="Descripción (opcional)" value={nuevoProd.descripcion} onChange={(e) => setNuevoProd({ ...nuevoProd, descripcion: e.target.value })} />
+        <Input className="mt-2 h-11 text-sm" placeholder="Descripción (opcional)" value={nuevoProd.descripcion} onChange={(e) => setNuevoProd({ ...nuevoProd, descripcion: e.target.value })} />
         <Button size="sm" className="mt-3" onClick={agregarProducto}>Agregar producto</Button>
       </Card>
 
-      <Card className="p-5">
+      <Card className="p-6">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <h2 className="font-semibold">Uso de tu plan</h2>
-          <Badge variant="secondary">{isAdmin ? "Administrador · sin límites" : `Plan ${planLabel(user.plan)}`}</Badge>
+          <h2 className="text-base font-bold">Uso de tu plan</h2>
+          <Badge variant="secondary" className="rounded-full px-2.5 py-1">{isAdmin ? "Administrador · sin límites" : `Plan ${planLabel(user.plan)}`}</Badge>
         </div>
         <div className="flex flex-wrap gap-2 mb-4">
           {!isAdmin && PLAN_OFFERS.filter((p) => p.id !== "free" && p.id !== user.plan).map((p) => (
@@ -560,14 +567,15 @@ function Conf() {
               servidor sí hace cumplir: compartidas. Fuera los contadores de
               publicaciones/conversaciones/productos contra límites ficticios. */}
           <div>
-            <div className="flex justify-between mb-1">
-              <span>{user.plan === "free" ? "Compartidas (de por vida)" : "Compartidas este mes"}</span>
-              <span className="text-muted-foreground">
-                {compartidasIlimitadas ? `${compartidasUsadas} / Ilimitadas` : `${compartidasUsadas} / ${limiteCompartidas}`}
+            <div className="flex justify-between items-end mb-2">
+              <span className="font-medium">{user.plan === "free" ? "Compartidas (de por vida)" : "Compartidas este mes"}</span>
+              <span className="text-xl font-extrabold text-foreground leading-none">
+                {compartidasUsadas}
+                <span className="text-sm font-semibold text-muted-foreground"> / {compartidasIlimitadas ? "Ilimitadas" : limiteCompartidas}</span>
               </span>
             </div>
-            <Progress value={compartidasIlimitadas ? 0 : Math.min(100, (compartidasUsadas / limiteCompartidas) * 100)} />
-            <p className="text-xs text-muted-foreground mt-1">
+            <Progress className="h-2.5" value={compartidasIlimitadas ? 0 : Math.min(100, (compartidasUsadas / limiteCompartidas) * 100)} />
+            <p className="text-[13px] text-muted-foreground mt-2">
               1 compartida = 1 impulso de tu link en las cuentas oficiales de tu nicho (hasta 4 redes).
               {user.plan === "free" && " Tu compartida gratuita no se renueva cada mes."}
             </p>
@@ -575,8 +583,8 @@ function Conf() {
         </div>
       </Card>
 
-      <Card className="p-5 border-destructive">
-        <h2 className="font-semibold text-destructive mb-2">Zona de peligro</h2>
+      <Card className="p-6 border-destructive">
+        <h2 className="text-base font-bold text-destructive mb-2">Zona de peligro</h2>
         <p className="text-sm text-muted-foreground mb-3">Eliminar tu cuenta borrará todos tus datos. Esta acción no se puede deshacer.</p>
         <Button variant="destructive" onClick={eliminar}><Trash2 className="w-4 h-4 mr-1" />Eliminar cuenta</Button>
       </Card>
