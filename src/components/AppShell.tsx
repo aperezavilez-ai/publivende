@@ -2,9 +2,9 @@ import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Calendar, BarChart3, Settings, LogOut,
   FolderOpen, Menu,
-  Radio, Layers, Rocket, AlertTriangle,
+  Radio, Layers, Rocket, AlertTriangle, PlugZap,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/mock/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -129,8 +129,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             const Icon = item.icon;
             const active = isActive(item.to);
             return (
+              <Fragment key={item.to}>
               <Link
-                key={item.to}
                 to={item.to}
                 onClick={closeMenu}
                 className={cn(
@@ -148,6 +148,29 @@ export function AppShell({ children }: { children: ReactNode }) {
                 />
                 <span>{item.label}</span>
               </Link>
+              {item.to === "/dashboard" && user.is_admin && (
+                <Link
+                  to="/conectar-redes"
+                  onClick={closeMenu}
+                  className={cn(
+                    "flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-[13px] transition-all group",
+                    isActive("/conectar-redes")
+                      ? "bg-accent text-accent-foreground font-semibold"
+                      : "text-muted-foreground font-medium hover:text-foreground hover:bg-muted",
+                  )}
+                >
+                  <PlugZap
+                    className={cn(
+                      "w-4 h-4 shrink-0",
+                      isActive("/conectar-redes")
+                        ? "text-primary"
+                        : "text-muted-foreground group-hover:text-foreground",
+                    )}
+                  />
+                  <span>Conectar redes</span>
+                </Link>
+              )}
+              </Fragment>
             );
           })}
 

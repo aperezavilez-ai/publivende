@@ -17,6 +17,7 @@ import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as AppBibliotecaRouteImport } from './routes/_app.biblioteca'
 import { Route as AppCalendarioRouteImport } from './routes/_app.calendario'
+import { Route as AppConectarRedesRouteImport } from './routes/_app.conectar-redes'
 import { Route as AppConfiguracionRouteImport } from './routes/_app.configuracion'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppDistribuirRouteImport } from './routes/_app.distribuir'
@@ -81,6 +82,11 @@ const AppBibliotecaRoute = AppBibliotecaRouteImport.update({
 const AppCalendarioRoute = AppCalendarioRouteImport.update({
   id: '/calendario',
   path: '/calendario',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConectarRedesRoute = AppConectarRedesRouteImport.update({
+  id: '/conectar-redes',
+  path: '/conectar-redes',
   getParentRoute: () => AppRoute,
 } as any)
 const AppConfiguracionRoute = AppConfiguracionRouteImport.update({
@@ -223,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/terminos': typeof TerminosRoute
   '/biblioteca': typeof AppBibliotecaRoute
   '/calendario': typeof AppCalendarioRoute
+  '/conectar-redes': typeof AppConectarRedesRoute
   '/configuracion': typeof AppConfiguracionRoute
   '/dashboard': typeof AppDashboardRoute
   '/distribuir': typeof AppDistribuirRoute
@@ -258,6 +265,7 @@ export interface FileRoutesByTo {
   '/terminos': typeof TerminosRoute
   '/biblioteca': typeof AppBibliotecaRoute
   '/calendario': typeof AppCalendarioRoute
+  '/conectar-redes': typeof AppConectarRedesRoute
   '/configuracion': typeof AppConfiguracionRoute
   '/dashboard': typeof AppDashboardRoute
   '/distribuir': typeof AppDistribuirRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/terminos': typeof TerminosRoute
   '/_app/biblioteca': typeof AppBibliotecaRoute
   '/_app/calendario': typeof AppCalendarioRoute
+  '/_app/conectar-redes': typeof AppConectarRedesRoute
   '/_app/configuracion': typeof AppConfiguracionRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/distribuir': typeof AppDistribuirRoute
@@ -332,6 +341,7 @@ export interface FileRouteTypes {
     | '/terminos'
     | '/biblioteca'
     | '/calendario'
+    | '/conectar-redes'
     | '/configuracion'
     | '/dashboard'
     | '/distribuir'
@@ -367,6 +377,7 @@ export interface FileRouteTypes {
     | '/terminos'
     | '/biblioteca'
     | '/calendario'
+    | '/conectar-redes'
     | '/configuracion'
     | '/dashboard'
     | '/distribuir'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/terminos'
     | '/_app/biblioteca'
     | '/_app/calendario'
+    | '/_app/conectar-redes'
     | '/_app/configuracion'
     | '/_app/dashboard'
     | '/_app/distribuir'
@@ -514,6 +526,13 @@ declare module '@tanstack/react-router' {
       path: '/calendario'
       fullPath: '/calendario'
       preLoaderRoute: typeof AppCalendarioRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/conectar-redes': {
+      id: '/_app/conectar-redes'
+      path: '/conectar-redes'
+      fullPath: '/conectar-redes'
+      preLoaderRoute: typeof AppConectarRedesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/configuracion': {
@@ -704,6 +723,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppBibliotecaRoute: typeof AppBibliotecaRoute
   AppCalendarioRoute: typeof AppCalendarioRoute
+  AppConectarRedesRoute: typeof AppConectarRedesRoute
   AppConfiguracionRoute: typeof AppConfiguracionRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDistribuirRoute: typeof AppDistribuirRoute
@@ -716,6 +736,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppBibliotecaRoute: AppBibliotecaRoute,
   AppCalendarioRoute: AppCalendarioRoute,
+  AppConectarRedesRoute: AppConectarRedesRoute,
   AppConfiguracionRoute: AppConfiguracionRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDistribuirRoute: AppDistribuirRoute,
