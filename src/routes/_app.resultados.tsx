@@ -100,9 +100,9 @@ function Resultados() {
         p.compartidos,
         p.interacciones,
         p.clics ?? "",
-        p.leads,
-        p.ventas,
-        p.ingresos,
+        p.leads ?? "",
+        p.ventas ?? "",
+        p.ingresos ?? "",
       ]),
     ];
     const csv = "\uFEFF" + filas.map((f) => f.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\r\n");
@@ -118,6 +118,10 @@ function Resultados() {
   async function descargarPdf() {
     const token = getSessionToken();
     if (!token) return toast.error("Sesión inválida");
+    if (paquete && !paquete.es_pro) {
+      toast.info("El reporte general en PDF está incluido en el plan Pro.");
+      return;
+    }
     setDescargando(true);
     try {
       const qs = new URLSearchParams({ dias: String(dias) });
@@ -249,8 +253,8 @@ function Resultados() {
             <Kpi label="Alcance" value={fmt(paquete.totales.alcance)} sub="Personas únicas alcanzadas" delta={deltaPct(paquete.totales.alcance, paquete.anterior?.alcance)} />
             <Kpi label="Interacciones" value={fmt(paquete.totales.interacciones)} sub={`${fmt(paquete.totales.likes)} me gusta · ${fmt(paquete.totales.comentarios)} comentarios · ${fmt(paquete.totales.compartidos)} compartidos`} delta={deltaPct(paquete.totales.interacciones, paquete.anterior?.interacciones)} />
             <Kpi label="Clics medidos" value={fmt(paquete.totales.clics)} sub="Enlaces /p/ y clics reportados por las redes" delta={deltaPct(paquete.totales.clics, paquete.anterior?.clics)} />
-            <Kpi label="Conversaciones atribuidas" value={fmt(paquete.totales.leads)} sub="Leads de WhatsApp con post de origen" delta={deltaPct(paquete.totales.leads, paquete.anterior?.leads)} />
-            <Kpi label="Ventas cerradas" value={fmt(paquete.totales.ventas_cerradas)} sub={money(paquete.totales.ingresos)} delta={deltaPct(paquete.totales.ventas_cerradas, paquete.anterior?.ventas_cerradas)} />
+            <Kpi label="Conversaciones atribuidas" value={paquete.es_pro ? fmt(paquete.totales.leads) : "Plan Pro"} sub={paquete.es_pro ? "Leads de WhatsApp con post de origen" : "Atribución incluida en el plan Pro"} delta={deltaPct(paquete.totales.leads, paquete.anterior?.leads)} />
+            <Kpi label="Ventas cerradas" value={paquete.es_pro ? fmt(paquete.totales.ventas_cerradas) : "Plan Pro"} sub={paquete.es_pro ? money(paquete.totales.ingresos ?? 0) : "Atribución incluida en el plan Pro"} delta={deltaPct(paquete.totales.ventas_cerradas, paquete.anterior?.ventas_cerradas)} />
             <Kpi label="Seguidores" value={fmt(paquete.totales.seguidores)} sub="Suma de tus redes conectadas" />
             <Kpi label="Distribuciones" value={fmt(paquete.por_post.reduce((s, p) => s + p.distribuciones, 0))} sub="Salidas por la Red PubliVende" />
           </div>
@@ -416,9 +420,9 @@ function Resultados() {
                       <td className="py-2 pr-3">{fmt(p.compartidos)}</td>
                       <td className="py-2 pr-3">{fmt(p.interacciones)}</td>
                       <td className="py-2 pr-3">{fmt(p.clics)}</td>
-                      <td className="py-2 pr-3">{fmt(p.leads)}</td>
-                      <td className="py-2 pr-3">{fmt(p.ventas)}</td>
-                      <td className="py-2">{money(p.ingresos)}</td>
+                      <td className="py-2 pr-3">{p.leads ?? "Plan Pro"}</td>
+                      <td className="py-2 pr-3">{p.ventas ?? "Plan Pro"}</td>
+                      <td className="py-2">{p.ingresos == null ? "Plan Pro" : money(p.ingresos)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { isProductionMode } from "@/server/config";
 import { verifySessionToken } from "@/server/auth/crypto";
 import { buildResultados, type ResultadosPaquete } from "@/server/metrics/resultados";
+import { findUserById } from "@/server/auth/users";
 import PDFDocument from "pdfkit";
 
 /**
@@ -44,7 +45,7 @@ function renderPdf(p: ResultadosPaquete): Promise<Buffer> {
     doc.text(`Publicaciones medidas: ${t.posts}`);
     doc.text(`Vistas: ${fmt(t.vistas)} · Alcance: ${fmt(t.alcance)} · Interacciones: ${fmt(t.interacciones)}`);
     doc.text(`Clics medidos: ${fmt(t.clics)} · Conversaciones atribuidas: ${fmt(t.leads)}`);
-    doc.text(`Ventas cerradas atribuidas: ${fmt(t.ventas_cerradas)} · Ingresos atribuidos: ${money(t.ingresos)}`);
+    doc.text(`Ventas cerradas atribuidas: ${fmt(t.ventas_cerradas)} · Ingresos atribuidos: ${money(t.ingresos ?? 0)}`);
     doc.text(`Seguidores (suma de redes): ${fmt(t.seguidores)}`);
     doc.moveDown(0.8);
 
@@ -66,7 +67,7 @@ function renderPdf(p: ResultadosPaquete): Promise<Buffer> {
         .fontSize(10)
         .fillColor("#475569")
         .text(
-          `  Vistas ${fmt(post.vistas)} · Alcance ${fmt(post.alcance)} · Interacciones ${fmt(post.interacciones)} · Clics ${fmt(post.clics)} · Conversaciones ${fmt(post.leads)} · Ventas ${fmt(post.ventas)} (${money(post.ingresos)}) · Distribuciones Red PubliVende: ${post.distribuciones}`,
+          `  Vistas ${fmt(post.vistas)} · Alcance ${fmt(post.alcance)} · Interacciones ${fmt(post.interacciones)} · Clics ${fmt(post.clics)} · Conversaciones ${fmt(post.leads)} · Ventas ${fmt(post.ventas)} (${money(post.ingresos ?? 0)}) · Distribuciones Red PubliVende: ${post.distribuciones}`,
         );
       doc.fontSize(11).fillColor("#1e293b");
     }
@@ -115,6 +116,14 @@ export const Route = createFileRoute("/api/reporte-pdf")({
         const token = auth.replace(/^Bearer\s+/i, "");
         const session = token ? await verifySessionToken(token) : null;
         if (!session) return new Response("Sesión inválida", { status: 401 });
+
+        // [COMPUERTA PRO — 2026-11-27] El reporte general en PDF es
+        // del plan Pro (la tabla de planes lo promete así). El plan
+        // efectivo ya trae administrador = business.
+        const usuario = await findUserById(session.userId);
+        if (usuario?.plan !== "pro" && usuario?.plan !== "business") {
+          return new Response("El reporte general en PDF está incluido en el plan Pro.", { status: 403 });
+        }
 
         const url = new URL(request.url);
         const dias = Math.min(365, Math.max(1, Number(url.searchParams.get("dias") ?? 30) || 30));

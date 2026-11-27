@@ -19,6 +19,7 @@ export interface ResultadosPaquete {
   generado_at: string;
   periodo_dias: number;
   filtro_post_id: string | null;
+  es_pro: boolean;
   negocio: { nombre: string; industria: string | null };
   totales: {
     posts: number;
@@ -30,9 +31,9 @@ export interface ResultadosPaquete {
     compartidos: number;
     guardados: number;
     clics: number;
-    leads: number;
-    ventas_cerradas: number;
-    ingresos: number;
+    leads: number | null;
+    ventas_cerradas: number | null;
+    ingresos: number | null;
     seguidores: number | null;
   };
   anterior: {
@@ -40,9 +41,9 @@ export interface ResultadosPaquete {
     alcance: number | null;
     interacciones: number;
     clics: number | null;
-    leads: number;
-    ventas_cerradas: number;
-    ingresos: number;
+    leads: number | null;
+    ventas_cerradas: number | null;
+    ingresos: number | null;
   } | null;
   por_red: Array<{
     red: Red;
@@ -66,9 +67,9 @@ export interface ResultadosPaquete {
     alcance: number | null;
     interacciones: number;
     clics: number;
-    leads: number;
-    ventas: number;
-    ingresos: number;
+    leads: number | null;
+    ventas: number | null;
+    ingresos: number | null;
     likes: number;
     comentarios: number;
     compartidos: number;
@@ -112,6 +113,11 @@ export async function buildResultados(
   const desde = new Date(Date.now() - (dias + desplazamiento) * 24 * 3600 * 1000);
   const db = getDb();
   const user = await findUserById(userId);
+  // [COMPUERTA PRO — 2026-11-27] La atribución (conversaciones,
+  // ventas e ingresos) es del plan Pro, como dice la tabla de
+  // planes; el PDF se cierra en su propia ruta. El plan efectivo
+  // ya trae administrador = business (findUserById).
+  const esPro = user?.plan === "pro" || user?.plan === "business";
 
   // ---- Posts del periodo (o el post filtrado) ----
   const postWhere = opts.postId
@@ -375,7 +381,7 @@ export async function buildResultados(
       });
     }
   }
-  if (totales.leads > 0 && totales.ventas_cerradas === 0) {
+  if ((totales.leads ?? 0) > 0 && totales.ventas_cerradas === 0) {
     pendientes.push({
       id: "leads-sin-cierre",
       nivel: "baja",
@@ -418,10 +424,16 @@ export async function buildResultados(
     periodo_dias: dias,
     filtro_post_id: opts.postId ?? null,
     negocio: { nombre: user?.nombreNegocio || user?.nombre || "Mi negocio", industria: nicho },
-    totales,
+    es_pro: esPro,
+    totales: {
+      ...totales,
+      leads: esPro ? totales.leads : null,
+      ventas_cerradas: esPro ? totales.ventas_cerradas : null,
+      ingresos: esPro ? totales.ingresos : null,
+    },
     anterior: null,
     por_red: porRed,
-    por_post: porPost,
+    por_post: porPost.map((p) => (esPro ? p : { ...p, leads: null, ventas: null, ingresos: null })),
     evolucion,
     benchmark,
     pendientes,
