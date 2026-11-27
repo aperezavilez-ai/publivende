@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { RefreshCw, AlertTriangle, CheckCircle2, TrendingUp, TrendingDown } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card } from "@/components/ui/card";
@@ -10,7 +9,7 @@ import { loadDB, saveDB } from "@/lib/mock/db";
 import { getSessionToken, isProductionModeClient } from "@/lib/production/session";
 import { syncMyMetricsServer } from "@/lib/api/metrics.functions";
 import { RED_LABELS } from "@/lib/redes";
-import type { AccountSnapshot, MetricsSyncStatus, PostMetric, Red } from "@/lib/mock/types";
+import type { AccountSnapshot, MetricsSyncStatus, PostMetric } from "@/lib/mock/types";
 
 type RealMetrics = {
   post_metrics: PostMetric[];
@@ -38,19 +37,8 @@ function haceCuanto(iso?: string | null): string {
   return `hace ${Math.round(h / 24)} días`;
 }
 
-/** Crecimiento de seguidores contra la foto más cercana a hace `dias` días. */
-function crecimiento(snaps: AccountSnapshot[], dias: number): number | null {
-  if (snaps.length < 2) return null;
-  const last = snaps[snaps.length - 1];
-  const target = Date.parse(last.fecha) - dias * 86400000;
-  const base = [...snaps].reverse().find((s) => Date.parse(s.fecha) <= target) ?? snaps[0];
-  if (base === last) return null;
-  return last.seguidores - base.seguidores;
-}
-
 export function MetricsSyncPanel() {
   const status = useDB((db) => db.metrics_sync ?? []);
-  const snapshots = useDB((db) => db.account_snapshots ?? []);
   const realCount = useDB((db) => db.post_metrics.filter((m) => m.fuente === "real").length);
   const [busy, setBusy] = useState(false);
   const production = isProductionModeClient();
@@ -112,67 +100,11 @@ export function MetricsSyncPanel() {
         </Button>
       </div>
 
-      {status.length === 0 ? (
+      {status.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          Conecta tus redes en{" "}
-          <Link to="/configuracion" className="underline">
-            Configuración
-          </Link>{" "}
-          para empezar a medir.
+          Aún no hay lecturas de las redes. Se actualizan solas cada 6 h, o cuando quieras con el
+          botón «Actualizar métricas».
         </p>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {status.map((s) => {
-            const snaps = snapshots.filter((x) => x.red === s.red);
-            const seguidores = snaps[snaps.length - 1]?.seguidores;
-            const delta = crecimiento(snaps, 30);
-            return (
-              <div key={s.red} className="rounded-lg border p-3 text-sm space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{RED_LABELS[s.red as Red]}</span>
-                  {s.reconectar ? (
-                    <AlertTriangle className="w-4 h-4 text-amber-500" />
-                  ) : (
-                    <CheckCircle2 className="w-4 h-4 text-success" />
-                  )}
-                </div>
-                {seguidores != null && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold">{seguidores.toLocaleString()}</span>
-                    <span className="text-xs text-muted-foreground">seguidores</span>
-                    {delta != null && delta !== 0 && (
-                      <span
-                        className={`flex items-center gap-0.5 text-xs ${delta > 0 ? "text-success" : "text-destructive"}`}
-                      >
-                        {delta > 0 ? (
-                          <TrendingUp className="w-3 h-3" />
-                        ) : (
-                          <TrendingDown className="w-3 h-3" />
-                        )}
-                        {delta > 0 ? "+" : ""}
-                        {delta.toLocaleString()} en 30 días
-                      </span>
-                    )}
-                  </div>
-                )}
-                <div className="text-xs text-muted-foreground">Leído {haceCuanto(s.synced_at)}</div>
-                {s.error && (
-                  <div className="text-xs text-amber-600">
-                    {s.error}
-                    {s.reconectar && (
-                      <>
-                        {" "}
-                        <Link to="/configuracion" className="underline font-medium">
-                          Reconectar
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
       )}
     </Card>
   );

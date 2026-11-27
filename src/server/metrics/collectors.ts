@@ -49,10 +49,15 @@ const num = (v: unknown): number => {
 
 type GraphError = { message?: string; code?: number; error_subcode?: number };
 
-/** Códigos de Meta que significan token caducado/revocado o permiso no concedido. */
+/**
+ * Códigos de Meta que significan token caducado/revocado o permiso no
+ * concedido. El error 10 NO entra: es un permiso que la reconexión no
+ * puede conceder (no está entre los que se piden al conectar), así que
+ * marcarlo «reconectar» manda al usuario a un callejón sin salida.
+ */
 function isMetaReconnectError(err: GraphError | undefined): boolean {
   const code = err?.code ?? 0;
-  return code === 190 || code === 10 || (code >= 200 && code < 300);
+  return code === 190 || (code >= 200 && code < 300);
 }
 
 async function graphGet<T>(
@@ -136,7 +141,34 @@ export async function collectFacebookPost(
     comments?: CountEdge;
     reactions?: CountEdge;
   }>(id, { fields }, token);
-  if (!base.data) return metaError(base.error, "No se pudo leer la publicación de Facebook");
+  if (!base.data) {
+    // [PERMISO META — 2026-11-27] Hay publicaciones que Meta no deja
+    // leer por la ruta de campos (error 10: pide un permiso adicional,
+    // pages_read_user_content, que no se pide al conectar). Antes de
+    // darla por perdida se leen sus insights, que sí están cubiertos:
+    // vistas, alcance y clics llegan; me gusta y comentarios de esa
+    // publicación quedan sin leer.
+    if (base.error?.code === 10 && isPost) {
+      const ins = await firstWorkingInsights(
+        `${id}/insights`,
+        [
+          "post_impressions,post_impressions_unique,post_clicks",
+          "post_media_view,post_total_media_view_unique,post_clicks",
+          "post_clicks",
+        ],
+        token,
+      );
+      if ("values" in ins) {
+        values.vistas = ins.values.post_impressions ?? ins.values.post_media_view ?? 0;
+        values.alcance =
+          ins.values.post_impressions_unique ?? ins.values.post_total_media_view_unique ?? null;
+        values.clics = ins.values.post_clicks ?? null;
+        notes.push("detalle no legible por permiso de Meta; se midieron los insights");
+        return { ok: true, values, notes };
+      }
+    }
+    return metaError(base.error, "No se pudo leer la publicación de Facebook");
+  }
   values.likes = num(base.data.reactions?.summary?.total_count);
   values.comentarios = num(base.data.comments?.summary?.total_count);
   values.compartidos = num(base.data.shares?.count);

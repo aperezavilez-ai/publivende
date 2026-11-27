@@ -332,7 +332,7 @@ async function syncNetwork(
     actualizadas,
     pendientes,
     seguidores,
-    error: firstError,
+    error: humanSyncError(firstError) ?? undefined,
     reconectar,
   };
 }
@@ -401,6 +401,22 @@ export async function syncUserMetrics(userId: string): Promise<MetricsSyncSummar
 }
 
 /** Estado de sincronización por red, para mostrar en la app. */
+/**
+ * [2026-11-27] El error que se MUESTRA, nunca el texto crudo del
+ * proveedor (llega en inglés, con códigos y enlaces). El detalle crudo
+ * queda guardado en la base; esto solo traduce al mostrarlo.
+ */
+function humanSyncError(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  if (raw.includes("pages_read_user_content") || raw.includes("Page Public Content Access"))
+    return "Meta no entregó el detalle de algunas publicaciones (pide un permiso adicional); el resto sí se midió.";
+  if (raw.includes("(#10)") || raw.includes("OAuthException"))
+    return "Meta no entregó los datos de algunas publicaciones en la última lectura.";
+  if (raw.length > 140 || /https?:\/\//.test(raw))
+    return "No se pudieron leer los datos de esta red en la última lectura.";
+  return raw;
+}
+
 export async function getMetricsSyncStatus(userId: string): Promise<MetricsSyncStatus[]> {
   const rows = await getDb()
     .select({
@@ -417,7 +433,7 @@ export async function getMetricsSyncStatus(userId: string): Promise<MetricsSyncS
       red: r.red,
       conectada: r.estado === "conectada",
       synced_at: r.syncedAt?.toISOString() ?? null,
-      error: r.error?.replace(RECONNECT_PREFIX, "") ?? null,
+      error: humanSyncError(r.error?.replace(RECONNECT_PREFIX, "")),
       reconectar,
     };
   });
@@ -464,7 +480,7 @@ export async function getOfficialMetricsSyncStatus(): Promise<MetricsSyncStatus[
       red: r.red,
       conectada: r.estado === "conectada",
       synced_at: r.syncedAt?.toISOString() ?? null,
-      error: r.error?.replace(RECONNECT_PREFIX, "") ?? null,
+      error: humanSyncError(r.error?.replace(RECONNECT_PREFIX, "")),
       reconectar,
     };
     const prev = byRed.get(r.red);
