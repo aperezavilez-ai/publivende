@@ -308,20 +308,20 @@ function Conf() {
           <b>Solo administración de plataforma.</b> Las cuentas de los clientes ya no se conectan; esta sección corresponde a cuentas del administrador.
         </div>
         {isAdmin && (
-          <div className="mb-4 rounded-xl border border-blue-300 bg-blue-50/90 p-4 text-xs space-y-2.5">
+          <div className="mb-4 rounded-xl border border-primary/30 bg-accent/90 p-4 text-xs space-y-2.5">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="font-bold text-blue-950 flex items-center gap-1.5 text-sm">
+              <span className="font-bold text-foreground flex items-center gap-1.5 text-sm">
                 👑 Cuentas Oficiales de Difusión PubliVende
               </span>
               <Button
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs h-8 shadow-sm"
+                className="bg-primary hover:bg-primary/90 text-white font-semibold text-xs h-8 shadow-sm"
                 onClick={() => navigate({ to: "/red" })}
               >
                 Ir a Conectar PubliVende →
               </Button>
             </div>
-            <p className="text-blue-900 leading-relaxed">
+            <p className="text-accent-foreground leading-relaxed">
               Las 4 cuentas oficiales maestras de PubliVende (desde donde se difunden las publicaciones de todos los clientes hacia el mundo) se configuran en <b>Red PubliVende</b>. Las opciones de abajo son únicamente para conectar tus cuentas personales opcionales de negocio.
             </p>
           </div>
@@ -376,21 +376,21 @@ function Conf() {
         </div>
 
         {isAdmin && oauthReady?.meta && oauthReady.redirectUris && (
-          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-xs space-y-2">
-            <p className="font-semibold text-blue-900">Checklist Meta — solo administrador de plataforma</p>
-            <p className="text-blue-800">
+          <div className="mb-4 rounded-lg border border-primary/25 bg-accent/70 p-3 text-xs space-y-2">
+            <p className="font-semibold text-accent-foreground">Checklist Meta — solo administrador de plataforma</p>
+            <p className="text-accent-foreground">
               App ID: <code>1514804460108550</code> · Base URL activa: <code>{oauthReady.appBaseUrl}</code>
             </p>
             <div>
-              <p className="font-medium text-blue-900 mb-1">App Domains</p>
-              <ul className="list-disc pl-4 text-blue-800">
+              <p className="font-medium text-accent-foreground mb-1">App Domains</p>
+              <ul className="list-disc pl-4 text-accent-foreground">
                 {(oauthReady.metaAppDomains ?? ["publivende.mx", "www.publivende.mx"]).map((d) => (
                   <li key={d}><code>{d}</code></li>
                 ))}
               </ul>
             </div>
             <div>
-              <p className="font-medium text-blue-900 mb-1">Valid OAuth Redirect URIs</p>
+              <p className="font-medium text-accent-foreground mb-1">Valid OAuth Redirect URIs</p>
               <div className="flex items-center gap-2 flex-wrap">
                 <code className="break-all text-[11px] bg-white/80 px-2 py-1 rounded border">{oauthReady.redirectUris.meta}</code>
                 <Button
@@ -406,20 +406,20 @@ function Conf() {
                   <Copy className="w-3.5 h-3.5" />
                 </Button>
               </div>
-              <p className="text-[10px] text-blue-700 mt-1">
+              <p className="text-[10px] text-primary mt-1">
                 Si la anterior no guarda en Meta, prueba también <code>https://publivende.mx/facebook/callback</code>
               </p>
             </div>
-            <p className="text-blue-800">
+            <p className="text-accent-foreground">
               Activa <b>Client OAuth Login</b> y <b>Web OAuth Login</b>. Los clientes finales no ven esta sección.
             </p>
             <div>
-              <p className="font-medium text-blue-900 mb-1">Si sale “Invalid Scopes” al conectar</p>
-              <p className="text-blue-800">
+              <p className="font-medium text-accent-foreground mb-1">Si sale “Invalid Scopes” al conectar</p>
+              <p className="text-accent-foreground">
                 En Meta → <b>Casos de uso</b> → <b>Administrar todo en tu página</b> → <b>Personalizar</b> →{" "}
                 <b>Permisos y funciones</b>, activa como <b>Listo para pruebas</b>:
               </p>
-              <ul className="list-disc pl-4 text-blue-800 mt-1">
+              <ul className="list-disc pl-4 text-accent-foreground mt-1">
                 <li><code>pages_show_list</code>, <code>pages_read_engagement</code></li>
                 <li><code>pages_manage_posts</code> (publicar en tu página de Facebook)</li>
                 <li><code>instagram_basic</code>, <code>instagram_content_publish</code> (Instagram → Casos de uso → Instagram API)</li>
@@ -509,7 +509,7 @@ function Conf() {
               <div className="min-w-0">
                 <div className="font-medium text-sm">{p.nombre} · ${p.precio.toLocaleString("es-MX")} {p.moneda}</div>
                 {p.link_pago
-                  ? <a href={p.link_pago} target="_blank" rel="noreferrer" className="text-xs text-blue-700 hover:underline break-all">{p.link_pago}</a>
+                  ? <a href={p.link_pago} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline break-all">{p.link_pago}</a>
                   : <div className="text-xs text-amber-700">Sin link de cobro todavía</div>}
               </div>
               <div className="flex gap-2 shrink-0">

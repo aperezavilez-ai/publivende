@@ -49,95 +49,98 @@
 }
 
 :root {
-  --radius: 0.5rem;
-  --background: #ffffff;
-  --foreground: #0f172a;
+  /* [DISEÑO CLARO PREMIUM — 2026-11-27] Sistema único de marca: violeta
+     PubliVende como único color primario, neutros cálidos, radios amplios
+     y sombras suaves en capas. Admin y cliente comparten el mismo sistema. */
+  --radius: 0.875rem;
+  --background: #fafaf8;
+  --foreground: #1c1b1a;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #1c1b1a;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #1d4ed8;
+  --popover-foreground: #1c1b1a;
+  --primary: #7c3aed;
   --primary-foreground: #ffffff;
-  --primary-glow: #1d4ed8;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f8fafc;
-  --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
+  --primary-glow: #8b5cf6;
+  --secondary: #f4f4f1;
+  --secondary-foreground: #1c1b1a;
+  --muted: #f6f6f3;
+  --muted-foreground: #6e6a61;
+  --accent: #f1ebfd;
+  --accent-foreground: #5b21b6;
   --whatsapp: #15803d;
   --whatsapp-foreground: #ffffff;
   --destructive: #b91c1c;
   --destructive-foreground: #ffffff;
   --success: #15803d;
   --warning: #b45309;
-  --border: #e2e8f0;
-  --input: #cbd5e1;
-  --ring: #1d4ed8;
-  --chart-1: #1d4ed8;
-  --chart-2: #15803d;
-  --chart-3: #b45309;
-  --chart-4: #475569;
-  --chart-5: #0ea5e9;
+  --border: #e7e4dd;
+  --input: #dcd9d1;
+  --ring: #7c3aed;
+  --chart-1: #7c3aed;
+  --chart-2: #0ea5e9;
+  --chart-3: #15803d;
+  --chart-4: #b45309;
+  --chart-5: #78716c;
   --sidebar: #ffffff;
-  --sidebar-foreground: #0f172a;
-  --sidebar-primary: #1d4ed8;
+  --sidebar-foreground: #1c1b1a;
+  --sidebar-primary: #7c3aed;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f5f9;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #1d4ed8;
+  --sidebar-accent: #f1ebfd;
+  --sidebar-accent-foreground: #5b21b6;
+  --sidebar-border: #e9e6df;
+  --sidebar-ring: #7c3aed;
   /* Sin degradados: colores sólidos (compatibilidad con clases heredadas). */
-  --gradient-primary: #1d4ed8;
-  --gradient-hero: #ffffff;
-  --shadow-elegant: 0 1px 3px rgb(15 23 42 / 0.08);
-  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.06);
+  --gradient-primary: #7c3aed;
+  --gradient-hero: #fafaf8;
+  --shadow-elegant: 0 1px 3px rgb(28 27 26 / 0.05), 0 10px 30px -12px rgb(28 27 26 / 0.14);
+  --shadow-soft: 0 1px 2px rgb(28 27 26 / 0.05);
 }
 
 .dark {
-  --radius: 0.5rem;
-  --background: #ffffff;
-  --foreground: #0f172a;
+  --radius: 0.875rem;
+  --background: #fafaf8;
+  --foreground: #1c1b1a;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #1c1b1a;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #1d4ed8;
+  --popover-foreground: #1c1b1a;
+  --primary: #7c3aed;
   --primary-foreground: #ffffff;
-  --primary-glow: #1d4ed8;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f8fafc;
-  --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
+  --primary-glow: #8b5cf6;
+  --secondary: #f4f4f1;
+  --secondary-foreground: #1c1b1a;
+  --muted: #f6f6f3;
+  --muted-foreground: #6e6a61;
+  --accent: #f1ebfd;
+  --accent-foreground: #5b21b6;
   --whatsapp: #15803d;
   --whatsapp-foreground: #ffffff;
   --destructive: #b91c1c;
   --destructive-foreground: #ffffff;
   --success: #15803d;
   --warning: #b45309;
-  --border: #e2e8f0;
-  --input: #cbd5e1;
-  --ring: #1d4ed8;
-  --chart-1: #1d4ed8;
-  --chart-2: #15803d;
-  --chart-3: #b45309;
-  --chart-4: #475569;
-  --chart-5: #0ea5e9;
+  --border: #e7e4dd;
+  --input: #dcd9d1;
+  --ring: #7c3aed;
+  --chart-1: #7c3aed;
+  --chart-2: #0ea5e9;
+  --chart-3: #15803d;
+  --chart-4: #b45309;
+  --chart-5: #78716c;
   --sidebar: #ffffff;
-  --sidebar-foreground: #0f172a;
-  --sidebar-primary: #1d4ed8;
+  --sidebar-foreground: #1c1b1a;
+  --sidebar-primary: #7c3aed;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f5f9;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #1d4ed8;
+  --sidebar-accent: #f1ebfd;
+  --sidebar-accent-foreground: #5b21b6;
+  --sidebar-border: #e9e6df;
+  --sidebar-ring: #7c3aed;
   /* Sin degradados: colores sólidos (compatibilidad con clases heredadas). */
-  --gradient-primary: #1d4ed8;
-  --gradient-hero: #ffffff;
-  --shadow-elegant: 0 1px 3px rgb(15 23 42 / 0.08);
-  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.06);
+  --gradient-primary: #7c3aed;
+  --gradient-hero: #fafaf8;
+  --shadow-elegant: 0 1px 3px rgb(28 27 26 / 0.05), 0 10px 30px -12px rgb(28 27 26 / 0.14);
+  --shadow-soft: 0 1px 2px rgb(28 27 26 / 0.05);
 }
 
 @layer base {
@@ -153,20 +156,20 @@
 
 @layer utilities {
   .bg-gradient-primary { background-color: var(--primary); background-image: none; }
-  .bg-gradient-hero { background-color: #ffffff; background-image: none; }
+  .bg-gradient-hero { background-color: #fafaf8; background-image: none; }
   .shadow-elegant { box-shadow: var(--shadow-elegant); }
   .shadow-soft { box-shadow: var(--shadow-soft); }
   .text-gradient { color: var(--primary); background: none; }
 
-  /* Slider azul — alcance local en Publicar (evita selectores Tailwind con /) */
+  /* Slider violeta — alcance local en Publicar (evita selectores Tailwind con /) */
   .alcance-slider [role="slider"] {
-    border-color: #3b82f6;
+    border-color: #7c3aed;
     background-color: #fff;
   }
   .alcance-slider [data-orientation="horizontal"] > span:first-child {
-    background-color: #bfdbfe;
+    background-color: #ddd6fe;
   }
   .alcance-slider [data-orientation="horizontal"] > span:first-child > span {
-    background-color: #2563eb;
+    background-color: #7c3aed;
   }
 }
