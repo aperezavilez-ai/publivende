@@ -4,7 +4,7 @@ import { desc, eq } from "drizzle-orm";
 import { isProductionMode } from "@/server/config";
 import { getDb, schema } from "@/server/db";
 import { verifySessionToken } from "@/server/auth/crypto";
-import { getMetricsSyncStatus, syncUserMetrics } from "@/server/metrics/sync";
+import { getSyncStatusForViewer, syncUserMetrics } from "@/server/metrics/sync";
 import { mergeRealMetrics } from "@/server/sync/user-data";
 import type { DB, WaContact } from "@/lib/mock/types";
 
@@ -115,7 +115,7 @@ export const syncMyMetricsServer = createServerFn({ method: "POST" })
     const session = await verifySessionToken(data.token);
     if (!session) return { ok: false as const, error: "Sesión inválida" };
 
-    const status = await getMetricsSyncStatus(session.userId);
+    const status = await getSyncStatusForViewer(session.userId);
     const lastSync = Math.max(0, ...status.map((s) => (s.synced_at ? Date.parse(s.synced_at) : 0)));
     const wait = MANUAL_SYNC_COOLDOWN_MS - (Date.now() - lastSync);
     if (wait > 0) {

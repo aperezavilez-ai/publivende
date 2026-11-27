@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { getDb, schema } from "@/server/db";
 import { findUserById } from "@/server/auth/users";
-import { getMetricsSyncStatus } from "@/server/metrics/sync";
+import { getSyncStatusForViewer } from "@/server/metrics/sync";
 import { MIN_BUSINESSES } from "@/server/brain/benchmarks";
 import type { Red } from "@/lib/mock/types";
 
@@ -33,7 +33,7 @@ export interface ResultadosPaquete {
     leads: number;
     ventas_cerradas: number;
     ingresos: number;
-    seguidores: number;
+    seguidores: number | null;
   };
   anterior: {
     vistas: number;
@@ -218,7 +218,10 @@ export async function buildResultados(
   for (const s of snaps) ultimoSegPorRed.set(s.red as Red, s.seguidores);
 
   // ---- Conexiones y sync ----
-  const syncStatus = await getMetricsSyncStatus(userId);
+  // [RED OFICIAL — 2026-11-27] El estado por red que ve el cliente es
+  // el de la Red PubliVende (cuentas oficiales), no el de cuentas
+  // propias que no tiene ni debe tener.
+  const syncStatus = await getSyncStatusForViewer(userId);
   const syncPorRed = new Map(syncStatus.map((s) => [s.red as Red, s]));
 
   const porRed = REDES.map((red) => {
@@ -256,7 +259,7 @@ export async function buildResultados(
     leads: leads.length,
     ventas_cerradas: ganadosTodos.length,
     ingresos: ganadosTodos.reduce((s, l) => s + (l.montoVenta ?? 0), 0),
-    seguidores: [...ultimoSegPorRed.values()].reduce((s, v) => s + v, 0),
+    seguidores: ultimoSegPorRed.size ? [...ultimoSegPorRed.values()].reduce((s, v) => s + v, 0) : null,
   };
 
   // ---- Benchmark de nicho (solo con muestra suficiente) ----
@@ -295,7 +298,10 @@ export async function buildResultados(
 
   // ---- Lo que falta por hacer (pendientes verificables desde los datos) ----
   const pendientes: ResultadoPendiente[] = [];
-  for (const r of porRed) {
+  // [RED OFICIAL — 2026-11-27] Conectar/reconectar cuentas es tarea del
+  // administrador (las cuentas son las oficiales de PubliVende). Al
+  // cliente no se le pide conectar nada.
+  for (const r of user?.isAdmin ? porRed : []) {
     if (!r.conectada) {
       pendientes.push({
         id: `conectar-${r.red}`,

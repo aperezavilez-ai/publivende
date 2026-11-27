@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/server/db";
 import { dbPostToClient } from "@/server/publish/service";
-import { getMetricsSyncStatus } from "@/server/metrics/sync";
+import { getSyncStatusForViewer } from "@/server/metrics/sync";
 import { resolveNiche } from "@/lib/brain/niches";
 import type {
   AutomationRule,
@@ -295,7 +295,7 @@ export async function mergeRealMetrics(userId: string, data: Partial<DB>) {
       .select()
       .from(schema.accountSnapshots)
       .where(and(eq(schema.accountSnapshots.userId, userId), gte(schema.accountSnapshots.fecha, since))),
-    getMetricsSyncStatus(userId),
+    getSyncStatusForViewer(userId),
   ]);
 
   data.metrics_sync = syncStatus;

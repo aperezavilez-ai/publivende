@@ -202,7 +202,7 @@ async function syncNetwork(
   existing: Map<string, StoredItem[]>,
 ): Promise<NetworkSyncResult> {
   const db = getDb();
-  const acc = await getFreshOAuthAccount(userId, red);
+  const acc = await getAccountForSync(userId, red);
   if (!acc) {
     const raw = await db
       .select({
@@ -286,30 +286,35 @@ async function syncNetwork(
     actualizadas++;
   }
 
-  const account = await collectAccount(red, acc);
+  // [RED OFICIAL — 2026-11-27] La foto de la cuenta (seguidores) solo se
+  // guarda bajo su dueño: si la medición de un cliente usó la cuenta
+  // oficial, esos seguidores son de PubliVende, no del cliente.
   let seguidores: number | undefined;
-  if (account.ok) {
-    seguidores = account.stats.seguidores;
-    const snap = {
-      seguidores: account.stats.seguidores,
-      publicaciones: account.stats.publicaciones,
-      vistasTotales: account.stats.vistasTotales,
-      raw: account.stats.raw,
-    };
-    await db
-      .insert(schema.accountSnapshots)
-      .values({ userId, red, fecha: now.toISOString().slice(0, 10), ...snap })
-      .onConflictDoUpdate({
-        target: [
-          schema.accountSnapshots.userId,
-          schema.accountSnapshots.red,
-          schema.accountSnapshots.fecha,
-        ],
-        set: snap,
-      });
-  } else {
-    firstError ??= account.error;
-    if (account.reconnect) reconectar = true;
+  if (acc.userId === userId) {
+    const account = await collectAccount(red, acc);
+    if (account.ok) {
+      seguidores = account.stats.seguidores;
+      const snap = {
+        seguidores: account.stats.seguidores,
+        publicaciones: account.stats.publicaciones,
+        vistasTotales: account.stats.vistasTotales,
+        raw: account.stats.raw,
+      };
+      await db
+        .insert(schema.accountSnapshots)
+        .values({ userId, red, fecha: now.toISOString().slice(0, 10), ...snap })
+        .onConflictDoUpdate({
+          target: [
+            schema.accountSnapshots.userId,
+            schema.accountSnapshots.red,
+            schema.accountSnapshots.fecha,
+          ],
+          set: snap,
+        });
+    } else {
+      firstError ??= account.error;
+      if (account.reconnect) reconectar = true;
+    }
   }
 
   const error = firstError
@@ -355,7 +360,19 @@ export async function syncUserMetrics(userId: string): Promise<MetricsSyncSummar
     .select({ red: schema.oauthAccounts.red })
     .from(schema.oauthAccounts)
     .where(eq(schema.oauthAccounts.userId, userId));
-  const redes = REDES.filter((red) => connected.some((c) => c.red === red));
+  // [RED OFICIAL — 2026-11-27] Un cliente sin cuentas propias también se
+  // mide: si tiene objetivos en una red y existe la cuenta oficial de
+  // esa red, la red entra a la sincronización (el token lo resuelve
+  // getAccountForSync con la cuenta oficial).
+  const targetRedes = new Set(targets.map((t) => t.red));
+  const redes: Red[] = [];
+  for (const red of REDES) {
+    if (connected.some((c) => c.red === red)) {
+      redes.push(red);
+    } else if (targetRedes.has(red) && (await findOfficialAccountOwner(red))) {
+      redes.push(red);
+    }
+  }
 
   const results: NetworkSyncResult[] = [];
   for (const red of redes) {
@@ -406,6 +423,80 @@ export async function getMetricsSyncStatus(userId: string): Promise<MetricsSyncS
   });
 }
 
+/**
+ * [RED OFICIAL — 2026-11-27] Dueño de la cuenta oficial de PubliVende
+ * en una red: el administrador que la tiene conectada. Los clientes no
+ * conectan cuentas: su difusión sale por las oficiales y sus métricas
+ * se leen con las oficiales.
+ */
+export async function findOfficialAccountOwner(red: Red): Promise<string | null> {
+  const rows = await getDb()
+    .select({ userId: schema.oauthAccounts.userId })
+    .from(schema.oauthAccounts)
+    .innerJoin(schema.users, eq(schema.users.id, schema.oauthAccounts.userId))
+    .where(
+      and(
+        eq(schema.oauthAccounts.red, red),
+        eq(schema.users.isAdmin, true),
+        eq(schema.oauthAccounts.estadoConexion, "conectada"),
+      ),
+    )
+    .limit(1);
+  return rows[0]?.userId ?? null;
+}
+
+/** Estado por red de las cuentas OFICIALES (una fila por red; gana la conectada). */
+export async function getOfficialMetricsSyncStatus(): Promise<MetricsSyncStatus[]> {
+  const rows = await getDb()
+    .select({
+      red: schema.oauthAccounts.red,
+      estado: schema.oauthAccounts.estadoConexion,
+      syncedAt: schema.oauthAccounts.metricsSyncedAt,
+      error: schema.oauthAccounts.metricsError,
+    })
+    .from(schema.oauthAccounts)
+    .innerJoin(schema.users, eq(schema.users.id, schema.oauthAccounts.userId))
+    .where(eq(schema.users.isAdmin, true));
+  const byRed = new Map<string, MetricsSyncStatus>();
+  for (const r of rows) {
+    const reconectar = r.estado !== "conectada" || !!r.error?.startsWith(RECONNECT_PREFIX);
+    const st: MetricsSyncStatus = {
+      red: r.red,
+      conectada: r.estado === "conectada",
+      synced_at: r.syncedAt?.toISOString() ?? null,
+      error: r.error?.replace(RECONNECT_PREFIX, "") ?? null,
+      reconectar,
+    };
+    const prev = byRed.get(r.red);
+    if (!prev || (st.conectada && !prev.conectada)) byRed.set(r.red, st);
+  }
+  return [...byRed.values()];
+}
+
+/**
+ * El estado que debe VER quien pregunta: el administrador ve el de sus
+ * cuentas (las oficiales); el cliente ve el de la Red PubliVende (las
+ * oficiales), nunca el de unas cuentas que no tiene ni debe tener.
+ */
+export async function getSyncStatusForViewer(userId: string): Promise<MetricsSyncStatus[]> {
+  const rows = await getDb()
+    .select({ isAdmin: schema.users.isAdmin })
+    .from(schema.users)
+    .where(eq(schema.users.id, userId))
+    .limit(1);
+  if (rows[0]?.isAdmin) return getMetricsSyncStatus(userId);
+  return getOfficialMetricsSyncStatus();
+}
+
+/** Cuenta para medir: la propia del usuario o, en su defecto, la oficial. */
+async function getAccountForSync(userId: string, red: Red): Promise<DbOAuthAccount | null> {
+  const own = await getFreshOAuthAccount(userId, red);
+  if (own) return own;
+  const ownerId = await findOfficialAccountOwner(red);
+  if (!ownerId || ownerId === userId) return null;
+  return getFreshOAuthAccount(ownerId, red);
+}
+
 /** Para el cron: usuarios con cuentas conectadas cuyas métricas tienen más de 6 h. */
 export async function findUsersDueForMetrics(limit: number): Promise<string[]> {
   const cutoff = new Date(Date.now() - AUTO_SYNC_INTERVAL_MS);
@@ -424,5 +515,35 @@ export async function findUsersDueForMetrics(limit: number): Promise<string[]> {
     )
     .orderBy(schema.oauthAccounts.metricsSyncedAt)
     .limit(limit * 4);
-  return [...new Set(rows.map((r) => r.userId))].slice(0, limit);
+  const due = [...new Set(rows.map((r) => r.userId))];
+  // [RED OFICIAL — 2026-11-27] Clientes sin cuentas propias pero con
+  // distribuciones publicadas: vencen cuando sus métricas (leídas con
+  // las cuentas oficiales) faltan o superan el intervalo.
+  const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 3600 * 1000);
+  const distRows = await getDb()
+    .select({ userId: schema.postDistributions.userId })
+    .from(schema.postDistributions)
+    .where(
+      and(
+        eq(schema.postDistributions.status, "published"),
+        gte(schema.postDistributions.createdAt, since),
+      ),
+    );
+  const candidates = [...new Set(distRows.map((r) => r.userId))].filter((id) => !due.includes(id));
+  if (candidates.length) {
+    const metricRows = await getDb()
+      .select({ userId: schema.postMetrics.userId, fetchedAt: schema.postMetrics.fetchedAt })
+      .from(schema.postMetrics)
+      .where(inArray(schema.postMetrics.userId, candidates));
+    const lastFetch = new Map<string, number>();
+    for (const m of metricRows) {
+      const t = m.fetchedAt?.getTime() ?? 0;
+      if (t > (lastFetch.get(m.userId) ?? 0)) lastFetch.set(m.userId, t);
+    }
+    for (const id of candidates) {
+      const t = lastFetch.get(id);
+      if (t === undefined || t < cutoff.getTime()) due.push(id);
+    }
+  }
+  return due.slice(0, limit);
 }
