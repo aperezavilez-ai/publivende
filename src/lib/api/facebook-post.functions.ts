@@ -53,8 +53,9 @@ async function scrapeOg(url: string) {
       const og = parseOgTagsFromHtml(html);
       const caption = pickCaption(og);
       const image = og.image && !og.image.includes("hsts-pixel") ? og.image : "";
+      const video = og.video?.startsWith("http") ? og.video : "";
       if (caption && !isLoginWallText(caption, og.title)) {
-        return { caption, imageUrl: image, title: og.title };
+        return { caption, imageUrl: image, videoUrl: video, title: og.title };
       }
     } catch {
       /* siguiente */
@@ -90,7 +91,7 @@ interface GraphPost {
       title?: string;
       url?: string;
       media?: { image?: { src?: string; height?: number; width?: number }; source?: string };
-      subattachments?: { data?: Array<{ media?: { image?: { src?: string } } }> };
+      subattachments?: { data?: Array<{ media?: { image?: { src?: string }; source?: string } }> };
     }>;
   };
 }
@@ -113,8 +114,26 @@ function imageFromPost(post: GraphPost): string {
   return "";
 }
 
+/**
+ * URL directa del archivo de video del post (attachments.media.source).
+ * Graph la devuelve cuando el post es un video y el token tiene acceso a la
+ * página dueña. Sin esto, un post de video se importaba solo con su portada
+ * (imageFromPost) y la difusión lo trataba como foto en todas las redes.
+ */
+function videoFromPost(post: GraphPost): string {
+  const atts = post.attachments?.data ?? [];
+  for (const att of atts) {
+    if (att?.media?.source?.startsWith("http")) return att.media.source;
+    const subs = att?.subattachments?.data ?? [];
+    for (const sub of subs) {
+      if (sub?.media?.source?.startsWith("http")) return sub.media.source;
+    }
+  }
+  return "";
+}
+
 const POST_FIELDS =
-  "message,full_picture,picture,permalink_url,created_time,attachments{media{image},subattachments{media{image}},type,title,url}";
+  "message,full_picture,picture,permalink_url,created_time,attachments{media{image,source},subattachments{media{image,source}},type,title,url}";
 
 interface GraphPage {
   id: string;
@@ -124,7 +143,7 @@ interface GraphPage {
 }
 
 type GraphOutcome =
-  | { post: { caption: string; imageUrl: string; title?: string; pageName: string } }
+  | { post: { caption: string; imageUrl: string; videoUrl: string; title?: string; pageName: string } }
   | { diag: string };
 
 /**
@@ -165,6 +184,7 @@ async function fetchFromGraphApi(
   const toResult = (post: GraphPost, pageName: string) => ({
     caption: post.message ?? "",
     imageUrl: imageFromPost(post),
+    videoUrl: videoFromPost(post),
     title: post.message?.split("\n")[0]?.slice(0, 70),
     pageName,
   });
@@ -185,7 +205,7 @@ async function fetchFromGraphApi(
           `https://graph.facebook.com/v21.0/${postId}?fields=${POST_FIELDS}&access_token=${encodeURIComponent(token)}`,
         );
         const post = (await res.json()) as GraphPost & { error?: unknown };
-        if (!post.error && (post.message || imageFromPost(post))) {
+        if (!post.error && (post.message || imageFromPost(post) || videoFromPost(post))) {
           return { post: toResult(post, ownerPage?.name ?? connectedPage.name) };
         }
       } catch {
@@ -261,12 +281,22 @@ export const fetchFacebookPostContent = createServerFn({ method: "POST" })
                   /* fallback a URL directa */
                 }
               }
+              let finalVideoUrl = outcome.post.videoUrl;
+              if (finalVideoUrl?.startsWith("http")) {
+                try {
+                  const hosted = await ensurePublicMediaUrl(session.userId, finalVideoUrl);
+                  if (hosted) finalVideoUrl = hosted;
+                } catch {
+                  /* fallback a URL directa */
+                }
+              }
               return {
                 ok: true as const,
                 source: "graph_api" as const,
                 finalUrl,
                 caption: outcome.post.caption,
                 imageUrl: finalImageUrl,
+                videoUrl: finalVideoUrl,
                 title: outcome.post.title,
                 pageName: outcome.post.pageName,
               };
@@ -299,6 +329,7 @@ export const fetchFacebookPostContent = createServerFn({ method: "POST" })
         finalUrl,
         caption: catalog.caption,
         imageUrl: catalog.imageUrl,
+        videoUrl: "",
         title: catalog.title,
         pageName: slugFromUrl ?? data.pageName,
       };
@@ -306,12 +337,19 @@ export const fetchFacebookPostContent = createServerFn({ method: "POST" })
 
     if (scraped?.caption) {
       let finalImageUrl = scraped.imageUrl || "";
-      if (finalImageUrl.startsWith("http")) {
+      let finalVideoUrl = scraped.videoUrl || "";
+      if (finalImageUrl.startsWith("http") || finalVideoUrl.startsWith("http")) {
         try {
           const session = data.token ? await verifySessionToken(data.token) : null;
           const uid = session?.userId ?? "imported";
-          const hosted = await ensurePublicMediaUrl(uid, finalImageUrl);
-          if (hosted) finalImageUrl = hosted;
+          if (finalImageUrl.startsWith("http")) {
+            const hosted = await ensurePublicMediaUrl(uid, finalImageUrl);
+            if (hosted) finalImageUrl = hosted;
+          }
+          if (finalVideoUrl.startsWith("http")) {
+            const hosted = await ensurePublicMediaUrl(uid, finalVideoUrl);
+            if (hosted) finalVideoUrl = hosted;
+          }
         } catch {
           /* fallback a URL directa */
         }
@@ -322,6 +360,7 @@ export const fetchFacebookPostContent = createServerFn({ method: "POST" })
         finalUrl,
         caption: scraped.caption,
         imageUrl: finalImageUrl,
+        videoUrl: finalVideoUrl,
         title: scraped.title,
         pageName: slugFromUrl ?? data.pageName,
         diag,

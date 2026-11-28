@@ -2,6 +2,8 @@ export interface ParsedOgTags {
   title?: string;
   description?: string;
   image?: string;
+  /** URL directa del archivo de video (og:video) cuando la página la expone. */
+  video?: string;
   type?: string;
 }
 
@@ -43,6 +45,10 @@ export function parseOgTagsFromHtml(html: string): ParsedOgTags {
     title: matchMeta(html, "title"),
     description: matchMeta(html, "description"),
     image: matchMeta(html, "image"),
+    video:
+      matchMeta(html, "video:secure_url") ??
+      matchMeta(html, "video:url") ??
+      matchMeta(html, "video"),
     type: matchMeta(html, "type"),
   };
 }

@@ -137,6 +137,22 @@ export async function fetchMetadataFromLink(
         },
       });
 
+      if (graph.ok && graph.caption && graph.videoUrl) {
+        return {
+          ...base(),
+          url: graph.finalUrl,
+          originalCaption: graph.caption,
+          mediaUrl: graph.videoUrl,
+          mediaType: "video",
+          fetchedFromLink: true,
+          needsManualInput: false,
+          pageName: graph.pageName ?? resolvedPageName,
+          title: graph.title,
+          linkDescription: graph.caption,
+          importSource: "graph_api",
+        };
+      }
+
       if (graph.ok && graph.caption && graph.imageUrl) {
         return {
           ...base(),
@@ -201,6 +217,7 @@ export async function fetchMetadataFromLink(
     const linkTitle = og.title?.trim();
     const linkDescription = og.description?.trim();
     let image = sanitizeMediaUrl(og.image);
+    const video = sanitizeMediaUrl(og.video);
     const useful = isUsefulOg(og);
 
     if (platform === "facebook" && caption) {
@@ -223,7 +240,7 @@ export async function fetchMetadataFromLink(
       };
     }
 
-    if (!useful && !image) {
+    if (!useful && !image && !video) {
       if (platform === "facebook") {
         const hint = buildFacebookManualHint(normalized, !!options.facebookConnected);
         return {
@@ -239,7 +256,7 @@ export async function fetchMetadataFromLink(
       throw new Error("El enlace no devolvió texto ni imagen.");
     }
 
-    const hasAll = !!caption && !!image;
+    const hasAll = !!caption && !!(image || video);
     const previewTitle =
       linkTitle && !isLoginWallText(linkTitle)
         ? linkTitle
@@ -254,11 +271,12 @@ export async function fetchMetadataFromLink(
     return {
       ...base(),
       originalCaption: caption || previewDescription || (resolvedPageName ? `Contenido de ${resolvedPageName}` : ""),
-      mediaUrl: image,
+      mediaUrl: video || image,
+      mediaType: video ? "video" : isVideo ? "video" : "imagen",
       fetchedFromLink: useful,
       needsManualInput: !hasAll,
       fetchWarning: !hasAll
-        ? !image && graphDiag
+        ? !image && !video && graphDiag
           ? graphDiag
           : buildPartialWarning(platform, resolvedPageName, !caption ? "text" : "image")
         : undefined,
